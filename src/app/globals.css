@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import 'leaflet-draw/dist/leaflet.draw.css';
 
 :root {
   --background: #ffffff;

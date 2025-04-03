@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String     @id @default(cuid())
+  name       String?
+  email      String     @unique
+  password   String
+  role       Role       @default(USER)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  properties Property[] @relation("ResponsibleFor")
+}
+
+model Property {
+  id            String         @id @default(cuid())
+  address       String
+  population    String
+  status        PropertyStatus @default(IN_PROCESS)
+  action        PropertyAction @default(NEWS)
+  ownerName     String
+  ownerPhone    String
+  captureDate   DateTime       @default(now())
+  responsibleId String?
+  hasSimpleNote Boolean        @default(false)
+  isOccupied    Boolean        @default(false)
+  clientId      String?
+  zoneId        String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  latitude      Float?
+  longitude     Float?
+  occupiedBy    String?
+  type          PropertyType   @default(HOUSE)
+  assignments   Assignment[]
+  client        Client?        @relation(fields: [clientId], references: [id])
+  responsible   User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
+  zone          Zone?          @relation(fields: [zoneId], references: [id])
+  isLocated     Boolean        @default(false)
+  lastContact   DateTime?
+
+  @@index([clientId], map: "Property_clientId_fkey")
+  @@index([responsibleId], map: "Property_responsibleId_fkey")
+  @@index([zoneId], map: "Property_zoneId_fkey")
+}
+
+model Client {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  phone       String?
+  address     String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments Assignment[]
+  properties  Property[]
+}
+
+model News {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  status      AssignmentStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  propertyId  String
+  clientId    String
+  client      Client           @relation(fields: [clientId], references: [id])
+  property    Property         @relation(fields: [propertyId], references: [id])
+
+  @@index([clientId], map: "Assignment_clientId_fkey")
+  @@index([propertyId], map: "Assignment_propertyId_fkey")
+}
+
+model Zone {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  color       String     @default("#FF0000")
+  coordinates Json       // Array of lat/lng points that define the polygon
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  properties  Property[] // Properties that belong to this zone
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  COMMERCIAL
+  LAND
+}
+
+enum PropertyStatus {
+  IN_PROCESS
+  AVAILABLE
+  SOLD
+  RENTED
+  PENDING
+}
+
+enum PropertyAction {
+  NEWS
+  SALE
+  RENT
+  OTHER
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
