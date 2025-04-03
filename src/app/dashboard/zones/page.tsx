@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { getProperties } from '../properties/actions';
-import { getZones, createZone, getPropertiesInZone, Zone, updateZone, deleteZone } from './actions';
+import { getZones, createZone, Zone, updateZone, deleteZone } from './actions';
 import { Property } from '@/types/property';
+import L from 'leaflet';
 
 // Importar componentes de Leaflet dinámicamente para evitar el error de window
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
@@ -28,12 +29,8 @@ const Polygon = dynamic(() => import('react-leaflet').then(mod => mod.Polygon), 
   ssr: false
 });
 
-const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), {
-  ssr: false
-});
-
 // Fix para los iconos por defecto de Leaflet
-let icon: any = null;
+let icon: L.Icon | L.DivIcon | undefined = undefined;
 
 if (typeof window !== 'undefined') {
   import('leaflet').then((L) => {
@@ -76,10 +73,10 @@ const MapWithDraw = ({
   onEditZone: (zone: Zone) => void,
   onDeleteZone: (zone: Zone) => void
 }) => {
-  const mapRef = useRef<any>(null);
-  const markerRefs = useRef<{ [key: string]: any }>({});
-  const featureGroupRef = useRef<any>(null);
-  const drawControlRef = useRef<any>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
   const initializedRef = useRef<boolean>(false);
   
   // Efecto para abrir el popup cuando se selecciona una propiedad
@@ -104,106 +101,78 @@ const MapWithDraw = ({
 
   // Efecto para inicializar el control de dibujo
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !mapRef.current || !initializedRef.current) return;
+    
+    // Guardar una referencia al mapa actual
+    const currentMap = mapRef.current;
     
     const initializeDrawControl = async () => {
       try {
         const L = await import('leaflet');
         await import('leaflet-draw');
         
-        // Esperar a que el mapa esté disponible
-        if (!mapRef.current) {
-          console.log('El mapa aún no está disponible, esperando...');
-          setTimeout(initializeDrawControl, 500);
-          return;
-        }
-        
-        const map = mapRef.current;
-        
-        // Verificar si ya está inicializado
-        if (initializedRef.current) {
-          console.log('El control de dibujo ya está inicializado');
-          return;
-        }
-        
-        console.log('Inicializando control de dibujo...');
-        
-        // Crear FeatureGroup si no existe
+        // Crear un grupo de características para almacenar las zonas dibujadas
         if (!featureGroupRef.current) {
-          featureGroupRef.current = new L.FeatureGroup();
-          map.addLayer(featureGroupRef.current);
-          console.log('FeatureGroup creado y añadido al mapa');
+          featureGroupRef.current = new L.FeatureGroup().addTo(currentMap);
         }
         
-        // Configurar el control de dibujo
-        const drawControl = new (L as any).Control.Draw({
-          draw: {
-            polyline: false,
-            rectangle: false,
-            circle: false,
-            circlemarker: false,
-            marker: false,
-            polygon: {
-              allowIntersection: false,
-              drawError: {
-                color: '#e1e100',
-                message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
-              },
-              shapeOptions: {
-                color: '#FF0000'
+        // Crear el control de dibujo
+        if (!drawControlRef.current) {
+          drawControlRef.current = new L.Control.Draw({
+            draw: {
+              // Deshabilitar todas las herramientas de dibujo excepto polígono
+              polyline: false,
+              rectangle: false,
+              circle: false,
+              circlemarker: false,
+              marker: false,
+              polygon: {
+                allowIntersection: false,
+                drawError: {
+                  color: '#e1e100',
+                  message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
+                },
+                shapeOptions: {
+                  color: newZoneColor
+                }
+              }
+            },
+            edit: {
+              featureGroup: featureGroupRef.current,
+              remove: false
+            }
+          });
+          
+          // Añadir el control al mapa
+          currentMap.addControl(drawControlRef.current);
+          
+          // Evento cuando se completa el dibujo de un polígono
+          currentMap.on('draw:created', (e: { layer: L.Layer }) => {
+            const layer = e.layer;
+            featureGroupRef.current?.addLayer(layer);
+            
+            // Obtener las coordenadas del polígono
+            if (layer instanceof L.Polygon) {
+              const latLngs = layer.getLatLngs()[0];
+              if (Array.isArray(latLngs)) {
+                const coordinates = latLngs.map((latLng: L.LatLng | L.LatLng[]) => {
+                  if (latLng instanceof L.LatLng) {
+                    return {
+                      lat: latLng.lat,
+                      lng: latLng.lng
+                    };
+                  }
+                  return null;
+                }).filter((coord): coord is { lat: number; lng: number } => coord !== null);
+                
+                // Llamar a la función de callback con las coordenadas
+                onZoneCreated(coordinates);
               }
             }
-          },
-          edit: {
-            featureGroup: featureGroupRef.current,
-            remove: true
-          }
-        });
-        
-        // Guardar referencia al control
-        drawControlRef.current = drawControl;
-        
-        // Añadir el control al mapa
-        map.addControl(drawControl);
-        console.log('Control de dibujo añadido al mapa');
-        
-        // Marcar como inicializado
-        initializedRef.current = true;
-        
-        // Eventos de dibujo
-        map.on('draw:created', (e: any) => {
-          console.log('Polígono creado');
-          const layer = e.layer;
-          featureGroupRef.current.addLayer(layer);
-          
-          // Obtener las coordenadas del polígono
-          const coordinates = layer.getLatLngs()[0].map((latLng: any) => ({
-            lat: latLng.lat,
-            lng: latLng.lng
-          }));
-          
-          onZoneCreated(coordinates);
-        });
-        
-        map.on('draw:edited', (e: any) => {
-          console.log('Polígono editado');
-          const layers = e.layers;
-          layers.eachLayer((layer: any) => {
-            const coordinates = layer.getLatLngs()[0].map((latLng: any) => ({
-              lat: latLng.lat,
-              lng: latLng.lng
-            }));
-            onZoneCreated(coordinates);
           });
-        });
-        
-        map.on('draw:deleted', () => {
-          console.log('Polígono eliminado');
-          onZoneCreated([]);
-        });
+        }
       } catch (error) {
         console.error('Error al inicializar el control de dibujo:', error);
-        initializedRef.current = false;
       }
     };
     
@@ -213,28 +182,33 @@ const MapWithDraw = ({
     // Función de limpieza
     return () => {
       console.log('Limpiando control de dibujo');
-      if (drawControlRef.current && mapRef.current) {
-        mapRef.current.removeControl(drawControlRef.current);
+      if (drawControlRef.current && currentMap) {
+        currentMap.removeControl(drawControlRef.current);
         drawControlRef.current = null;
       }
-      if (featureGroupRef.current && mapRef.current) {
-        mapRef.current.removeLayer(featureGroupRef.current);
+      if (featureGroupRef.current && currentMap) {
+        currentMap.removeLayer(featureGroupRef.current);
         featureGroupRef.current = null;
       }
     };
-  }, [onZoneCreated]);
+  }, [onZoneCreated, newZoneColor]);
 
   // Efecto para asegurar que el control de dibujo permanezca visible
   useEffect(() => {
     if (typeof window === 'undefined' || !mapRef.current || !initializedRef.current) return;
+    
+    // Guardar una referencia al mapa actual
+    const currentMap = mapRef.current;
     
     const ensureDrawControlVisible = async () => {
       try {
         const L = await import('leaflet');
         
         // Verificar si el control de dibujo ya está en el mapa
-        const map = mapRef.current;
-        const drawControls = map._toolbar?._container?.children;
+        if (!currentMap) return;
+        
+        // @ts-expect-error - La propiedad _toolbar no está en los tipos de Leaflet
+        const drawControls = currentMap._toolbar?._container?.children;
         
         if (!drawControls || drawControls.length === 0) {
           console.log('Reinicializando control de dibujo...');
@@ -242,11 +216,11 @@ const MapWithDraw = ({
           // Crear FeatureGroup si no existe
           if (!featureGroupRef.current) {
             featureGroupRef.current = new L.FeatureGroup();
-            map.addLayer(featureGroupRef.current);
+            currentMap.addLayer(featureGroupRef.current);
           }
           
           // Configurar el control de dibujo
-          const drawControl = new (L as any).Control.Draw({
+          const drawControl = new L.Control.Draw({
             draw: {
               polyline: false,
               rectangle: false,
@@ -274,7 +248,7 @@ const MapWithDraw = ({
           drawControlRef.current = drawControl;
           
           // Añadir el control al mapa
-          map.addControl(drawControl);
+          currentMap.addControl(drawControl);
           console.log('Control de dibujo reinicializado');
         }
       } catch (error) {
@@ -291,7 +265,7 @@ const MapWithDraw = ({
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
-      ref={mapRef}
+      ref={mapRef as unknown as React.RefObject<L.Map>}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -359,33 +333,35 @@ const MapWithDraw = ({
       
       {/* Mostrar propiedades */}
       {properties.map((property) => (
-        <Marker
-          key={property.id}
-          position={[property.latitude!, property.longitude!]}
-          icon={icon}
-          ref={(ref) => {
-            if (ref) {
-              markerRefs.current[property.id] = ref;
-            }
-          }}
-          eventHandlers={{
-            click: () => {
-              onPropertyClick(property);
-            }
-          }}
-        >
-          <Popup>
-            <div className="p-2">
-              <h3 className="font-semibold">{property.address}</h3>
-              <p className="text-sm text-gray-600">{property.population}</p>
-              <p className="text-sm text-gray-600">Estado: {property.status}</p>
-              <p className="text-sm text-gray-600">Propietario: {property.ownerName}</p>
-              <p className="text-sm text-gray-600">Teléfono: {property.ownerPhone}</p>
-              <p className="text-sm text-gray-600">Tipo: {property.type}</p>
-              <p className="text-sm text-gray-600">Acción: {property.action}</p>
-            </div>
-          </Popup>
-        </Marker>
+        property.latitude && property.longitude ? (
+          <Marker
+            key={property.id}
+            position={[property.latitude, property.longitude]}
+            icon={icon}
+            ref={(ref) => {
+              if (ref) {
+                markerRefs.current[property.id] = ref;
+              }
+            }}
+            eventHandlers={{
+              click: () => {
+                onPropertyClick(property);
+              }
+            }}
+          >
+            <Popup>
+              <div className="p-2">
+                <h3 className="font-semibold">{property.address}</h3>
+                <p className="text-sm text-gray-600">{property.population}</p>
+                <p className="text-sm text-gray-600">Estado: {property.status}</p>
+                <p className="text-sm text-gray-600">Propietario: {property.ownerName}</p>
+                <p className="text-sm text-gray-600">Teléfono: {property.ownerPhone}</p>
+                <p className="text-sm text-gray-600">Tipo: {property.type}</p>
+                <p className="text-sm text-gray-600">Acción: {property.action}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ) : null
       ))}
     </MapContainer>
   );
@@ -439,12 +415,7 @@ export default function ZonesPage() {
         }
 
         // Filtrar propiedades con coordenadas válidas
-        const validProperties = propertiesData.filter(prop => 
-          prop.latitude !== null && 
-          prop.longitude !== null && 
-          !isNaN(prop.latitude) && 
-          !isNaN(prop.longitude)
-        );
+        const validProperties = filterValidProperties(propertiesData);
 
         console.log('Valid properties with coordinates:', validProperties);
         
@@ -472,8 +443,12 @@ export default function ZonesPage() {
   const handlePropertyClick = (property: Property) => {
     setSelectedProperty(property);
     setSelectedPropertyId(property.id);
-    setCenter([property.latitude!, property.longitude!]);
-    setZoom(15);
+    
+    // Verificar que las coordenadas existan antes de centrar el mapa
+    if (property.latitude && property.longitude) {
+      setCenter([property.latitude, property.longitude]);
+      setZoom(15);
+    }
     
     // Asegurarse de que el popup se abra cuando se selecciona una propiedad
     console.log(`Propiedad seleccionada: ${property.id}`);
@@ -486,12 +461,9 @@ export default function ZonesPage() {
     
     try {
       // Filtrar propiedades que están dentro de la zona
-      const propertiesInZone = allProperties.filter(property => {
-        return isPointInPolygon(
-          [property.latitude!, property.longitude!],
-          zone.coordinates.map(coord => [coord.lat, coord.lng])
-        );
-      });
+      const propertiesInZone = allProperties.filter(property => 
+        isPropertyInZone(property, zone.coordinates)
+      );
       
       setProperties(propertiesInZone);
       
@@ -531,12 +503,9 @@ export default function ZonesPage() {
       setZones([...zones, newZone]);
       
       // Filtrar propiedades que están dentro de la zona
-      const propertiesInZone = allProperties.filter(property => {
-        return isPointInPolygon(
-          [property.latitude!, property.longitude!],
-          newZone.coordinates.map(coord => [coord.lat, coord.lng])
-        );
-      });
+      const propertiesInZone = allProperties.filter(property => 
+        isPropertyInZone(property, newZone.coordinates)
+      );
       
       // Actualizar la lista de propiedades mostradas
       setProperties(propertiesInZone);
@@ -575,11 +544,22 @@ export default function ZonesPage() {
     setShowZoneForm(false);
   };
 
+  const handleStartEditing = (zone: Zone) => {
+    setSelectedZone(zone);
+    setEditingZone(zone);
+    setIsEditing(true);
+    setNewZoneName(zone.name);
+    setNewZoneDescription(zone.description || '');
+    setNewZoneColor(zone.color);
+    setZoneCoordinates(zone.coordinates);
+    setShowZoneForm(true);
+  };
+
   const handleEditZone = async () => {
-    if (!selectedZone) return;
+    if (!editingZone) return;
 
     try {
-      const updatedZone = await updateZone(selectedZone.id, {
+      const updatedZone = await updateZone(editingZone.id, {
         name: newZoneName,
         description: newZoneDescription,
         color: newZoneColor,
@@ -623,12 +603,7 @@ export default function ZonesPage() {
       // Recargar todas las propiedades
       const propertiesData = await getProperties();
       if (propertiesData) {
-        const validProperties = propertiesData.filter(prop => 
-          prop.latitude !== null && 
-          prop.longitude !== null && 
-          !isNaN(prop.latitude) && 
-          !isNaN(prop.longitude)
-        );
+        const validProperties = filterValidProperties(propertiesData);
         setProperties(validProperties);
       }
       
@@ -638,17 +613,6 @@ export default function ZonesPage() {
       console.error('Error deleting zone:', error);
       alert('Error al eliminar la zona');
     }
-  };
-
-  const handleStartEditing = (zone: Zone) => {
-    setSelectedZone(zone);
-    setEditingZone(zone);
-    setIsEditing(true);
-    setNewZoneName(zone.name);
-    setNewZoneDescription(zone.description || '');
-    setNewZoneColor(zone.color);
-    setZoneCoordinates(zone.coordinates);
-    setShowZoneForm(true);
   };
 
   // Función para determinar si un punto está dentro de un polígono
@@ -667,6 +631,26 @@ export default function ZonesPage() {
     }
     
     return inside;
+  };
+
+  // Función para filtrar propiedades con coordenadas válidas
+  const filterValidProperties = (properties: Property[]): Property[] => {
+    return properties.filter(prop => 
+      prop.latitude !== null && 
+      prop.longitude !== null && 
+      !isNaN(prop.latitude || 0) && 
+      !isNaN(prop.longitude || 0)
+    );
+  };
+
+  // Función para verificar si una propiedad está dentro de una zona
+  const isPropertyInZone = (property: Property, zoneCoordinates: { lat: number; lng: number }[]): boolean => {
+    if (!property.latitude || !property.longitude) return false;
+    
+    return isPointInPolygon(
+      [property.latitude, property.longitude],
+      zoneCoordinates.map(coord => [coord.lat, coord.lng])
+    );
   };
 
   if (loading) {
@@ -816,12 +800,7 @@ export default function ZonesPage() {
                       // Recargar todas las propiedades
                       getProperties().then(data => {
                         if (data) {
-                          const validProperties = data.filter(prop => 
-                            prop.latitude !== null && 
-                            prop.longitude !== null && 
-                            !isNaN(prop.latitude) && 
-                            !isNaN(prop.longitude)
-                          );
+                          const validProperties = filterValidProperties(data);
                           setProperties(validProperties);
                         }
                       });

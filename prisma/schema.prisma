@@ -19,36 +19,37 @@ model User {
 }
 
 model Property {
-  id            String         @id @default(cuid())
-  address       String
-  population    String
-  status        PropertyStatus @default(IN_PROCESS)
-  action        PropertyAction @default(NEWS)
-  ownerName     String
-  ownerPhone    String
-  captureDate   DateTime       @default(now())
-  responsibleId String?
-  hasSimpleNote Boolean        @default(false)
-  isOccupied    Boolean        @default(false)
-  clientId      String?
-  zoneId        String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  latitude      Float?
-  longitude     Float?
-  occupiedBy    String?
-  type          PropertyType   @default(HOUSE)
-  isLocated     Boolean        @default(false)
-  activities    Activity[]
-  assignments   Assignment[]
-  dpv           DPV?
-  client        Client?        @relation(fields: [clientId], references: [id])
-  responsible   User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
-  zone          Zone?          @relation(fields: [zoneId], references: [id])
+  id              String         @id @default(cuid())
+  address         String
+  population      String
+  status          PropertyStatus @default(IN_PROCESS)
+  action          PropertyAction @default(NEWS)
+  ownerName       String
+  ownerPhone      String
+  captureDate     DateTime       @default(now())
+  responsibleId   String?
+  hasSimpleNote   Boolean        @default(false)
+  isOccupied      Boolean        @default(false)
+  clientId        String?
+  zoneId          String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  latitude        Float?
+  longitude       Float?
+  occupiedBy      String?
+  type            PropertyType   @default(HOUSE)
+  isLocated       Boolean        @default(false)
+  responsible     String?
+  activities      Activity[]
+  assignments     Assignment[]
+  dpv             DPV?
+  responsibleUser User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
+  zone            Zone?          @relation(fields: [zoneId], references: [id])
+  clients         Client[]       @relation("ClientProperties")
 
   @@index([clientId], map: "Property_clientId_fkey")
-  @@index([responsibleId], map: "Property_responsibleId_fkey")
   @@index([zoneId], map: "Property_zoneId_fkey")
+  @@index([responsibleId], map: "Property_responsibleId_fkey")
 }
 
 model Client {
@@ -59,8 +60,9 @@ model Client {
   address     String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  hasRequest  Boolean      @default(false)
   assignments Assignment[]
-  properties  Property[]
+  properties  Property[]   @relation("ClientProperties")
 }
 
 model News {
@@ -102,8 +104,8 @@ model Zone {
 
 model Activity {
   id         String   @id @default(cuid())
-  type       String   // Llamada, Contacto Directo, Visita, Email, WhatsApp
-  status     String   @default("Programada") // Programada, Realizada
+  type       String
+  status     String   @default("Programada")
   date       DateTime
   client     String?
   notes      String?

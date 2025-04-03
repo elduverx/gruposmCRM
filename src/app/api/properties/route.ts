@@ -43,13 +43,13 @@ export async function POST(request: Request) {
         population: data.population,
         status: data.status as PropertyStatus,
         action: data.action as PropertyAction,
-        propertyType: data.type as PropertyType,
+        type: data.type as PropertyType,
         ownerName: data.ownerName,
         ownerPhone: data.ownerPhone,
         isOccupied: data.isOccupied,
-        occupantName: data.occupiedBy,
-        lat: data.latitude,
-        lng: data.longitude,
+        occupiedBy: data.occupiedBy,
+        latitude: data.latitude,
+        longitude: data.longitude,
       },
     });
 

@@ -1,31 +1,101 @@
 'use server';
 
-import { PrismaClient, PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/client';
-import { Property, PropertyCreateInput, PropertyUpdateInput, Activity, DPV } from '@/types/property';
+import { PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/client';
+import { Property, PropertyCreateInput, Activity } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
-const prismaClient = new PrismaClient();
+type PrismaProperty = Prisma.PropertyGetPayload<{
+  include: {
+    zone: true;
+    activities: true;
+    responsibleUser: true;
+  }
+}>;
 
 export async function getProperties(): Promise<Property[]> {
   try {
     const properties = await prisma.property.findMany({
       include: {
         zone: true,
-        responsible: true,
         activities: {
           orderBy: {
             date: 'desc'
-          },
-          take: 1
-        }
-      } satisfies Prisma.PropertyInclude,
+          }
+        },
+        responsibleUser: true
+      },
       orderBy: {
         createdAt: 'desc',
       },
+    }) as unknown as PrismaProperty[];
+
+    return properties.map(property => {
+      const result: Property = {
+        id: property.id,
+        address: property.address,
+        population: property.population,
+        status: property.status,
+        action: property.action,
+        type: property.type,
+        ownerName: property.ownerName,
+        ownerPhone: property.ownerPhone,
+        captureDate: property.captureDate.toISOString(),
+        responsibleId: property.responsibleId ?? undefined,
+        hasSimpleNote: property.hasSimpleNote,
+        isOccupied: property.isOccupied,
+        clientId: property.clientId ?? undefined,
+        zoneId: property.zoneId ?? undefined,
+        createdAt: property.createdAt.toISOString(),
+        updatedAt: property.updatedAt.toISOString(),
+        latitude: property.latitude ?? undefined,
+        longitude: property.longitude ?? undefined,
+        occupiedBy: property.occupiedBy ?? undefined,
+        isLocated: property.isLocated,
+        responsible: property.responsible ?? undefined,
+        zone: property.zone ? {
+          id: property.zone.id,
+          name: property.zone.name
+        } : undefined,
+        activities: property.activities.map(activity => ({
+          id: activity.id,
+          type: activity.type,
+          status: activity.status,
+          date: activity.date.toISOString(),
+          client: activity.client ?? undefined,
+          notes: activity.notes ?? undefined,
+          propertyId: activity.propertyId,
+          createdAt: activity.createdAt.toISOString(),
+          updatedAt: activity.updatedAt.toISOString()
+        })),
+        responsibleUser: property.responsibleUser ? {
+          id: property.responsibleUser.id,
+          name: property.responsibleUser.name,
+          email: property.responsibleUser.email
+        } : undefined
+      };
+      return result;
+    });
+  } catch (error) {
+    console.error('Error fetching properties:', error);
+    return [];
+  }
+}
+
+export async function getPropertyById(id: string): Promise<Property | null> {
+  try {
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: {
+        zone: true,
+        activities: true,
+        responsibleUser: true
+      }
     });
 
-    return properties.map((property): Property => ({
+    if (!property) return null;
+
+    return {
       id: property.id,
       address: property.address,
       population: property.population,
@@ -46,12 +116,12 @@ export async function getProperties(): Promise<Property[]> {
       longitude: property.longitude ?? undefined,
       occupiedBy: property.occupiedBy ?? undefined,
       isLocated: property.isLocated,
+      responsible: property.responsible ?? undefined,
       zone: property.zone ? {
         id: property.zone.id,
         name: property.zone.name
       } : undefined,
-      responsible: property.responsible?.name ?? undefined,
-      activities: property.activities.map((activity): Activity => ({
+      activities: property.activities ? property.activities.map(activity => ({
         id: activity.id,
         type: activity.type,
         status: activity.status,
@@ -61,32 +131,12 @@ export async function getProperties(): Promise<Property[]> {
         propertyId: activity.propertyId,
         createdAt: activity.createdAt.toISOString(),
         updatedAt: activity.updatedAt.toISOString()
-      }))
-    }));
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    return [];
-  }
-}
-
-export async function getPropertyById(id: string): Promise<Property | null> {
-  try {
-    const property = await prisma.property.findUnique({
-      where: { id },
-      include: {
-        zone: true
-      }
-    });
-
-    if (!property) return null;
-
-    return {
-      ...property,
-      type: property.type as PropertyType,
-      status: property.status as PropertyStatus,
-      action: property.action as PropertyAction,
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
+      })) : [],
+      responsibleUser: property.responsibleUser ? {
+        id: property.responsibleUser.id,
+        name: property.responsibleUser.name,
+        email: property.responsibleUser.email
+      } : undefined
     };
   } catch (error) {
     console.error('Error fetching property:', error);
@@ -98,74 +148,64 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
   try {
     const property = await prisma.property.create({
       data: {
-        ...data,
+        address: data.address,
+        population: data.population,
         status: data.status || PropertyStatus.IN_PROCESS,
         action: data.action || PropertyAction.NEWS,
         type: data.type || PropertyType.HOUSE,
+        ownerName: data.ownerName,
+        ownerPhone: data.ownerPhone,
         captureDate: data.captureDate || new Date(),
+        responsibleId: data.responsibleId,
         hasSimpleNote: data.hasSimpleNote || false,
         isOccupied: data.isOccupied || false,
+        clientId: data.clientId,
+        zoneId: data.zoneId,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        occupiedBy: data.occupiedBy,
         isLocated: data.isLocated || false,
+        responsible: data.responsible
       },
       include: {
         zone: true,
-        responsible: true,
-        assignments: true,
-        client: true,
-      },
+        activities: true,
+        responsibleUser: true
+      }
     });
 
     return {
-      id: property.id,
-      address: property.address,
-      population: property.population,
-      status: property.status,
-      action: property.action,
-      type: property.type,
-      ownerName: property.ownerName,
-      ownerPhone: property.ownerPhone,
-      captureDate: property.captureDate,
-      responsibleId: property.responsibleId,
-      hasSimpleNote: property.hasSimpleNote,
-      isOccupied: property.isOccupied,
-      clientId: property.clientId,
-      zoneId: property.zoneId,
+      ...property,
+      captureDate: property.captureDate.toISOString(),
       createdAt: property.createdAt.toISOString(),
       updatedAt: property.updatedAt.toISOString(),
-      latitude: property.latitude,
-      longitude: property.longitude,
-      occupiedBy: property.occupiedBy,
-      isLocated: property.isLocated,
+      responsibleId: property.responsibleId ?? undefined,
+      clientId: property.clientId ?? undefined,
+      zoneId: property.zoneId ?? undefined,
+      latitude: property.latitude ?? undefined,
+      longitude: property.longitude ?? undefined,
+      occupiedBy: property.occupiedBy ?? undefined,
+      responsible: property.responsible ?? undefined,
       zone: property.zone ? {
         id: property.zone.id,
-        name: property.zone.name,
-        description: property.zone.description,
-        color: property.zone.color,
-        coordinates: property.zone.coordinates,
-        createdAt: property.zone.createdAt,
-        updatedAt: property.zone.updatedAt,
-      } : null,
-      responsible: property.responsible?.name || null,
-      assignments: property.assignments.map((assignment) => ({
-        id: assignment.id,
-        title: assignment.title,
-        description: assignment.description,
-        status: assignment.status,
-        dueDate: assignment.dueDate,
-        createdAt: assignment.createdAt,
-        updatedAt: assignment.updatedAt,
-        propertyId: assignment.propertyId,
-        clientId: assignment.clientId,
-      })),
-      client: property.client ? {
-        id: property.client.id,
-        name: property.client.name,
-        email: property.client.email,
-        phone: property.client.phone,
-        address: property.client.address,
-        createdAt: property.client.createdAt,
-        updatedAt: property.client.updatedAt,
-      } : null,
+        name: property.zone.name
+      } : undefined,
+      activities: property.activities ? property.activities.map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        status: activity.status,
+        date: activity.date.toISOString(),
+        client: activity.client ?? undefined,
+        notes: activity.notes ?? undefined,
+        propertyId: activity.propertyId,
+        createdAt: activity.createdAt.toISOString(),
+        updatedAt: activity.updatedAt.toISOString()
+      })) : [],
+      responsibleUser: property.responsibleUser ? {
+        id: property.responsibleUser.id,
+        name: property.responsibleUser.name,
+        email: property.responsibleUser.email
+      } : undefined
     };
   } catch (error) {
     console.error('Error creating property:', error);
@@ -177,16 +217,43 @@ export async function updateProperty(id: string, data: Partial<Property>): Promi
   try {
     const property = await prisma.property.update({
       where: { id },
-      data
+      data: {
+        ...data,
+        updatedAt: new Date()
+      },
+      include: {
+        zone: true,
+        activities: true
+      }
     });
-
-    revalidatePath('/dashboard/properties');
-    revalidatePath(`/dashboard/properties/${id}`);
 
     return {
       ...property,
+      captureDate: property.captureDate.toISOString(),
       createdAt: property.createdAt.toISOString(),
       updatedAt: property.updatedAt.toISOString(),
+      responsibleId: property.responsibleId ?? undefined,
+      clientId: property.clientId ?? undefined,
+      zoneId: property.zoneId ?? undefined,
+      latitude: property.latitude ?? undefined,
+      longitude: property.longitude ?? undefined,
+      occupiedBy: property.occupiedBy ?? undefined,
+      responsible: property.responsible ?? undefined,
+      zone: property.zone ? {
+        id: property.zone.id,
+        name: property.zone.name
+      } : undefined,
+      activities: property.activities.map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        status: activity.status,
+        date: activity.date.toISOString(),
+        client: activity.client ?? undefined,
+        notes: activity.notes ?? undefined,
+        propertyId: activity.propertyId,
+        createdAt: activity.createdAt.toISOString(),
+        updatedAt: activity.updatedAt.toISOString()
+      }))
     };
   } catch (error) {
     console.error('Error updating property:', error);
@@ -199,8 +266,6 @@ export async function deleteProperty(id: string): Promise<boolean> {
     await prisma.property.delete({
       where: { id },
     });
-
-    revalidatePath('/dashboard/properties');
     return true;
   } catch (error) {
     console.error('Error deleting property:', error);

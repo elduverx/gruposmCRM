@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { getProperties, deleteProperty } from './actions';
-import { Property } from '@/types/property';
+import { getProperties, deleteProperty, getActivitiesByPropertyId } from './actions';
+import { Property, Activity } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
@@ -17,6 +18,21 @@ export default function PropertiesPage() {
       try {
         const data = await getProperties();
         setProperties(data);
+        
+        // Obtener las actividades para cada propiedad
+        const activitiesPromises = data.map(property => 
+          getActivitiesByPropertyId(property.id)
+        );
+        
+        const activitiesResults = await Promise.all(activitiesPromises);
+        
+        // Crear un mapa de actividades por propiedad
+        const activitiesMap: Record<string, Activity[]> = {};
+        data.forEach((property, index) => {
+          activitiesMap[property.id] = activitiesResults[index];
+        });
+        
+        setActivitiesMap(activitiesMap);
       } catch (error) {
         console.error('Error fetching properties:', error);
       } finally {
@@ -41,8 +57,6 @@ export default function PropertiesPage() {
       }
     }
   };
-
-
 
   // const formatPrice = (price: string | null) => {
   //   if (!price) return 'No especificado';
@@ -90,58 +104,58 @@ export default function PropertiesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {properties.map((property) => (
-                    <tr key={property.id}>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.zone?.name || '-'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.address}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                        {property.activities?.[0] ? (
-                          <div>
-                            <div title={`Último contacto: ${new Date(property.activities[0].date).toLocaleDateString()}`}>
-                              {new Date(property.activities[0].date).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {property.activities[0].type}
-                            </div>
+                  {properties.map((property) => {
+                    const propertyActivities = activitiesMap[property.id] || [];
+                    const lastActivity = propertyActivities.length > 0 ? propertyActivities[0] : null;
+                    
+                    return (
+                      <tr key={property.id}>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.zone?.name || '-'}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.address}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                          {lastActivity ? (
+                            <span title={`Último contacto: ${lastActivity.date}`}>
+                              {lastActivity.date}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
+                          {property.isLocated ? (
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
+                              <CheckIcon className="h-4 w-4 text-green-600" />
+                            </span>
+                          ) : (
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300">
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                          <div className="flex justify-end space-x-2">
+                            <Link
+                              href={`/dashboard/properties/${property.id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                              <span className="sr-only">Editar {property.address}</span>
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteProperty(property.id)}
+                              disabled={isDeleting === property.id}
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                              <span className="sr-only">Eliminar {property.address}</span>
+                            </button>
                           </div>
-                        ) : '-'}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
-                        {property.isLocated ? (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-                            <CheckIcon className="h-4 w-4 text-green-600" />
-                          </span>
-                        ) : (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300">
-                          </span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <div className="flex justify-end space-x-2">
-                          <Link
-                            href={`/dashboard/properties/${property.id}`}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                            <span className="sr-only">Editar {property.address}</span>
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteProperty(property.id)}
-                            disabled={isDeleting === property.id}
-                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                            <span className="sr-only">Eliminar {property.address}</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

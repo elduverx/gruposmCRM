@@ -40,8 +40,8 @@ export default function MapPage() {
 
         // Filtrar propiedades con coordenadas válidas
         const validProperties = data.filter(prop => 
-          prop.latitude !== null && 
-          prop.longitude !== null && 
+          typeof prop.latitude === 'number' && 
+          typeof prop.longitude === 'number' && 
           !isNaN(prop.latitude) && 
           !isNaN(prop.longitude)
         );

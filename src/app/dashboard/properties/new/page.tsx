@@ -9,6 +9,8 @@ import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/ge
 import { createProperty, updateProperty, getPropertyById } from '../actions';
 import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 import { getZones, Zone } from '../../zones/actions';
+import { getClients } from '../../clients/actions';
+import { Client } from '@/types/client';
 
 // Fix for default marker icons in Next.js
 const icon = L.icon({
@@ -32,20 +34,35 @@ function LocationMarker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 function MapController({ coordinates }: { coordinates: { lat: number; lng: number } | null }) {
   const map = useMap();
   
-  if (coordinates) {
-    map.setView([coordinates.lat, coordinates.lng], 16);
-  }
+  useEffect(() => {
+    if (coordinates) {
+      map.setView([coordinates.lat, coordinates.lng], 15);
+    }
+  }, [coordinates, map]);
   
   return null;
 }
 
-export default function PropertyFormPage({ params }: { params?: { id?: string } }) {
+interface PageProps {
+  params: Promise<{ id?: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function PropertyFormPage({ params }: PageProps) {
+  const resolvedParams = await params;
+  const propertyId = resolvedParams.id;
+  return <PropertyFormClient propertyId={propertyId} />;
+}
+
+// Componente cliente que maneja el estado y la lógica
+function PropertyFormClient({ propertyId }: { propertyId?: string }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [formData, setFormData] = useState({
     address: '',
     population: '',
@@ -56,6 +73,8 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
     ownerPhone: '',
     isOccupied: false,
     occupiedBy: '',
+    clientId: '',
+    tenantName: '',
     isLocated: false,
     zoneId: '',
   });
@@ -99,15 +118,26 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
       }
     };
 
+    // Cargar los clientes al iniciar el componente
+    const fetchClients = async () => {
+      try {
+        const clientsData = await getClients();
+        setClients(clientsData);
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+      }
+    };
+
     fetchZones();
+    fetchClients();
   }, []);
 
   useEffect(() => {
-    if (params?.id) {
+    if (propertyId) {
       setIsEditing(true);
       const fetchProperty = async () => {
         try {
-          const propertyData = await getPropertyById(params.id!);
+          const propertyData = await getPropertyById(propertyId);
           if (propertyData) {
             setFormData({
               address: propertyData.address,
@@ -119,6 +149,8 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
               ownerPhone: propertyData.ownerPhone,
               isOccupied: propertyData.isOccupied,
               occupiedBy: propertyData.occupiedBy || '',
+              clientId: propertyData.clientId || '',
+              tenantName: '',
               isLocated: propertyData.isLocated,
               zoneId: propertyData.zoneId || '',
             });
@@ -138,7 +170,7 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
       
       fetchProperty();
     }
-  }, [params?.id]);
+  }, [propertyId]);
 
   const handleLocationSelect = async (lat: number, lng: number) => {
     const location = { lat, lng };
@@ -217,6 +249,18 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
     }
   };
 
+  const handleOccupiedByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      occupiedBy: value,
+      // Si se selecciona "PROPIETARIO", buscar el cliente correspondiente
+      clientId: value === 'PROPIETARIO' ? prev.clientId : '',
+      // Si se selecciona "INQUILINO", limpiar el clientId
+      tenantName: value === 'INQUILINO' ? prev.tenantName : ''
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -224,14 +268,22 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
     try {
       const data = {
         ...formData,
-        latitude: selectedLocation?.lat || null,
-        longitude: selectedLocation?.lng || null,
-        occupiedBy: formData.occupiedBy || null,
-        zoneId: formData.zoneId || null,
+        latitude: selectedLocation?.lat || undefined,
+        longitude: selectedLocation?.lng || undefined,
+        occupiedBy: formData.isOccupied 
+          ? (formData.occupiedBy === 'INQUILINO' 
+              ? formData.tenantName 
+              : formData.occupiedBy === 'PROPIETARIO' && formData.clientId
+                ? clients.find(c => c.id === formData.clientId)?.name || undefined
+                : undefined)
+          : undefined,
+        // Solo incluir clientId si está ocupado por propietario
+        clientId: formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && formData.clientId ? formData.clientId : undefined,
+        zoneId: formData.zoneId || undefined,
       };
 
-      if (isEditing && params?.id) {
-        await updateProperty(params.id, data);
+      if (isEditing && propertyId) {
+        await updateProperty(propertyId, data);
       } else {
         await createProperty(data);
       }
@@ -387,13 +439,53 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
                         id="occupiedBy"
                         name="occupiedBy"
                         value={formData.occupiedBy}
-                        onChange={handleInputChange}
+                        onChange={handleOccupiedByChange}
                         className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="">Seleccionar</option>
                         <option value="PROPIETARIO">Propietario</option>
                         <option value="INQUILINO">Inquilino</option>
                       </select>
+                    </div>
+                  )}
+
+                  {formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && (
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">
+                        Cliente propietario
+                      </label>
+                      <select
+                        id="clientId"
+                        name="clientId"
+                        value={formData.clientId}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        required
+                      >
+                        <option value="">Seleccionar cliente</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {formData.isOccupied && formData.occupiedBy === 'INQUILINO' && (
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
+                        Nombre del inquilino
+                      </label>
+                      <input
+                        type="text"
+                        name="tenantName"
+                        id="tenantName"
+                        value={formData.tenantName}
+                        onChange={handleInputChange}
+                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        required
+                      />
                     </div>
                   )}
 

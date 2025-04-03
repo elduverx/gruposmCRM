@@ -1,20 +1,21 @@
-import { PropertyStatus, PropertyAction, PropertyType, AssignmentStatus } from '@prisma/client';
+import { Prisma, PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+import { Client } from './client';
 
-interface Zone {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  coordinates: any;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// interface Zone {
+//   id: string;
+//   name: string;
+//   description: string | null;
+//   color: string;
+//   coordinates: any;
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
 
-interface Assignment {
+export interface Assignment {
   id: string;
   title: string;
   description: string;
-  status: AssignmentStatus;
+  status: string;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -22,15 +23,13 @@ interface Assignment {
   clientId: string;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type PropertyWithRelations = Prisma.PropertyGetPayload<{
+  include: {
+    zone: true;
+    activities: true;
+    responsibleUser: true;
+  }
+}>;
 
 export interface Activity {
   id: string;
@@ -46,31 +45,39 @@ export interface Activity {
 
 export interface Property {
   id: string;
-  population: string;
-  zone?: {
-    id: string;
-    name: string;
-  };
   address: string;
-  occupiedBy?: string;
-  ownerName: string;
-  ownerPhone: string;
-  responsible?: string;
-  isLocated: boolean;
-  createdAt: string;
-  updatedAt: string;
+  population: string;
   status: PropertyStatus;
   action: PropertyAction;
-  type: PropertyType;
+  ownerName: string;
+  ownerPhone: string;
   captureDate: string;
   responsibleId?: string;
   hasSimpleNote: boolean;
   isOccupied: boolean;
   clientId?: string;
   zoneId?: string;
+  createdAt: string;
+  updatedAt: string;
   latitude?: number;
   longitude?: number;
+  occupiedBy?: string;
+  type: PropertyType;
+  isLocated: boolean;
+  responsible?: string;
   activities?: Activity[];
+  zone?: {
+    id: string;
+    name: string;
+  };
+  assignments?: Assignment[];
+  dpv?: DPV;
+  clients?: Client[];
+  responsibleUser?: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
 }
 
 export interface PropertyCreateInput {
@@ -91,6 +98,7 @@ export interface PropertyCreateInput {
   longitude?: number | null;
   occupiedBy?: string | null;
   isLocated?: boolean;
+  responsible?: string | null;
 }
 
 export interface PropertyUpdateInput {
@@ -111,6 +119,7 @@ export interface PropertyUpdateInput {
   longitude?: number | null;
   occupiedBy?: string | null;
   isLocated?: boolean;
+  responsible?: string | null;
 }
 
 export interface DPV {
