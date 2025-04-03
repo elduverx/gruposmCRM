@@ -9,6 +9,7 @@ import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/ge
 import { createProperty, updateProperty, getPropertyById } from '../actions';
 import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 import { Property } from '@/types/property';
+import { getZones, Zone } from '../../zones/actions';
 
 // Fix for default marker icons in Next.js
 const icon = L.icon({
@@ -46,29 +47,62 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
   const [isSearching, setIsSearching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [formData, setFormData] = useState({
     address: '',
     population: '',
-    status: 'PENDING' as PropertyStatus,
-    action: 'SALE' as PropertyAction,
+    status: 'IN_PROCESS' as PropertyStatus,
+    action: 'NEWS' as PropertyAction,
     type: 'HOUSE' as PropertyType,
     ownerName: '',
     ownerPhone: '',
     isOccupied: false,
     occupiedBy: '',
-    price: '',
-    rooms: '',
-    bathrooms: '',
-    area: '',
-    description: '',
-    features: '',
-    yearBuilt: '',
-    parking: false,
-    furnished: false,
-    pets: false,
-    children: false,
-    notes: ''
+    isLocated: false,
+    zoneId: '',
   });
+
+  // Función para determinar si un punto está dentro de un polígono
+  const isPointInPolygon = (point: { lat: number; lng: number }, polygon: { lat: number; lng: number }[]): boolean => {
+    const { lat, lng } = point;
+    let inside = false;
+    
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const { lat: lati, lng: lngi } = polygon[i];
+      const { lat: latj, lng: lngj } = polygon[j];
+      
+      const intersect = ((lati > lat) !== (latj > lat)) &&
+        (lng < (lngj - lngi) * (lat - lati) / (latj - lati) + lngi);
+      
+      if (intersect) inside = !inside;
+    }
+    
+    return inside;
+  };
+
+  // Función para encontrar la zona a la que pertenece un punto
+  const findZoneForLocation = (location: { lat: number; lng: number }): string | null => {
+    for (const zone of zones) {
+      if (isPointInPolygon(location, zone.coordinates)) {
+        return zone.id;
+      }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    // Cargar las zonas al iniciar el componente
+    const fetchZones = async () => {
+      try {
+        const zonesData = await getZones();
+        setZones(zonesData);
+      } catch (error) {
+        console.error('Error fetching zones:', error);
+      }
+    };
+
+    fetchZones();
+  }, []);
 
   useEffect(() => {
     if (params?.id) {
@@ -88,18 +122,8 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
               ownerPhone: propertyData.ownerPhone,
               isOccupied: propertyData.isOccupied,
               occupiedBy: propertyData.occupiedBy || '',
-              price: propertyData.price || '',
-              rooms: propertyData.rooms || '',
-              bathrooms: propertyData.bathrooms || '',
-              area: propertyData.area || '',
-              description: propertyData.description || '',
-              features: propertyData.features || '',
-              yearBuilt: propertyData.yearBuilt || '',
-              parking: propertyData.parking || false,
-              furnished: propertyData.furnished || false,
-              pets: propertyData.pets || false,
-              children: propertyData.children || false,
-              notes: propertyData.notes || ''
+              isLocated: propertyData.isLocated,
+              zoneId: propertyData.zoneId || '',
             });
             
             if (propertyData.latitude && propertyData.longitude) {
@@ -120,15 +144,21 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
   }, [params?.id]);
 
   const handleLocationSelect = async (lat: number, lng: number) => {
-    setSelectedLocation({ lat, lng });
+    const location = { lat, lng };
+    setSelectedLocation(location);
     
     // Obtener dirección desde las coordenadas
     const addressData = await getAddressFromCoordinates(lat, lng);
     if (addressData) {
+      // Encontrar la zona a la que pertenece la ubicación
+      const zoneId = findZoneForLocation(location);
+      
       setFormData(prev => ({
         ...prev,
         address: addressData.address,
-        population: addressData.population
+        population: addressData.population,
+        isLocated: true,
+        zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
       }));
     }
   };
@@ -139,14 +169,26 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
       try {
         const coordinates = await getCoordinatesFromAddress(formData.address);
         if (coordinates) {
-          setSelectedLocation({ lat: coordinates.lat, lng: coordinates.lng });
+          const location = { lat: coordinates.lat, lng: coordinates.lng };
+          setSelectedLocation(location);
+          
+          // Encontrar la zona a la que pertenece la ubicación
+          const zoneId = findZoneForLocation(location);
           
           // Actualizar población si está disponible
           const addressData = await getAddressFromCoordinates(coordinates.lat, coordinates.lng);
           if (addressData?.population) {
             setFormData(prev => ({
               ...prev,
-              population: addressData.population
+              population: addressData.population,
+              isLocated: true,
+              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              isLocated: true,
+              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
             }));
           }
         } else {
@@ -188,18 +230,7 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
         latitude: selectedLocation?.lat || null,
         longitude: selectedLocation?.lng || null,
         occupiedBy: formData.occupiedBy || null,
-        price: formData.price || null,
-        rooms: formData.rooms || null,
-        bathrooms: formData.bathrooms || null,
-        area: formData.area || null,
-        description: formData.description || null,
-        features: formData.features || null,
-        yearBuilt: formData.yearBuilt || null,
-        parking: formData.parking || false,
-        furnished: formData.furnished || false,
-        pets: formData.pets || false,
-        children: formData.children || false,
-        notes: formData.notes || null
+        zoneId: formData.zoneId || null,
       };
 
       if (isEditing && params?.id) {
@@ -207,11 +238,12 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
       } else {
         await createProperty(data);
       }
-      
+
       router.push('/dashboard/properties');
+      router.refresh();
     } catch (error) {
-      console.error('Error:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar el inmueble');
+      console.error('Error saving property:', error);
+      alert('Error al guardar el inmueble');
     } finally {
       setIsSubmitting(false);
     }
@@ -223,49 +255,41 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
         <div className="md:col-span-1">
           <div className="px-4 sm:px-0">
             <h3 className="text-lg font-medium leading-6 text-gray-900">
-              {isEditing ? 'Editar Inmueble' : 'Nuevo Inmueble'}
+              {isEditing ? 'Editar inmueble' : 'Nuevo inmueble'}
             </h3>
             <p className="mt-1 text-sm text-gray-600">
-              {isEditing 
-                ? 'Modifica la información del inmueble y su ubicación en el mapa.' 
-                : 'Ingresa la información del inmueble y selecciona su ubicación en el mapa.'}
+              Ingresa la información básica del inmueble. Puedes completar más detalles más adelante.
             </p>
           </div>
         </div>
-
         <div className="mt-5 md:mt-0 md:col-span-2">
           <form onSubmit={handleSubmit}>
             <div className="shadow sm:rounded-md sm:overflow-hidden">
               <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
                 <div className="grid grid-cols-6 gap-6">
-                  {/* Información básica */}
                   <div className="col-span-6">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Información Básica</h4>
-                    <div className="flex space-x-4">
-                      <div className="flex-grow">
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                          Dirección
-                        </label>
-                        <div className="mt-1 flex rounded-md shadow-sm">
-                          <input
-                            type="text"
-                            name="address"
-                            id="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            required
-                            className="flex-grow focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-l-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddressSearch}
-                            disabled={isSearching}
-                            className="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 shadow-sm text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                          >
-                            {isSearching ? 'Buscando...' : 'Buscar'}
-                          </button>
-                        </div>
-                      </div>
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                      Dirección
+                    </label>
+                    <div className="mt-1 flex rounded-md shadow-sm">
+                      <input
+                        type="text"
+                        name="address"
+                        id="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
+                        placeholder="Calle, número, piso, puerta"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddressSearch}
+                        disabled={isSearching}
+                        className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        {isSearching ? 'Buscando...' : 'Buscar'}
+                      </button>
                     </div>
                   </div>
 
@@ -279,236 +303,39 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
                       id="population"
                       value={formData.population}
                       onChange={handleInputChange}
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                       required
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                     />
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                      Estado
+                    <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
+                      Zona
                     </label>
                     <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
+                      id="zoneId"
+                      name="zoneId"
+                      value={formData.zoneId}
                       onChange={handleInputChange}
-                      required
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     >
-                      <option value="PENDING">Pendiente</option>
-                      <option value="IN_PROCESS">En proceso</option>
-                      <option value="AVAILABLE">Disponible</option>
-                      <option value="SOLD">Vendido</option>
-                      <option value="RENTED">Alquilado</option>
+                      <option value="">Seleccionar zona</option>
+                      {zones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
                     </select>
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="action" className="block text-sm font-medium text-gray-700">
-                      Acción
-                    </label>
-                    <select
-                      id="action"
-                      name="action"
-                      value={formData.action}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    >
-                      <option value="SALE">Venta</option>
-                      <option value="RENT">Alquiler</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                      Tipo
-                    </label>
-                    <select
-                      id="type"
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    >
-                      <option value="HOUSE">Casa</option>
-                      <option value="APARTMENT">Apartamento</option>
-                      <option value="COMMERCIAL">Local Comercial</option>
-                      <option value="LAND">Terreno</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                      Precio (€)
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      id="price"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  {/* Características */}
-                  <div className="col-span-6">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Características</h4>
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-2">
-                    <label htmlFor="rooms" className="block text-sm font-medium text-gray-700">
-                      Habitaciones
-                    </label>
-                    <input
-                      type="number"
-                      name="rooms"
-                      id="rooms"
-                      value={formData.rooms}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-2">
-                    <label htmlFor="bathrooms" className="block text-sm font-medium text-gray-700">
-                      Baños
-                    </label>
-                    <input
-                      type="number"
-                      name="bathrooms"
-                      id="bathrooms"
-                      value={formData.bathrooms}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-2">
-                    <label htmlFor="area" className="block text-sm font-medium text-gray-700">
-                      Área (m²)
-                    </label>
-                    <input
-                      type="number"
-                      name="area"
-                      id="area"
-                      value={formData.area}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="yearBuilt" className="block text-sm font-medium text-gray-700">
-                      Año de construcción
-                    </label>
-                    <input
-                      type="number"
-                      name="yearBuilt"
-                      id="yearBuilt"
-                      value={formData.yearBuilt}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                      Descripción
-                    </label>
-                    <textarea
-                      name="description"
-                      id="description"
-                      rows={3}
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6">
-                    <label htmlFor="features" className="block text-sm font-medium text-gray-700">
-                      Características destacadas
-                    </label>
-                    <textarea
-                      name="features"
-                      id="features"
-                      rows={2}
-                      value={formData.features}
-                      onChange={handleInputChange}
-                      placeholder="Ej: Aire acondicionado, Calefacción, Terraza..."
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div className="col-span-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center">
-                        <input
-                          id="parking"
-                          name="parking"
-                          type="checkbox"
-                          checked={formData.parking}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="parking" className="ml-2 block text-sm text-gray-900">
-                          Parking
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="furnished"
-                          name="furnished"
-                          type="checkbox"
-                          checked={formData.furnished}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="furnished" className="ml-2 block text-sm text-gray-900">
-                          Amueblado
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="pets"
-                          name="pets"
-                          type="checkbox"
-                          checked={formData.pets}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="pets" className="ml-2 block text-sm text-gray-900">
-                          Admite mascotas
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="children"
-                          name="children"
-                          type="checkbox"
-                          checked={formData.children}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="children" className="ml-2 block text-sm text-gray-900">
-                          Admite niños
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Información del propietario */}
-                  <div className="col-span-6">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Información del Propietario</h4>
+                    {formData.zoneId && (
+                      <p className="mt-1 text-sm text-green-600">
+                        Zona asignada automáticamente según la ubicación
+                      </p>
+                    )}
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
-                      Nombre del Propietario
+                      Propietario
                     </label>
                     <input
                       type="text"
@@ -516,121 +343,122 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
                       id="ownerName"
                       value={formData.ownerName}
                       onChange={handleInputChange}
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                       required
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                     />
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
-                      Teléfono del Propietario
+                      Teléfono
                     </label>
                     <input
-                      type="tel"
+                      type="text"
                       name="ownerPhone"
                       id="ownerPhone"
                       value={formData.ownerPhone}
                       onChange={handleInputChange}
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                       required
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                     />
                   </div>
+
+                  <div className="col-span-6 sm:col-span-3">
+                    <label htmlFor="isOccupied" className="block text-sm font-medium text-gray-700">
+                      Estado de ocupación
+                    </label>
+                    <div className="mt-1">
+                      <select
+                        id="isOccupied"
+                        name="isOccupied"
+                        value={formData.isOccupied.toString()}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isOccupied: e.target.value === 'true' }))}
+                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="false">Desocupado</option>
+                        <option value="true">Ocupado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {formData.isOccupied && (
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
+                        Ocupado por
+                      </label>
+                      <select
+                        id="occupiedBy"
+                        name="occupiedBy"
+                        value={formData.occupiedBy}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="PROPIETARIO">Propietario</option>
+                        <option value="INQUILINO">Inquilino</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div className="col-span-6">
                     <div className="flex items-center">
                       <input
-                        id="isOccupied"
-                        name="isOccupied"
+                        id="isLocated"
+                        name="isLocated"
                         type="checkbox"
-                        checked={formData.isOccupied}
-                        onChange={handleInputChange}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        checked={formData.isLocated}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isLocated: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <label htmlFor="isOccupied" className="ml-2 block text-sm text-gray-900">
-                        Está ocupado
+                      <label htmlFor="isLocated" className="ml-2 block text-sm text-gray-900">
+                        Inmueble localizado en el mapa
                       </label>
                     </div>
                   </div>
+                </div>
 
-                  <div className="col-span-6">
-                    <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
-                      Ocupado por
-                    </label>
-                    <input
-                      type="text"
-                      name="occupiedBy"
-                      id="occupiedBy"
-                      value={formData.occupiedBy}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
+                <div className="col-span-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ubicación en el mapa
+                  </label>
+                  <div className="h-96 w-full rounded-md border border-gray-300">
+                    <MapContainer
+                      center={[40.4168, -3.7038]}
+                      zoom={13}
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <LocationMarker onLocationSelect={handleLocationSelect} />
+                      {selectedLocation && (
+                        <>
+                          <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
+                          <MapController coordinates={selectedLocation} />
+                        </>
+                      )}
+                    </MapContainer>
                   </div>
-
-                  {/* Ubicación */}
-                  <div className="col-span-6">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Ubicación</h4>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ubicación en el mapa
-                    </label>
-                    <div className="h-64 w-full rounded-md border border-gray-300">
-                      <MapContainer
-                        center={[40.4168, -3.7038]}
-                        zoom={13}
-                        style={{ height: '100%', width: '100%' }}
-                        scrollWheelZoom={true}
-                      >
-                        <TileLayer
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        />
-                        <LocationMarker onLocationSelect={handleLocationSelect} />
-                        <MapController coordinates={selectedLocation} />
-                        {selectedLocation && (
-                          <Marker
-                            position={[selectedLocation.lat, selectedLocation.lng]}
-                            icon={icon}
-                          />
-                        )}
-                      </MapContainer>
-                    </div>
-                    {selectedLocation && (
-                      <p className="mt-2 text-sm text-gray-500">
-                        Coordenadas seleccionadas: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Notas adicionales */}
-                  <div className="col-span-6">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">Notas Adicionales</h4>
-                    <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                      Notas
-                    </label>
-                    <textarea
-                      name="notes"
-                      id="notes"
-                      rows={3}
-                      value={formData.notes}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Haz clic en el mapa para seleccionar la ubicación del inmueble.
+                  </p>
                 </div>
               </div>
               <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
                 <button
                   type="button"
                   onClick={() => router.back()}
-                  className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedLocation}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Guardar'}
+                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
             </div>
