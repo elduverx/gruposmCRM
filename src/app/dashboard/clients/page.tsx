@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState([]);
+  const [clients] = useState([]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { NewspaperIcon } from '@heroicons/react/24/outline';
 
 export default function NewsPage() {
-  const [news, setNews] = useState([]);
+  const [news] = useState([]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">

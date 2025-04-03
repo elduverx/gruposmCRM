@@ -38,12 +38,13 @@ model Property {
   longitude     Float?
   occupiedBy    String?
   type          PropertyType   @default(HOUSE)
+  isLocated     Boolean        @default(false)
+  activities    Activity[]
   assignments   Assignment[]
+  dpv           DPV?
   client        Client?        @relation(fields: [clientId], references: [id])
   responsible   User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
   zone          Zone?          @relation(fields: [zoneId], references: [id])
-  isLocated     Boolean        @default(false)
-  lastContact   DateTime?
 
   @@index([clientId], map: "Property_clientId_fkey")
   @@index([responsibleId], map: "Property_responsibleId_fkey")
@@ -93,10 +94,40 @@ model Zone {
   name        String
   description String?
   color       String     @default("#FF0000")
-  coordinates Json       // Array of lat/lng points that define the polygon
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  properties  Property[] // Properties that belong to this zone
+  coordinates Json
+  properties  Property[]
+}
+
+model Activity {
+  id         String   @id @default(cuid())
+  type       String   // Llamada, Contacto Directo, Visita, Email, WhatsApp
+  status     String   @default("Programada") // Programada, Realizada
+  date       DateTime
+  client     String?
+  notes      String?
+  propertyId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@index([propertyId], map: "Activity_propertyId_fkey")
+}
+
+model DPV {
+  id             String   @id @default(cuid())
+  links          Json
+  realEstate     String?
+  phone          String?
+  currentPrice   Float?
+  estimatedValue Float?
+  propertyId     String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  property       Property @relation(fields: [propertyId], references: [id])
+
+  @@index([propertyId], map: "DPV_propertyId_fkey")
 }
 
 enum Role {

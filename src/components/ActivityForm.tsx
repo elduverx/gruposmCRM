@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { Activity } from '@/types/property';
 
@@ -8,26 +10,24 @@ interface ActivityFormProps {
 }
 
 export default function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
-  const [formData, setFormData] = useState({
-    type: 'Llamada',
-    status: 'Programada' as Activity['status'],
-    client: '',
-    notes: '',
-    date: new Date().toISOString().slice(0, 16) // Format: "YYYY-MM-DDTHH:mm"
+  const [type, setType] = useState<Activity['type']>('Llamada');
+  const [status, setStatus] = useState<Activity['status']>('Programada');
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    return now.toISOString().slice(0, 16); // Formato YYYY-MM-DDThh:mm
   });
+  const [client, setClient] = useState('');
+  const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      propertyId,
-      ...formData,
-      date: new Date(formData.date).toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      type,
+      status,
+      date,
+      client,
+      notes,
+      propertyId
     });
   };
 
@@ -39,30 +39,16 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
         </label>
         <select
           id="type"
-          name="type"
-          value={formData.type}
-          onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+          value={type}
+          onChange={(e) => setType(e.target.value as Activity['type'])}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
           <option value="Llamada">Llamada</option>
           <option value="Contacto Directo">Contacto Directo</option>
-          <option value="Email">Email</option>
           <option value="Visita">Visita</option>
+          <option value="Email">Email</option>
+          <option value="WhatsApp">WhatsApp</option>
         </select>
-      </div>
-
-      <div>
-        <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-          Fecha y hora
-        </label>
-        <input
-          type="datetime-local"
-          id="date"
-          name="date"
-          value={formData.date}
-          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        />
       </div>
 
       <div>
@@ -71,14 +57,27 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
         </label>
         <select
           id="status"
-          name="status"
-          value={formData.status}
-          onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as Activity['status'] }))}
+          value={status}
+          onChange={(e) => setStatus(e.target.value as Activity['status'])}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
           <option value="Programada">Programada</option>
           <option value="Realizada">Realizada</option>
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+          Fecha
+        </label>
+        <input
+          type="datetime-local"
+          id="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          required
+        />
       </div>
 
       <div>
@@ -88,9 +87,8 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
         <input
           type="text"
           id="client"
-          name="client"
-          value={formData.client}
-          onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+          value={client}
+          onChange={(e) => setClient(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
       </div>
@@ -101,10 +99,9 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
         </label>
         <textarea
           id="notes"
-          name="notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          value={formData.notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
       </div>

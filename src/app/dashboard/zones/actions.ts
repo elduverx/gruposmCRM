@@ -72,7 +72,7 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
 
 export async function updateZone(id: string, data: Partial<Omit<Zone, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Zone> {
   try {
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     
     if (data.coordinates) {
       updateData.coordinates = JSON.stringify(data.coordinates);

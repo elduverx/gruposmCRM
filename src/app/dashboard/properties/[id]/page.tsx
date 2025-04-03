@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity } from '@/types/property';
-import { getPropertyById, updateProperty } from '../actions';
+import { getPropertyById, updateProperty, getActivitiesByPropertyId, createActivity, getDPVByPropertyId, createOrUpdateDPV } from '../actions';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
@@ -15,6 +15,7 @@ interface DPV {
   phone: string;
   currentPrice: number;
   estimatedValue: number;
+  propertyId: string;
 }
 
 export default function PropertyDetailPage({ params }: { params: { id: string } }) {
@@ -22,57 +23,48 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [isDPVFormOpen, setIsDPVFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activities, setActivities] = useState([
-    {
-      date: '28/3/2025 19:46',
-      type: 'Llamada',
-      status: 'Realizada' as Activity['status']
-    },
-    {
-      date: '28/3/2025 19:41',
-      type: 'Llamada',
-      status: 'Realizada' as Activity['status'],
-      client: 'persiste'
-    },
-    {
-      date: '28/3/2025 19:40',
-      type: 'Llamada',
-      status: 'Realizada' as Activity['status']
-    },
-    {
-      date: '28/3/2025 19:38',
-      type: 'Llamada',
-      status: 'Realizada' as Activity['status']
-    },
-    {
-      date: '28/3/2025 18:48',
-      type: 'Contacto Directo',
-      status: 'Programada' as Activity['status'],
-      client: 'wqef'
-    }
-  ]);
-  const [dpv, setDPV] = useState<DPV>({
-    links: ['qwer', 'qwerwqer'],
-    realEstate: 'qwer',
-    phone: 'qwer',
-    currentPrice: 234,
-    estimatedValue: 2344
-  });
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [dpv, setDPV] = useState<DPV | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProperty = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getPropertyById(params.id);
-        if (data) {
-          setProperty(data);
+        setIsLoading(true);
+        const [propertyData, activitiesData, dpvData] = await Promise.all([
+          getPropertyById(params.id),
+          getActivitiesByPropertyId(params.id),
+          getDPVByPropertyId(params.id)
+        ]);
+        
+        if (propertyData) {
+          setProperty(propertyData);
         } else {
           console.error('Property not found');
         }
+        
+        if (activitiesData) {
+          setActivities(activitiesData);
+        }
+        
+        if (dpvData) {
+          setDPV({
+            links: dpvData.links as string[],
+            realEstate: dpvData.realEstate || '',
+            phone: dpvData.phone || '',
+            currentPrice: dpvData.currentPrice || 0,
+            estimatedValue: dpvData.estimatedValue || 0,
+            propertyId: params.id
+          });
+        }
       } catch (error) {
-        console.error('Error fetching property:', error);
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchProperty();
+    
+    fetchData();
   }, [params.id]);
 
   const handleToggleLocated = async () => {
@@ -96,22 +88,59 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
     }
   };
 
-  const handleActivitySubmit = (newActivity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>) => {
-    setActivities(prev => [{
-      date: newActivity.date,
-      type: newActivity.type,
-      status: newActivity.status,
-      client: newActivity.client,
-    }, ...prev]);
-    setIsActivityFormOpen(false);
+  const handleActivitySubmit = async (newActivity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await createActivity({
+        propertyId: params.id,
+        type: newActivity.type,
+        status: newActivity.status,
+        date: newActivity.date,
+        client: newActivity.client,
+        notes: newActivity.notes
+      });
+      
+      // Recargar las actividades
+      const activitiesData = await getActivitiesByPropertyId(params.id);
+      if (activitiesData) {
+        setActivities(activitiesData);
+      }
+      
+      setIsActivityFormOpen(false);
+    } catch (error) {
+      console.error('Error creating activity:', error);
+    }
   };
 
-  const handleDPVSubmit = (data: DPV) => {
-    setDPV(data);
-    setIsDPVFormOpen(false);
+  const handleDPVSubmit = async (data: DPV) => {
+    try {
+      const result = await createOrUpdateDPV(params.id, {
+        links: data.links,
+        realEstate: data.realEstate,
+        phone: data.phone,
+        currentPrice: data.currentPrice,
+        estimatedValue: data.estimatedValue,
+        propertyId: params.id
+      });
+      
+      if (result) {
+        setDPV({
+          links: result.links as string[],
+          realEstate: result.realEstate || '',
+          phone: result.phone || '',
+          currentPrice: result.currentPrice || 0,
+          estimatedValue: result.estimatedValue || 0,
+          propertyId: params.id
+        });
+      }
+      
+      setIsDPVFormOpen(false);
+    } catch (error) {
+      console.error('Error updating DPV:', error);
+    }
   };
 
-  if (!property) return <div>Cargando...</div>;
+  if (isLoading) return <div className="p-8 text-center">Cargando...</div>;
+  if (!property) return <div className="p-8 text-center">Inmueble no encontrado</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -147,7 +176,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
             
             <div>
               <label className="text-sm text-gray-500">Zona</label>
-              <p className="font-medium">{property.zone || 'N/A'}</p>
+              <p className="font-medium">{property.zone?.name || 'N/A'}</p>
             </div>
             
             <div>
@@ -162,7 +191,18 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
             
             <div>
               <label className="text-sm text-gray-500">Último contacto</label>
-              <p className="font-medium">{property.lastContact || 'N/A'}</p>
+              {activities.length > 0 ? (
+                <div>
+                  <p className="font-medium">
+                    {new Date(activities[0].date).toLocaleDateString('es-ES')}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Tipo: {activities[0].type}
+                  </p>
+                </div>
+              ) : (
+                <p className="font-medium">N/A</p>
+              )}
             </div>
             
             <div>
@@ -195,22 +235,27 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
           </div>
           
           <div className="space-y-4">
-            {activities.map((activity, index) => (
-              <div key={index} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500">{activity.date}</p>
-                    <p className="font-medium">Tipo: {activity.type}</p>
-                    {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
+            {activities.length > 0 ? (
+              activities.map((activity, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-gray-500">{activity.date}</p>
+                      <p className="font-medium">Tipo: {activity.type}</p>
+                      {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
+                      {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
+                    </div>
+                    <span className={`px-2 py-1 text-sm rounded-full ${
+                      activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {activity.status}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-sm rounded-full ${
-                    activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {activity.status}
-                  </span>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No hay actividades registradas</p>
+            )}
           </div>
         </div>
 
@@ -218,46 +263,64 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">DPV</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-500">Links:</label>
-              <ul className="list-disc list-inside text-blue-600">
-                {dpv.links.map((link, index) => (
-                  <li key={index}><a href={link} className="hover:underline">{link}</a></li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Inmobiliaria:</label>
-              <p className="font-medium">{dpv.realEstate}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Teléfono:</label>
-              <p className="font-medium">{dpv.phone}</p>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div>
-                <label className="text-sm text-gray-500">Precio Actual:</label>
-                <p className="font-medium">{dpv.currentPrice} €</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">Valoración Estimada:</label>
-                <p className="font-medium">{dpv.estimatedValue} €</p>
-              </div>
-            </div>
-            
             <button 
               onClick={() => setIsDPVFormOpen(true)}
-              className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
             >
-              Editar
+              <PlusIcon className="h-5 w-5" />
             </button>
           </div>
+          
+          {dpv ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-500">Links:</label>
+                <ul className="list-disc list-inside text-blue-600">
+                  {dpv.links.map((link, index) => (
+                    <li key={index}><a href={link} className="hover:underline">{link}</a></li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-500">Inmobiliaria:</label>
+                <p className="font-medium">{dpv.realEstate || 'N/A'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-500">Teléfono:</label>
+                <p className="font-medium">{dpv.phone || 'N/A'}</p>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <label className="text-sm text-gray-500">Precio Actual:</label>
+                  <p className="font-medium">{dpv.currentPrice ? `${dpv.currentPrice} €` : 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500">Valoración Estimada:</label>
+                  <p className="font-medium">{dpv.estimatedValue ? `${dpv.estimatedValue} €` : 'N/A'}</p>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setIsDPVFormOpen(true)}
+                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              >
+                Editar
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">No hay información DPV registrada</p>
+              <button 
+                onClick={() => setIsDPVFormOpen(true)}
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Agregar DPV
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -302,7 +365,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
           <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
-                {dpv.realEstate ? 'Editar DPV' : 'Nuevo DPV'}
+                {dpv ? 'Editar DPV' : 'Nuevo DPV'}
               </Dialog.Title>
               <button
                 onClick={() => setIsDPVFormOpen(false)}
@@ -313,7 +376,13 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
             </div>
             
             <DPVForm
-              initialData={dpv}
+              initialData={dpv || {
+                links: [],
+                realEstate: '',
+                phone: '',
+                currentPrice: 0,
+                estimatedValue: 0
+              }}
               onSubmit={handleDPVSubmit}
               onCancel={() => setIsDPVFormOpen(false)}
             />

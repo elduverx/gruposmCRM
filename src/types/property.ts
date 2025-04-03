@@ -32,32 +32,45 @@ interface Client {
   updatedAt: Date;
 }
 
+export interface Activity {
+  id: string;
+  type: string;
+  status: string;
+  date: string;
+  client?: string;
+  notes?: string;
+  propertyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Property {
   id: string;
-  address: string;
   population: string;
+  zone?: {
+    id: string;
+    name: string;
+  };
+  address: string;
+  occupiedBy?: string;
+  ownerName: string;
+  ownerPhone: string;
+  responsible?: string;
+  isLocated: boolean;
+  createdAt: string;
+  updatedAt: string;
   status: PropertyStatus;
   action: PropertyAction;
   type: PropertyType;
-  ownerName: string;
-  ownerPhone: string;
-  captureDate: Date;
-  responsibleId: string | null;
+  captureDate: string;
+  responsibleId?: string;
   hasSimpleNote: boolean;
   isOccupied: boolean;
-  clientId: string | null;
-  zoneId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  latitude: number | null;
-  longitude: number | null;
-  occupiedBy: string | null;
-  zone: Zone | null;
-  isLocated: boolean;
-  lastContact: Date | null;
-  responsible: string | null;
-  assignments: Assignment[];
-  client: Client | null;
+  clientId?: string;
+  zoneId?: string;
+  latitude?: number;
+  longitude?: number;
+  activities?: Activity[];
 }
 
 export interface PropertyCreateInput {
@@ -78,7 +91,6 @@ export interface PropertyCreateInput {
   longitude?: number | null;
   occupiedBy?: string | null;
   isLocated?: boolean;
-  lastContact?: Date | null;
 }
 
 export interface PropertyUpdateInput {
@@ -99,14 +111,16 @@ export interface PropertyUpdateInput {
   longitude?: number | null;
   occupiedBy?: string | null;
   isLocated?: boolean;
-  lastContact?: Date | null;
 }
 
-export interface Activity {
+export interface DPV {
   id: string;
-  type: string;
-  description: string;
-  createdAt: Date;
+  links: string[];
+  realEstate: string;
+  phone: string;
+  currentPrice: number;
+  estimatedValue: number;
   propertyId: string;
-  userId: string;
+  createdAt: string;
+  updatedAt: string;
 } 

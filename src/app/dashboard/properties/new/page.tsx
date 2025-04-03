@@ -8,7 +8,6 @@ import L from 'leaflet';
 import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/geocoding';
 import { createProperty, updateProperty, getPropertyById } from '../actions';
 import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
-import { Property } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
 
 // Fix for default marker icons in Next.js
@@ -46,7 +45,6 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [property, setProperty] = useState<Property | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [formData, setFormData] = useState({
     address: '',
@@ -111,7 +109,6 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
         try {
           const propertyData = await getPropertyById(params.id!);
           if (propertyData) {
-            setProperty(propertyData);
             setFormData({
               address: propertyData.address,
               population: propertyData.population,
@@ -238,7 +235,7 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
       } else {
         await createProperty(data);
       }
-
+      
       router.push('/dashboard/properties');
       router.refresh();
     } catch (error) {
@@ -268,28 +265,28 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
               <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6">
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Dirección
-                    </label>
-                    <div className="mt-1 flex rounded-md shadow-sm">
-                      <input
-                        type="text"
-                        name="address"
-                        id="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
+                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                          Dirección
+                        </label>
+                        <div className="mt-1 flex rounded-md shadow-sm">
+                          <input
+                            type="text"
+                            name="address"
+                            id="address"
+                            value={formData.address}
+                            onChange={handleInputChange}
                         className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
                         placeholder="Calle, número, piso, puerta"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddressSearch}
-                        disabled={isSearching}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddressSearch}
+                            disabled={isSearching}
                         className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        {isSearching ? 'Buscando...' : 'Buscar'}
-                      </button>
+                          >
+                            {isSearching ? 'Buscando...' : 'Buscar'}
+                          </button>
                     </div>
                   </div>
 
@@ -415,32 +412,32 @@ export default function PropertyFormPage({ params }: { params?: { id?: string } 
                       </label>
                     </div>
                   </div>
-                </div>
+                  </div>
 
-                <div className="col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación en el mapa
-                  </label>
+                  <div className="col-span-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ubicación en el mapa
+                    </label>
                   <div className="h-96 w-full rounded-md border border-gray-300">
-                    <MapContainer
-                      center={[40.4168, -3.7038]}
-                      zoom={13}
-                      style={{ height: '100%', width: '100%' }}
-                    >
-                      <TileLayer
+                      <MapContainer
+                        center={[40.4168, -3.7038]}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%' }}
+                      >
+                        <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <LocationMarker onLocationSelect={handleLocationSelect} />
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <LocationMarker onLocationSelect={handleLocationSelect} />
                       {selectedLocation && (
                         <>
                           <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
-                          <MapController coordinates={selectedLocation} />
+                        <MapController coordinates={selectedLocation} />
                         </>
-                      )}
-                    </MapContainer>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">
+                        )}
+                      </MapContainer>
+                    </div>
+                      <p className="mt-2 text-sm text-gray-500">
                     Haz clic en el mapa para seleccionar la ubicación del inmueble.
                   </p>
                 </div>

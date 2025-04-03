@@ -32,12 +32,6 @@ const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), {
   ssr: false
 });
 
-// Importar estilos de leaflet-draw
-if (typeof window !== 'undefined') {
-  import('leaflet/dist/leaflet.css');
-  import('leaflet-draw/dist/leaflet.draw.css');
-}
-
 // Fix para los iconos por defecto de Leaflet
 let icon: any = null;
 
@@ -93,8 +87,18 @@ const MapWithDraw = ({
     if (selectedPropertyId && markerRefs.current[selectedPropertyId]) {
       // Usar setTimeout para asegurar que el popup se abra después de que el mapa se haya actualizado
       setTimeout(() => {
-        markerRefs.current[selectedPropertyId].openPopup();
-      }, 100);
+        try {
+          const marker = markerRefs.current[selectedPropertyId];
+          if (marker && marker.openPopup) {
+            marker.openPopup();
+            console.log(`Abriendo popup para la propiedad ${selectedPropertyId}`);
+          } else {
+            console.warn(`No se pudo abrir el popup para la propiedad ${selectedPropertyId}: marcador no válido`);
+          }
+        } catch (error) {
+          console.error(`Error al abrir el popup para la propiedad ${selectedPropertyId}:`, error);
+        }
+      }, 300); // Aumentar el tiempo de espera para asegurar que el mapa esté listo
     }
   }, [selectedPropertyId]);
 
@@ -406,6 +410,14 @@ export default function ZonesPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
 
+  // Importar estilos de leaflet-draw
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('leaflet/dist/leaflet.css');
+      import('leaflet-draw/dist/leaflet.draw.css');
+    }
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -462,11 +474,15 @@ export default function ZonesPage() {
     setSelectedPropertyId(property.id);
     setCenter([property.latitude!, property.longitude!]);
     setZoom(15);
+    
+    // Asegurarse de que el popup se abra cuando se selecciona una propiedad
+    console.log(`Propiedad seleccionada: ${property.id}`);
   };
 
   const handleZoneClick = async (zone: Zone) => {
     setSelectedZone(zone);
     setSelectedProperty(null);
+    setSelectedPropertyId(null); // Limpiar la propiedad seleccionada al cambiar de zona
     
     try {
       // Filtrar propiedades que están dentro de la zona
@@ -796,6 +812,7 @@ export default function ZonesPage() {
                   <button
                     onClick={() => {
                       setSelectedZone(null);
+                      setSelectedPropertyId(null); // Limpiar la propiedad seleccionada
                       // Recargar todas las propiedades
                       getProperties().then(data => {
                         if (data) {

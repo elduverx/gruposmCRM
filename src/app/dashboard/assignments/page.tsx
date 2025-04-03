@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState([]);
+  const [assignments] = useState([]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">

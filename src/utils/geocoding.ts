@@ -87,16 +87,16 @@ export async function getAddressFromCoordinates(lat: number, lng: number) {
   }
 }
 
-interface NominatimResult {
-  lat: string;
-  lon: string;
-  display_name: string;
-  address?: {
-    city?: string;
-    town?: string;
-    village?: string;
-  };
-}
+// interface NominatimResult {
+//   lat: string;
+//   lon: string;
+//   display_name: string;
+//   address?: {
+//     city?: string;
+//     town?: string;
+//     village?: string;
+//   };
+// }
 
 // Función para obtener coordenadas a partir de una dirección
 export async function getCoordinatesFromAddress(address: string) {

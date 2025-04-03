@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { getProperties, deleteProperty } from './actions';
 import { Property } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
@@ -42,53 +42,12 @@ export default function PropertiesPage() {
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'IN_PROCESS':
-        return 'bg-blue-100 text-blue-800';
-      case 'AVAILABLE':
-        return 'bg-green-100 text-green-800';
-      case 'SOLD':
-        return 'bg-red-100 text-red-800';
-      case 'RENTED':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
-  const getActionBadgeClass = (action: string) => {
-    switch (action) {
-      case 'SALE':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'RENT':
-        return 'bg-pink-100 text-pink-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
-  const getTypeBadgeClass = (type: string) => {
-    switch (type) {
-      case 'HOUSE':
-        return 'bg-teal-100 text-teal-800';
-      case 'APARTMENT':
-        return 'bg-cyan-100 text-cyan-800';
-      case 'COMMERCIAL':
-        return 'bg-orange-100 text-orange-800';
-      case 'LAND':
-        return 'bg-lime-100 text-lime-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatPrice = (price: string | null) => {
-    if (!price) return 'No especificado';
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(price));
-  };
+  // const formatPrice = (price: string | null) => {
+  //   if (!price) return 'No especificado';
+  //   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(price));
+  // };
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-96">Cargando...</div>;
@@ -138,10 +97,15 @@ export default function PropertiesPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.address}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                        {property.lastContact ? (
-                          <span title={`Último contacto: ${new Date(property.lastContact).toLocaleDateString()}`}>
-                            {new Date(property.lastContact).toLocaleDateString()}
-                          </span>
+                        {property.activities?.[0] ? (
+                          <div>
+                            <div title={`Último contacto: ${new Date(property.activities[0].date).toLocaleDateString()}`}>
+                              {new Date(property.activities[0].date).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {property.activities[0].type}
+                            </div>
+                          </div>
                         ) : '-'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
@@ -158,13 +122,23 @@ export default function PropertiesPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <Link
-                          href={`/dashboard/properties/${property.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                          <span className="sr-only">Editar {property.address}</span>
-                        </Link>
+                        <div className="flex justify-end space-x-2">
+                          <Link
+                            href={`/dashboard/properties/${property.id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                            <span className="sr-only">Editar {property.address}</span>
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteProperty(property.id)}
+                            disabled={isDeleting === property.id}
+                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                            <span className="sr-only">Eliminar {property.address}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
