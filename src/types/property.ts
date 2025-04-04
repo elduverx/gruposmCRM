@@ -1,5 +1,6 @@
-import { Prisma, PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { Client } from './client';
+import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 
 // interface Zone {
 //   id: string;
@@ -43,12 +44,15 @@ export interface Activity {
   updatedAt: string;
 }
 
+export type { PropertyStatus, PropertyAction, PropertyType };
+
 export interface Property {
   id: string;
   address: string;
   population: string;
   status: PropertyStatus;
   action: PropertyAction;
+  type: PropertyType;
   ownerName: string;
   ownerPhone: string;
   captureDate: string;
@@ -62,7 +66,6 @@ export interface Property {
   latitude?: number;
   longitude?: number;
   occupiedBy?: string;
-  type: PropertyType;
   isLocated: boolean;
   responsible?: string;
   activities?: Activity[];
@@ -101,26 +104,7 @@ export interface PropertyCreateInput {
   responsible?: string | null;
 }
 
-export interface PropertyUpdateInput {
-  address?: string;
-  population?: string;
-  status?: PropertyStatus;
-  action?: PropertyAction;
-  type?: PropertyType;
-  ownerName?: string;
-  ownerPhone?: string;
-  captureDate?: Date;
-  responsibleId?: string | null;
-  hasSimpleNote?: boolean;
-  isOccupied?: boolean;
-  clientId?: string | null;
-  zoneId?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  occupiedBy?: string | null;
-  isLocated?: boolean;
-  responsible?: string | null;
-}
+export interface PropertyUpdateInput extends Partial<PropertyCreateInput> {}
 
 export interface DPV {
   id: string;

@@ -22,8 +22,8 @@ model Property {
   id              String         @id @default(cuid())
   address         String
   population      String
-  status          PropertyStatus @default(IN_PROCESS)
-  action          PropertyAction @default(NEWS)
+  status          PropertyStatus @default(SIN_EMPEZAR)
+  action          PropertyAction @default(IR_A_DIRECCION)
   ownerName       String
   ownerPhone      String
   captureDate     DateTime       @default(now())
@@ -37,7 +37,7 @@ model Property {
   latitude        Float?
   longitude       Float?
   occupiedBy      String?
-  type            PropertyType   @default(HOUSE)
+  type            PropertyType   @default(CASA)
   isLocated       Boolean        @default(false)
   responsible     String?
   activities      Activity[]
@@ -138,25 +138,28 @@ enum Role {
 }
 
 enum PropertyType {
-  HOUSE
-  APARTMENT
-  COMMERCIAL
-  LAND
+  CHALET
+  PISO
+  CASA
+  APARTAMENTO
+  ATICO
+  DUPLEX
+  TERRENO
+  LOCAL_COMERCIAL
+  OFICINA
+  GARAJE
+  TRASTERO
 }
 
 enum PropertyStatus {
-  IN_PROCESS
-  AVAILABLE
-  SOLD
-  RENTED
-  PENDING
+  SIN_EMPEZAR
+  EMPEZADA
 }
 
 enum PropertyAction {
-  NEWS
-  SALE
-  RENT
-  OTHER
+  IR_A_DIRECCION
+  REPETIR
+  LOCALIZAR_VERIFICADO
 }
 
 enum AssignmentStatus {

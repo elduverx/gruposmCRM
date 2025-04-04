@@ -150,9 +150,9 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
       data: {
         address: data.address,
         population: data.population,
-        status: data.status || PropertyStatus.IN_PROCESS,
-        action: data.action || PropertyAction.NEWS,
-        type: data.type || PropertyType.HOUSE,
+        status: 'SIN_EMPEZAR' as PropertyStatus,
+        action: 'IR_A_DIRECCION' as PropertyAction,
+        type: 'CASA' as PropertyType,
         ownerName: data.ownerName,
         ownerPhone: data.ownerPhone,
         captureDate: data.captureDate || new Date(),
@@ -190,7 +190,7 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
         id: property.zone.id,
         name: property.zone.name
       } : undefined,
-      activities: property.activities ? property.activities.map(activity => ({
+      activities: property.activities.map(activity => ({
         id: activity.id,
         type: activity.type,
         status: activity.status,
@@ -200,7 +200,7 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
         propertyId: activity.propertyId,
         createdAt: activity.createdAt.toISOString(),
         updatedAt: activity.updatedAt.toISOString()
-      })) : [],
+      })),
       responsibleUser: property.responsibleUser ? {
         id: property.responsibleUser.id,
         name: property.responsibleUser.name,

@@ -6,6 +6,8 @@ import { getProperties } from '../properties/actions';
 import { getZones, createZone, Zone, updateZone, deleteZone } from './actions';
 import { Property } from '@/types/property';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 // Importar componentes de Leaflet dinámicamente para evitar el error de window
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
@@ -101,7 +103,7 @@ const MapWithDraw = ({
 
   // Efecto para inicializar el control de dibujo
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current || !initializedRef.current) return;
+    if (typeof window === 'undefined' || !mapRef.current) return;
     
     // Guardar una referencia al mapa actual
     const currentMap = mapRef.current;
@@ -109,7 +111,7 @@ const MapWithDraw = ({
     const initializeDrawControl = async () => {
       try {
         const L = await import('leaflet');
-        await import('leaflet-draw');
+        const { default: LeafletDraw } = await import('leaflet-draw');
         
         // Crear un grupo de características para almacenar las zonas dibujadas
         if (!featureGroupRef.current) {
@@ -181,7 +183,6 @@ const MapWithDraw = ({
     
     // Función de limpieza
     return () => {
-      console.log('Limpiando control de dibujo');
       if (drawControlRef.current && currentMap) {
         currentMap.removeControl(drawControlRef.current);
         drawControlRef.current = null;
