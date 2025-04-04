@@ -109,11 +109,28 @@ export interface PropertyUpdateInput extends Partial<PropertyCreateInput> {}
 export interface DPV {
   id: string;
   links: string[];
-  realEstate: string;
-  phone: string;
-  currentPrice: number;
-  estimatedValue: number;
+  realEstate: string | null;
+  phone: string | null;
+  currentPrice: number | null;
+  estimatedValue: number | null;
   propertyId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PropertyNews {
+  id: string;
+  type: string;
+  action: string;
+  valuation: string;
+  priority: string;
+  responsible: string;
+  value: number | null;
+  propertyId: string;
+  createdAt: string;
+  updatedAt: string;
+  property?: {
+    address: string;
+    population: string;
+  };
 } 

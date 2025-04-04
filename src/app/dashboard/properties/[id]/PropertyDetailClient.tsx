@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId } from '../actions';
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createPropertyNews, getPropertyNews } from '../actions';
+import { PlusIcon, XMarkIcon, NewspaperIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
+import { PropertyNewsForm } from '../PropertyNewsForm';
 
 interface DPV {
   links: string[];
@@ -23,19 +24,23 @@ interface PropertyDetailClientProps {
   initialProperty: Property | null;
   initialActivities: Activity[];
   initialDPV: any | null;
+  initialNews: any[];
 }
 
 export default function PropertyDetailClient({ 
   propertyId, 
   initialProperty, 
   initialActivities, 
-  initialDPV 
+  initialDPV,
+  initialNews 
 }: PropertyDetailClientProps) {
   const [property, setProperty] = useState<Property | null>(initialProperty);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [isDPVFormOpen, setIsDPVFormOpen] = useState(false);
+  const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
+  const [news, setNews] = useState<any[]>(initialNews);
   const [dpv, setDPV] = useState<DPV | null>(initialDPV ? {
     links: initialDPV.links as string[],
     realEstate: initialDPV.realEstate || '',
@@ -117,6 +122,23 @@ export default function PropertyDetailClient({
     }
   };
 
+  const handleNewsSubmit = async (data: any) => {
+    try {
+      const result = await createPropertyNews({
+        ...data,
+        propertyId,
+        value: data.type === 'DPV' ? dpv?.currentPrice : null
+      });
+      
+      if (result) {
+        setNews(prev => [result, ...prev]);
+        setIsNewsFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating news:', error);
+    }
+  };
+
   if (!property) return <div className="p-8 text-center">Inmueble no encontrado</div>;
 
   return (
@@ -124,7 +146,7 @@ export default function PropertyDetailClient({
       {/* Información General */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Información General</h2>
+          <h2 className="text-xl font-semibold text-blue-600">Información General</h2>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Localizado:</span>
             <button 
@@ -146,27 +168,27 @@ export default function PropertyDetailClient({
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="text-sm text-gray-500">Población</label>
+            <label className="text-sm text-gray-700">Población</label>
             <p className="font-medium">{property.population}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Zona</label>
+            <label className="text-sm text-gray-700">Zona</label>
             <p className="font-medium">{property.zone?.name || 'N/A'}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Dirección</label>
+            <label className="text-sm text-gray-700">Dirección</label>
             <p className="font-medium">{property.address}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Ocupado por</label>
+            <label className="text-sm text-gray-700">Ocupado por</label>
             <p className="font-medium">{property.occupiedBy || 'N/A'}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Último contacto</label>
+            <label className="text-sm text-gray-700">Último contacto</label>
             {activities.length > 0 ? (
               <div>
                 <p className="font-medium">
@@ -182,17 +204,17 @@ export default function PropertyDetailClient({
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Nombre propietario</label>
+            <label className="text-sm text-gray-700">Nombre propietario</label>
             <p className="font-medium">{property.ownerName}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Teléfono</label>
+            <label className="text-sm text-gray-700">Teléfono</label>
             <p className="font-medium">{property.ownerPhone}</p>
           </div>
           
           <div>
-            <label className="text-sm text-gray-500">Responsable</label>
+            <label className="text-sm text-gray-700">Responsable</label>
             <p className="font-medium">{property.responsible || 'N/A'}</p>
           </div>
         </div>
@@ -205,7 +227,7 @@ export default function PropertyDetailClient({
           {/* Activities */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Actividades</h2>
+              <h2 className="text-xl font-semibold text-blue-600">Actividades</h2>
               <button 
                 onClick={() => setIsActivityFormOpen(true)}
                 className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
@@ -242,7 +264,7 @@ export default function PropertyDetailClient({
           {/* DPV */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">DPV</h2>
+              <h2 className="text-xl font-semibold text-blue-600">DPV</h2>
               <button 
                 onClick={() => setIsDPVFormOpen(true)}
                 className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
@@ -254,7 +276,7 @@ export default function PropertyDetailClient({
             {dpv ? (
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-500">Links:</label>
+                  <label className="text-sm text-gray-700">Links:</label>
                   <ul className="list-disc list-inside text-blue-600 mt-1">
                     {dpv.links.map((link, index) => (
                       <li key={index} className="mb-1">
@@ -268,50 +290,76 @@ export default function PropertyDetailClient({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-500">Inmobiliaria:</label>
+                    <label className="text-sm text-gray-700">Inmobiliaria:</label>
                     <p className="font-medium">{dpv.realEstate || 'N/A'}</p>
                   </div>
                   
                   <div>
-                    <label className="text-sm text-gray-500">Teléfono:</label>
+                    <label className="text-sm text-gray-700">Teléfono:</label>
                     <p className="font-medium">{dpv.phone || 'N/A'}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-500">Precio Actual:</label>
+                    <label className="text-sm text-gray-700">Precio Actual:</label>
                     <p className="font-medium">{dpv.currentPrice ? `${dpv.currentPrice.toLocaleString()} €` : 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">Valoración Estimada:</label>
+                    <label className="text-sm text-gray-700">Valoración Estimada:</label>
                     <p className="font-medium">{dpv.estimatedValue ? `${dpv.estimatedValue.toLocaleString()} €` : 'N/A'}</p>
                   </div>
                 </div>
-                
-                <button 
-                  onClick={() => setIsDPVFormOpen(true)}
-                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center mt-2"
-                >
-                  Editar
-                </button>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No hay información DPV registrada</p>
-                <button 
-                  onClick={() => setIsDPVFormOpen(true)}
-                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Agregar DPV
-                </button>
-              </div>
+              <p className="text-center text-gray-500 py-4">No hay información de DPV</p>
             )}
+          </div>
+
+          {/* Noticias */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-blue-600">Noticias</h2>
+              <button 
+                onClick={() => setIsNewsFormOpen(true)}
+                className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
+                title="Crear noticia"
+              >
+                <NewspaperIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {news.length > 0 ? (
+                news.map((item) => (
+                  <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
+                        <p className="font-medium">Tipo: {item.type}</p>
+                        <p className="text-sm">Acción: {item.action === 'SALE' ? 'Venta' : 'Alquiler'}</p>
+                        <p className="text-sm">Valoración: {item.valuation === 'PRECIOSM' ? 'PrecioSM' : 'Precio Cliente'}</p>
+                        <p className="text-sm">Responsable: {item.responsible}</p>
+                        {item.value && <p className="text-sm">Valor: {item.value.toLocaleString()} €</p>}
+                      </div>
+                      <span className={`px-2 py-1 text-sm rounded-full ${
+                        item.priority === 'HIGH' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">No hay noticias registradas</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Activity Modal */}
+      {/* Modales */}
+      {/* Modal de Actividades */}
       <Dialog
         open={isActivityFormOpen}
         onClose={() => setIsActivityFormOpen(false)}
@@ -320,27 +368,29 @@ export default function PropertyDetailClient({
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
-            <div className="flex justify-between items-center mb-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
               <Dialog.Title className="text-lg font-medium">Nueva Actividad</Dialog.Title>
               <button
                 onClick={() => setIsActivityFormOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
             
-            <ActivityForm
-              propertyId={propertyId}
-              onSubmit={handleActivitySubmit}
-              onCancel={() => setIsActivityFormOpen(false)}
-            />
+            <div className="p-6">
+              <ActivityForm 
+                propertyId={propertyId}
+                onSubmit={handleActivitySubmit}
+                onCancel={() => setIsActivityFormOpen(false)}
+              />
+            </div>
           </Dialog.Panel>
         </div>
       </Dialog>
 
-      {/* DPV Modal */}
+      {/* Modal de DPV */}
       <Dialog
         open={isDPVFormOpen}
         onClose={() => setIsDPVFormOpen(false)}
@@ -349,31 +399,67 @@ export default function PropertyDetailClient({
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
-            <div className="flex justify-between items-center mb-4">
-              <Dialog.Title className="text-lg font-medium">
-                {dpv ? 'Editar DPV' : 'Nuevo DPV'}
-              </Dialog.Title>
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <Dialog.Title className="text-lg font-medium">DPV</Dialog.Title>
               <button
                 onClick={() => setIsDPVFormOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
             
-            <DPVForm
-              initialData={dpv || {
-                links: [],
-                realEstate: '',
-                phone: '',
-                currentPrice: 0,
-                estimatedValue: 0,
-                propertyId: propertyId
-              }}
-              onSubmit={handleDPVSubmit}
-              onCancel={() => setIsDPVFormOpen(false)}
-            />
+            <div className="p-6">
+              <DPVForm 
+                initialData={dpv || {
+                  links: [],
+                  realEstate: '',
+                  phone: '',
+                  currentPrice: 0,
+                  estimatedValue: 0,
+                  propertyId: propertyId
+                }}
+                onSubmit={handleDPVSubmit}
+                onCancel={() => setIsDPVFormOpen(false)}
+              />
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Modal de Noticias */}
+      <Dialog
+        open={isNewsFormOpen}
+        onClose={() => setIsNewsFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <Dialog.Title className="text-lg font-medium">Nueva Noticia</Dialog.Title>
+              <button
+                onClick={() => setIsNewsFormOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <PropertyNewsForm 
+                propertyId={propertyId}
+                dpvValue={dpv?.currentPrice}
+                onSuccess={() => {
+                  setIsNewsFormOpen(false);
+                  getPropertyNews(propertyId).then(newsData => {
+                    setNews(newsData);
+                  });
+                }}
+              />
+            </div>
           </Dialog.Panel>
         </div>
       </Dialog>

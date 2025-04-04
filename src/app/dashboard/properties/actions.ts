@@ -1,7 +1,7 @@
 'use server';
 
 import { PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/client';
-import { Property, PropertyCreateInput, Activity } from '@/types/property';
+import { Property, PropertyCreateInput, Activity, DPV, PropertyNews } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
@@ -369,5 +369,53 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
   } catch (error) {
     console.error('Error creating/updating DPV:', error);
     return null;
+  }
+}
+
+export async function createPropertyNews(data: {
+  type: string;
+  action: string;
+  valuation: string;
+  priority: string;
+  responsible: string;
+  value?: number;
+  propertyId: string;
+}): Promise<PropertyNews | null> {
+  try {
+    const propertyNews = await prisma.propertyNews.create({
+      data: {
+        type: data.type,
+        action: data.action,
+        valuation: data.valuation,
+        priority: data.priority,
+        responsible: data.responsible,
+        value: data.value || null,
+        propertyId: data.propertyId
+      }
+    });
+    
+    revalidatePath(`/dashboard/properties/${data.propertyId}`);
+    revalidatePath('/dashboard/news');
+    return propertyNews;
+  } catch (error) {
+    console.error('Error creating property news:', error);
+    return null;
+  }
+}
+
+export async function getPropertyNews(propertyId: string): Promise<PropertyNews[]> {
+  try {
+    const propertyNews = await prisma.propertyNews.findMany({
+      where: {
+        propertyId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    return propertyNews;
+  } catch (error) {
+    console.error('Error getting property news:', error);
+    return [];
   }
 } 

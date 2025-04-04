@@ -43,6 +43,7 @@ model Property {
   activities      Activity[]
   assignments     Assignment[]
   dpv             DPV?
+  propertyNews    PropertyNews[]
   responsibleUser User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
   zone            Zone?          @relation(fields: [zoneId], references: [id])
   clients         Client[]       @relation("ClientProperties")
@@ -130,6 +131,22 @@ model DPV {
   property       Property @relation(fields: [propertyId], references: [id])
 
   @@index([propertyId], map: "DPV_propertyId_fkey")
+}
+
+model PropertyNews {
+  id          String   @id @default(cuid())
+  type        String   // DPV o PVA
+  action      String   // SALE o RENT
+  valuation   String   // PRECIOSM o PRECIO_CLIENTE
+  priority    String   // HIGH o LOW
+  responsible String
+  value       Float?
+  propertyId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  property    Property @relation(fields: [propertyId], references: [id])
+
+  @@index([propertyId], map: "PropertyNews_propertyId_fkey")
 }
 
 enum Role {

@@ -1,5 +1,5 @@
 import { Property, Activity } from '@/types/property';
-import { getPropertyById, updateProperty, getActivitiesByPropertyId, createActivity, getDPVByPropertyId, createOrUpdateDPV } from '../actions';
+import { getPropertyById, updateProperty, getActivitiesByPropertyId, createActivity, getDPVByPropertyId, createOrUpdateDPV, getPropertyNews } from '../actions';
 import PropertyDetailClient from './PropertyDetailClient';
 
 interface PageProps {
@@ -13,16 +13,18 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const propertyId = resolvedParams.id;
   
   // Fetch initial data on the server
-  const [property, activities, dpv] = await Promise.all([
+  const [property, activities, dpv, news] = await Promise.all([
     getPropertyById(propertyId),
     getActivitiesByPropertyId(propertyId),
-    getDPVByPropertyId(propertyId)
+    getDPVByPropertyId(propertyId),
+    getPropertyNews(propertyId)
   ]);
   
   return <PropertyDetailClient 
     propertyId={propertyId} 
     initialProperty={property} 
     initialActivities={activities} 
-    initialDPV={dpv} 
+    initialDPV={dpv}
+    initialNews={news}
   />;
 } 
