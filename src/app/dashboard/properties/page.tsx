@@ -1,54 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon, MapIcon } from '@heroicons/react/24/outline';
-import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId } from './actions';
+import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from './actions';
 import { Property, Activity, DPV } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { getZones, updateZone, Zone } from '../zones/actions';
-import dynamic from 'next/dynamic';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-
-// Importar componentes de Leaflet dinámicamente para evitar el error de window
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse" />
-});
-
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), {
-  ssr: false
-});
-
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), {
-  ssr: false
-});
-
-const Polygon = dynamic(() => import('react-leaflet').then(mod => mod.Polygon), {
-  ssr: false
-});
-
-// Fix para los iconos por defecto de Leaflet
-let icon: L.Icon | L.DivIcon | undefined = undefined;
-
-if (typeof window !== 'undefined') {
-  import('leaflet').then((L) => {
-    icon = L.default.icon({
-      iconUrl: '/marker-icon.png',
-      shadowUrl: '/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-  });
-}
+import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+import ActivityForm from '@/components/ActivityForm';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -61,15 +24,6 @@ export default function PropertiesPage() {
   const [newZoneName, setNewZoneName] = useState('');
   const [newZoneDescription, setNewZoneDescription] = useState('');
   const [newZoneColor, setNewZoneColor] = useState('#FF0000');
-  const [zoneCoordinates, setZoneCoordinates] = useState<{ lat: number; lng: number }[]>([]);
-  const [center, setCenter] = useState<[number, number]>([40.4168, -3.7038]); // Madrid por defecto
-  const [zoom, setZoom] = useState(13);
-  const [mapRef, setMapRef] = useState<L.Map | null>(null);
-  const mapRefObj = useRef<L.Map | null>(null);
-  const [featureGroupRef, setFeatureGroupRef] = useState<L.FeatureGroup | null>(null);
-  const [drawControlRef, setDrawControlRef] = useState<L.Control.Draw | null>(null);
-  
-  // Estados para el modal de edición de propiedades
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Property>>({});
@@ -79,6 +33,9 @@ export default function PropertiesPage() {
   const [selectedPropertyActivities, setSelectedPropertyActivities] = useState<Activity[]>([]);
   const [selectedPropertyDPV, setSelectedPropertyDPV] = useState<DPV | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
+  const [selectedPropertyForActivity, setSelectedPropertyForActivity] = useState<Property | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -137,20 +94,11 @@ export default function PropertiesPage() {
     setNewZoneName(zone.name);
     setNewZoneDescription(zone.description || '');
     setNewZoneColor(zone.color);
-    setZoneCoordinates(zone.coordinates);
     setShowZoneModal(true);
-    
-    // Centrar el mapa en la zona
-    if (zone.coordinates.length > 0) {
-      const centerLat = zone.coordinates.reduce((sum, coord) => sum + coord.lat, 0) / zone.coordinates.length;
-      const centerLng = zone.coordinates.reduce((sum, coord) => sum + coord.lng, 0) / zone.coordinates.length;
-      setCenter([centerLat, centerLng]);
-      setZoom(13);
-    }
   };
 
-  const handleZoneCreated = (coordinates: { lat: number; lng: number }[]) => {
-    setZoneCoordinates(coordinates);
+  const handleZoneCreated = () => {
+    // Implementation needed if required
   };
 
   const handleSaveZone = async () => {
@@ -161,16 +109,11 @@ export default function PropertiesPage() {
         name: newZoneName,
         description: newZoneDescription,
         color: newZoneColor,
-        coordinates: zoneCoordinates
+        coordinates: [] // Empty array as we're not handling coordinates anymore
       });
       
-      // Actualizar la lista de zonas
       setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
-      
-      // Cerrar el modal
       setShowZoneModal(false);
-      
-      // Mostrar mensaje de éxito
       alert('Zona actualizada correctamente');
     } catch (error) {
       console.error('Error updating zone:', error);
@@ -181,76 +124,6 @@ export default function PropertiesPage() {
   const handleCancelZoneEdit = () => {
     setShowZoneModal(false);
     setSelectedZone(null);
-    setZoneCoordinates([]);
-  };
-
-  // Función para inicializar el control de dibujo
-  const initializeDrawControl = async (map: L.Map) => {
-    try {
-      const L = await import('leaflet');
-      const { default: LeafletDraw } = await import('leaflet-draw');
-      
-      // Crear un grupo de características para almacenar las zonas dibujadas
-      const featureGroup = new L.FeatureGroup().addTo(map);
-      setFeatureGroupRef(featureGroup);
-      
-      // Crear el control de dibujo
-      const drawControl = new L.Control.Draw({
-        draw: {
-          // Deshabilitar todas las herramientas de dibujo excepto polígono
-          polyline: false,
-          rectangle: false,
-          circle: false,
-          circlemarker: false,
-          marker: false,
-          polygon: {
-            allowIntersection: false,
-            drawError: {
-              color: '#e1e100',
-              message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
-            },
-            shapeOptions: {
-              color: newZoneColor
-            }
-          }
-        },
-        edit: {
-          featureGroup: featureGroup,
-          remove: false
-        }
-      });
-      
-      // Añadir el control al mapa
-      map.addControl(drawControl);
-      setDrawControlRef(drawControl);
-      
-      // Evento cuando se completa el dibujo de un polígono
-      map.on('draw:created', (e: { layer: L.Layer }) => {
-        const layer = e.layer;
-        featureGroup.addLayer(layer);
-        
-        // Obtener las coordenadas del polígono
-        if (layer instanceof L.Polygon) {
-          const latLngs = layer.getLatLngs()[0];
-          if (Array.isArray(latLngs)) {
-            const coordinates = latLngs.map((latLng: L.LatLng | L.LatLng[]) => {
-              if (latLng instanceof L.LatLng) {
-                return {
-                  lat: latLng.lat,
-                  lng: latLng.lng
-                };
-              }
-              return null;
-            }).filter((coord): coord is { lat: number; lng: number } => coord !== null);
-            
-            // Actualizar las coordenadas
-            setZoneCoordinates(coordinates);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error al inicializar el control de dibujo:', error);
-    }
   };
 
   // Funciones para editar propiedades
@@ -356,125 +229,168 @@ export default function PropertiesPage() {
     }
   };
 
+  const handleActivitySubmit = async (activityData: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newActivity = await createActivity(activityData);
+      if (newActivity) {
+        // Actualizar las actividades en el estado
+        const updatedActivities = [...selectedPropertyActivities, newActivity];
+        setSelectedPropertyActivities(updatedActivities);
+        
+        // Actualizar el mapa de actividades
+        setActivitiesMap(prev => ({
+          ...prev,
+          [activityData.propertyId]: updatedActivities
+        }));
+        
+        setIsActivityFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      alert('Error al crear la actividad');
+    }
+  };
+
+  const handleToggleLocated = async (property: Property) => {
+    try {
+      setIsUpdating(true);
+      const updatedProperty = await updateProperty(property.id, {
+        isLocated: !property.isLocated
+      });
+      if (updatedProperty) {
+        setProperties(properties.map(p => p.id === property.id ? updatedProperty : p));
+        if (selectedPropertyDetails?.id === property.id) {
+          setSelectedPropertyDetails(updatedProperty);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating property:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-96">Cargando...</div>;
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8">
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-xl font-semibold text-gray-900">Inmuebles</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="text-xl font-semibold text-gray-900">Inmuebles</h1>
+          </div>
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <Link
+              href="/dashboard/properties/new"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
+            >
+              Añadir inmueble
+            </Link>
+          </div>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <Link
-            href="/dashboard/properties/new"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
-          >
-            Añadir inmueble
-          </Link>
-        </div>
-      </div>
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Población</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Zona</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ocupado por</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Último contacto</th>
-                    <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Localizado</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Propietario</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Teléfono</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Responsable</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Acciones</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {properties.map((property) => {
-                    const propertyActivities = activitiesMap[property.id] || [];
-                    const lastActivity = propertyActivities.length > 0 ? propertyActivities[0] : null;
-                    const propertyZone = property.zoneId ? zones.find(zone => zone.id === property.zoneId) : null;
-                    
-                    return (
-                      <tr key={property.id}>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                          {propertyZone ? (
-                            <div className="flex items-center">
-                              <span 
-                                className="inline-block w-3 h-3 rounded-full mr-2" 
-                                style={{ backgroundColor: propertyZone.color }}
-                              ></span>
-                              {propertyZone.name}
+        <div className="mt-8 flex flex-col">
+          <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Población</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Zona</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dirección</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ocupado por</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Último contacto</th>
+                      <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Localizado</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Propietario</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Teléfono</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Responsable</th>
+                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                        <span className="sr-only">Acciones</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {properties.map((property) => {
+                      const propertyActivities = activitiesMap[property.id] || [];
+                      const lastActivity = propertyActivities.length > 0 ? propertyActivities[0] : null;
+                      const propertyZone = property.zoneId ? zones.find(zone => zone.id === property.zoneId) : null;
+                      
+                      return (
+                        <tr key={property.id} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                            {propertyZone ? (
+                              <div className="flex items-center">
+                                <span 
+                                  className="inline-block w-3 h-3 rounded-full mr-2" 
+                                  style={{ backgroundColor: propertyZone.color }}
+                                ></span>
+                                {propertyZone.name}
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                            <button
+                              onClick={() => handlePropertyClick(property)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            >
+                              {property.address}
+                            </button>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                            {lastActivity ? (
+                              <span title={`Último contacto: ${lastActivity.date}`}>
+                                {lastActivity.date}
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
+                            {property.isLocated ? (
+                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
+                                <CheckIcon className="h-4 w-4 text-green-600" />
+                              </span>
+                            ) : (
+                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300">
+                              </span>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
+                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => handleEditProperty(property)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                                <span className="sr-only">Editar {property.address}</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProperty(property.id)}
+                                disabled={isDeleting === property.id}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                                <span className="sr-only">Eliminar {property.address}</span>
+                              </button>
                             </div>
-                          ) : '-'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                          <button
-                            onClick={() => handlePropertyClick(property)}
-                            className="text-blue-600 hover:text-blue-900 hover:underline"
-                          >
-                            {property.address}
-                          </button>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                          {lastActivity ? (
-                            <span title={`Último contacto: ${lastActivity.date}`}>
-                              {lastActivity.date}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
-                          {property.isLocated ? (
-                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-                              <CheckIcon className="h-4 w-4 text-green-600" />
-                            </span>
-                          ) : (
-                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300">
-                            </span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex justify-end space-x-2">
-                            <button
-                              onClick={() => handleEditProperty(property)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                              <span className="sr-only">Editar {property.address}</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProperty(property.id)}
-                              disabled={isDeleting === property.id}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                              <span className="sr-only">Eliminar {property.address}</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal para editar zona */}
+      {/* Zone Modal */}
       {showZoneModal && selectedZone && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -482,112 +398,42 @@ export default function PropertiesPage() {
               <h3 className="text-lg font-medium text-gray-900">Editar Zona: {selectedZone.name}</h3>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <div className="h-[400px] border border-gray-300 rounded-md overflow-hidden">
-                    {icon && (
-                      <MapContainer
-                        center={center}
-                        zoom={zoom}
-                        style={{ height: '100%', width: '100%' }}
-                        ref={(ref) => {
-                          if (ref && !mapRefObj.current) {
-                            mapRefObj.current = ref;
-                            setMapRef(ref);
-                            initializeDrawControl(ref);
-                          }
-                        }}
-                      >
-                        <TileLayer
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        />
-                        
-                        {/* Mostrar zona actual */}
-                        <Polygon
-                          positions={selectedZone.coordinates.map(coord => [coord.lat, coord.lng])}
-                          pathOptions={{ 
-                            color: selectedZone.color, 
-                            fillColor: selectedZone.color, 
-                            fillOpacity: 0.2,
-                            weight: 2
-                          }}
-                        />
-                        
-                        {/* Mostrar zona en edición */}
-                        {zoneCoordinates.length > 0 && (
-                          <Polygon
-                            positions={zoneCoordinates.map(coord => [coord.lat, coord.lng])}
-                            pathOptions={{ 
-                              color: newZoneColor, 
-                              fillColor: newZoneColor, 
-                              fillOpacity: 0.2,
-                              weight: 2
-                            }}
-                          />
-                        )}
-                        
-                        {/* Mostrar propiedades en la zona */}
-                        {properties
-                          .filter(property => property.zoneId === selectedZone.id)
-                          .map((property) => (
-                            property.latitude && property.longitude ? (
-                              <Marker
-                                key={property.id}
-                                position={[property.latitude, property.longitude]}
-                                icon={icon}
-                              />
-                            ) : null
-                          ))
-                        }
-                      </MapContainer>
-                    )}
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="zoneName" className="block text-sm font-medium text-gray-700">
+                    Nombre de la Zona
+                  </label>
+                  <input
+                    type="text"
+                    id="zoneName"
+                    value={newZoneName}
+                    onChange={(e) => setNewZoneName(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
                 </div>
                 <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="zoneName" className="block text-sm font-medium text-gray-700">
-                        Nombre de la Zona
-                      </label>
-                      <input
-                        type="text"
-                        id="zoneName"
-                        value={newZoneName}
-                        onChange={(e) => setNewZoneName(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="zoneDescription" className="block text-sm font-medium text-gray-700">
-                        Descripción
-                      </label>
-                      <textarea
-                        id="zoneDescription"
-                        value={newZoneDescription}
-                        onChange={(e) => setNewZoneDescription(e.target.value)}
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="zoneColor" className="block text-sm font-medium text-gray-700">
-                        Color
-                      </label>
-                      <input
-                        type="color"
-                        id="zoneColor"
-                        value={newZoneColor}
-                        onChange={(e) => setNewZoneColor(e.target.value)}
-                        className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="pt-4">
-                      <p className="text-sm text-gray-500">
-                        Usa la herramienta de dibujo en el mapa para modificar la zona.
-                      </p>
-                    </div>
-                  </div>
+                  <label htmlFor="zoneDescription" className="block text-sm font-medium text-gray-700">
+                    Descripción
+                  </label>
+                  <textarea
+                    id="zoneDescription"
+                    value={newZoneDescription}
+                    onChange={(e) => setNewZoneDescription(e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="zoneColor" className="block text-sm font-medium text-gray-700">
+                    Color
+                  </label>
+                  <input
+                    type="color"
+                    id="zoneColor"
+                    value={newZoneColor}
+                    onChange={(e) => setNewZoneColor(e.target.value)}
+                    className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
             </div>
@@ -872,16 +718,16 @@ export default function PropertiesPage() {
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-4xl w-full rounded-lg bg-white p-6">
-            <div className="flex justify-between items-center mb-4">
-              <Dialog.Title className="text-lg font-medium">
+          <Dialog.Panel className="mx-auto max-w-6xl w-full rounded-xl bg-white">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <Dialog.Title className="text-xl font-medium text-gray-900">
                 Detalles del Inmueble
               </Dialog.Title>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-gray-100"
               >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
+                <XMarkIcon className="h-6 w-6 text-gray-500" />
               </button>
             </div>
 
@@ -890,138 +736,250 @@ export default function PropertiesPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : selectedPropertyDetails ? (
-              <div className="space-y-6">
-                {/* Información General */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-medium mb-4">Información General</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-500">Dirección</label>
-                      <p className="font-medium">{selectedPropertyDetails.address}</p>
+              <div className="grid grid-cols-3 gap-6 p-6 h-[calc(100vh-12rem)] overflow-hidden">
+                {/* Columna 1: Información General */}
+                <div className="bg-white rounded-lg overflow-hidden flex flex-col h-full border border-gray-200">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-medium text-gray-900">Información General</h3>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-500">Población</label>
-                      <p className="font-medium">{selectedPropertyDetails.population}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500">Propietario</label>
-                      <p className="font-medium">{selectedPropertyDetails.ownerName}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500">Teléfono</label>
-                      <p className="font-medium">{selectedPropertyDetails.ownerPhone}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500">Estado</label>
-                      <p className="font-medium">{selectedPropertyDetails.status}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500">Tipo</label>
-                      <p className="font-medium">{selectedPropertyDetails.type}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Localizado:</span>
+                      <button 
+                        onClick={() => selectedPropertyDetails && handleToggleLocated(selectedPropertyDetails)}
+                        disabled={isUpdating}
+                        className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        title="Marcar como localizado"
+                      >
+                        {selectedPropertyDetails?.isLocated && (
+                          <CheckIcon 
+                            className={`absolute inset-0 m-auto h-4 w-4 ${
+                              isUpdating ? 'text-gray-400' : 'text-green-600'
+                            }`}
+                          />
+                        )}
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                {/* Actividades */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Actividades</h3>
-                    <button 
-                      onClick={() => {
-                        setShowDetailsModal(false);
-                        router.push(`/dashboard/properties/${selectedPropertyDetails.id}`);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      Ver todas
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                    {selectedPropertyActivities.length > 0 ? (
-                      selectedPropertyActivities.slice(0, 5).map((activity, index) => (
-                        <div key={index} className="border rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm text-gray-500">{new Date(activity.date).toLocaleDateString('es-ES')}</p>
-                              <p className="font-medium">Tipo: {activity.type}</p>
-                              {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
-                              {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
-                            </div>
-                            <span className={`px-2 py-1 text-sm rounded-full ${
-                              activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {activity.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-500 py-4">No hay actividades registradas</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* DPV */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">DPV</h3>
-                    <button 
-                      onClick={() => {
-                        setShowDetailsModal(false);
-                        router.push(`/dashboard/properties/${selectedPropertyDetails.id}`);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      Ver detalles
-                    </button>
-                  </div>
-                  
-                  {selectedPropertyDPV ? (
-                    <div className="space-y-4">
+                  <div className="p-6 overflow-y-auto flex-1">
+                    <dl className="space-y-6">
                       <div>
-                        <label className="text-sm text-gray-500">Links:</label>
-                        <ul className="list-disc list-inside text-blue-600 mt-1">
-                          {selectedPropertyDPV.links.map((link: string, index: number) => (
-                            <li key={index} className="mb-1">
-                              <a href={link} className="hover:underline break-all" target="_blank" rel="noopener noreferrer">
-                                {link}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
+                        <dt className="text-sm font-medium text-gray-500">Dirección</dt>
+                        <dd className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.address}</dd>
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Población</dt>
+                        <dd className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.population}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Estado</dt>
+                        <dd className="mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            {selectedPropertyDetails.status}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Acción</dt>
+                        <dd className="mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {selectedPropertyDetails.action}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Tipo</dt>
+                        <dd className="mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {selectedPropertyDetails.type}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Propietario</dt>
+                        <dd className="mt-1 flex items-center gap-2">
+                          <span className="text-sm text-gray-900">{selectedPropertyDetails.ownerName}</span>
+                          {selectedPropertyDetails.ownerName && (
+                            <button className="text-blue-600 hover:text-blue-800">
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+                        <dd className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.ownerPhone}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+
+                {/* Columna 2: Actividades */}
+                <div className="bg-white rounded-lg overflow-hidden flex flex-col h-full border border-gray-200">
+                  <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900">Actividades</h3>
+                    <button 
+                      onClick={() => {
+                        setSelectedPropertyForActivity(selectedPropertyDetails);
+                        setIsActivityFormOpen(true);
+                      }}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto flex-1">
+                    <div className="space-y-4">
+                      {selectedPropertyActivities.length > 0 ? (
+                        selectedPropertyActivities.map((activity, index) => (
+                          <div key={index} className="border-b border-gray-100 last:border-b-0 pb-4 last:pb-0">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                  <time className="text-xs text-gray-500">{new Date(activity.date).toLocaleDateString('es-ES', { 
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}</time>
+                                  <p className="text-sm font-medium text-gray-900">{activity.type}</p>
+                                </div>
+                                {activity.client && (
+                                  <p className="text-sm text-gray-600">Cliente: {activity.client}</p>
+                                )}
+                                {activity.notes && (
+                                  <p className="text-sm text-gray-600">{activity.notes}</p>
+                                )}
+                              </div>
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {activity.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-gray-500">No hay actividades registradas</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna 3: DPV */}
+                <div className="bg-white rounded-lg overflow-hidden flex flex-col h-full border border-gray-200">
+                  <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900">DPV</h3>
+                    <button 
+                      onClick={() => {
+                        setShowDetailsModal(false);
+                        router.push(`/dashboard/properties/${selectedPropertyDetails.id}/dpv/edit`);
+                      }}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto flex-1">
+                    {selectedPropertyDPV ? (
+                      <dl className="space-y-6">
                         <div>
-                          <label className="text-sm text-gray-500">Inmobiliaria:</label>
-                          <p className="font-medium">{selectedPropertyDPV.realEstate || 'N/A'}</p>
+                          <dt className="text-sm font-medium text-gray-500">Links</dt>
+                          <dd className="mt-2">
+                            <ul className="space-y-1">
+                              {selectedPropertyDPV.links.map((link: string, index: number) => (
+                                <li key={index}>
+                                  <a 
+                                    href={link} 
+                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    {link}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </dd>
                         </div>
                         
                         <div>
-                          <label className="text-sm text-gray-500">Teléfono:</label>
-                          <p className="font-medium">{selectedPropertyDPV.phone || 'N/A'}</p>
+                          <dt className="text-sm font-medium text-gray-500">Inmobiliaria</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{selectedPropertyDPV.realEstate || 'N/A'}</dd>
                         </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
                         <div>
-                          <label className="text-sm text-gray-500">Precio Actual:</label>
-                          <p className="font-medium">{selectedPropertyDPV.currentPrice ? `${selectedPropertyDPV.currentPrice.toLocaleString()} €` : 'N/A'}</p>
+                          <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{selectedPropertyDPV.phone || 'N/A'}</dd>
                         </div>
+                        
                         <div>
-                          <label className="text-sm text-gray-500">Valoración Estimada:</label>
-                          <p className="font-medium">{selectedPropertyDPV.estimatedValue ? `${selectedPropertyDPV.estimatedValue.toLocaleString()} €` : 'N/A'}</p>
+                          <dt className="text-sm font-medium text-gray-500">Precio Actual</dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {selectedPropertyDPV.currentPrice ? `${selectedPropertyDPV.currentPrice.toLocaleString()} €` : 'N/A'}
+                          </dd>
                         </div>
+                        
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Valoración Estimada</dt>
+                          <dd className="mt-1 flex items-center gap-2">
+                            <span className="text-sm text-gray-900">
+                              {selectedPropertyDPV.estimatedValue ? `${selectedPropertyDPV.estimatedValue.toLocaleString()} €` : 'N/A'}
+                            </span>
+                            <button className="text-blue-600 hover:text-blue-800">
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                          </dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">No hay información DPV registrada</p>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-center text-gray-500 py-4">No hay información DPV registrada</p>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
-              <p className="text-center text-gray-500">No se encontró la información del inmueble</p>
+              <div className="flex justify-center items-center h-64">
+                <p className="text-gray-600">No se encontró la información del inmueble</p>
+              </div>
+            )}
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Activity Form Modal */}
+      <Dialog
+        open={isActivityFormOpen}
+        onClose={() => setIsActivityFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-lg font-medium text-gray-900">Nueva Actividad</Dialog.Title>
+              <button
+                onClick={() => setIsActivityFormOpen(false)}
+                className="rounded-full p-1 hover:bg-gray-100"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {selectedPropertyForActivity && (
+              <ActivityForm
+                propertyId={selectedPropertyForActivity.id}
+                onSubmit={handleActivitySubmit}
+                onCancel={() => setIsActivityFormOpen(false)}
+              />
             )}
           </Dialog.Panel>
         </div>

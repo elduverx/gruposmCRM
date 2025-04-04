@@ -82,6 +82,7 @@ const MapWithDraw = ({
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
   const initializedRef = useRef<boolean>(false);
+  const router = useRouter();
   
   // Efecto para abrir el popup cuando se selecciona una propiedad
   useEffect(() => {
@@ -446,7 +447,6 @@ export default function ZonesPage() {
     isOccupied: '',
     isLocated: ''
   });
-  const router = useRouter();
 
   // Importar estilos de leaflet-draw
   useEffect(() => {
