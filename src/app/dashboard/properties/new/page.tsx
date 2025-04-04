@@ -300,70 +300,51 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {isEditing ? 'Editar inmueble' : 'Nuevo inmueble'}
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Ingresa la información del inmueble. Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Columna izquierda: Formulario */}
-          <div className="lg:w-2/3 space-y-6">
-            {/* Información básica */}
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-900">Información básica</h2>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-2">
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Dirección <span className="text-red-500">*</span>
-                    </label>
-                    <div className="mt-1 flex rounded-md shadow-sm">
-                      <input
-                        type="text"
-                        name="address"
-                        id="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-l-md sm:text-sm border-gray-300"
+      <div className="md:grid md:grid-cols-3 md:gap-6">
+        <div className="md:col-span-1">
+          <div className="px-4 sm:px-0">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">
+              {isEditing ? 'Editar inmueble' : 'Nuevo inmueble'}
+            </h3>
+            <p className="mt-1 text-sm text-gray-600">
+              Ingresa la información básica del inmueble. Puedes completar más detalles más adelante.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 md:mt-0 md:col-span-2">
+          <form onSubmit={handleSubmit}>
+            <div className="shadow sm:rounded-md sm:overflow-hidden">
+              <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
+                <div className="grid grid-cols-6 gap-6">
+                  <div className="col-span-6">
+                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                          Dirección
+                        </label>
+                        <div className="mt-1 flex rounded-md shadow-sm">
+                          <input
+                            type="text"
+                            name="address"
+                            id="address"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                        className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
                         placeholder="Calle, número, piso, puerta"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddressSearch}
-                        disabled={isSearching}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-r-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        {isSearching ? (
-                          <span className="flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Buscando...
-                          </span>
-                        ) : (
-                          <span className="flex items-center">
-                            <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            Buscar
-                          </span>
-                        )}
-                      </button>
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddressSearch}
+                            disabled={isSearching}
+                        className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            {isSearching ? 'Buscando...' : 'Buscar'}
+                          </button>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="population" className="block text-sm font-medium text-gray-700">
-                      Población <span className="text-red-500">*</span>
+                      Población
                     </label>
                     <input
                       type="text"
@@ -376,57 +357,34 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                     />
                   </div>
 
-                  <div>
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
                       Zona
                     </label>
-                    <div className="mt-1 relative">
-                      <select
-                        id="zoneId"
-                        name="zoneId"
-                        value={formData.zoneId}
-                        onChange={handleInputChange}
-                        className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar zona</option>
-                        {zones.map((zone) => (
-                          <option key={zone.id} value={zone.id}>
-                            {zone.name}
-                          </option>
-                        ))}
-                      </select>
-                      {formData.zoneId && (
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <span 
-                            className="inline-block w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: zones.find(z => z.id === formData.zoneId)?.color || '#FF0000' }}
-                          ></span>
-                        </div>
-                      )}
-                    </div>
+                    <select
+                      id="zoneId"
+                      name="zoneId"
+                      value={formData.zoneId}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar zona</option>
+                      {zones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
+                    </select>
                     {formData.zoneId && (
-                      <p className="mt-1 text-sm text-green-600 flex items-center">
-                        <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                      <p className="mt-1 text-sm text-green-600">
                         Zona asignada automáticamente según la ubicación
                       </p>
                     )}
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Información del propietario */}
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-900">Información del propietario</h2>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
-                      Propietario <span className="text-red-500">*</span>
+                      Propietario
                     </label>
                     <input
                       type="text"
@@ -439,9 +397,9 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                     />
                   </div>
 
-                  <div>
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
-                      Teléfono <span className="text-red-500">*</span>
+                      Teléfono
                     </label>
                     <input
                       type="text"
@@ -453,18 +411,8 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                       required
                     />
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Estado de ocupación */}
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-900">Estado de ocupación</h2>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="isOccupied" className="block text-sm font-medium text-gray-700">
                       Estado de ocupación
                     </label>
@@ -474,7 +422,7 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                         name="isOccupied"
                         value={formData.isOccupied.toString()}
                         onChange={(e) => setFormData(prev => ({ ...prev, isOccupied: e.target.value === 'true' }))}
-                        className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="false">Desocupado</option>
                         <option value="true">Ocupado</option>
@@ -483,7 +431,7 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                   </div>
 
                   {formData.isOccupied && (
-                    <div>
+                    <div className="col-span-6 sm:col-span-3">
                       <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
                         Ocupado por
                       </label>
@@ -502,9 +450,9 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                   )}
 
                   {formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && (
-                    <div>
+                    <div className="col-span-6 sm:col-span-3">
                       <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">
-                        Cliente propietario <span className="text-red-500">*</span>
+                        Cliente propietario
                       </label>
                       <select
                         id="clientId"
@@ -525,9 +473,9 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                   )}
 
                   {formData.isOccupied && formData.occupiedBy === 'INQUILINO' && (
-                    <div>
+                    <div className="col-span-6 sm:col-span-3">
                       <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
-                        Nombre del inquilino <span className="text-red-500">*</span>
+                        Nombre del inquilino
                       </label>
                       <input
                         type="text"
@@ -540,98 +488,72 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                       />
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
 
-            {/* Botones de acción */}
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {isEditing ? 'Actualizar' : 'Crear'}
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+                  <div className="col-span-6">
+                    <div className="flex items-center">
+                      <input
+                        id="isLocated"
+                        name="isLocated"
+                        type="checkbox"
+                        checked={formData.isLocated}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isLocated: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="isLocated" className="ml-2 block text-sm text-gray-900">
+                        Inmueble localizado en el mapa
+                      </label>
+                    </div>
+                  </div>
+                  </div>
 
-          {/* Columna derecha: Mapa */}
-          <div className="lg:w-1/3">
-            <div className="bg-white shadow rounded-lg overflow-hidden sticky top-8">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-900">Ubicación en el mapa</h2>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center">
-                  <input
-                    id="isLocated"
-                    name="isLocated"
-                    type="checkbox"
-                    checked={formData.isLocated}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isLocated: e.target.checked }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isLocated" className="ml-2 block text-sm text-gray-900">
-                    Inmueble localizado en el mapa
-                  </label>
-                </div>
-
-                <div className="h-[calc(100vh-300px)] w-full rounded-md border border-gray-300 overflow-hidden">
-                  <MapContainer
-                    center={[40.4168, -3.7038]}
-                    zoom={13}
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <LocationMarker onLocationSelect={handleLocationSelect} />
-                    {selectedLocation && (
-                      <>
-                        <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
+                  <div className="col-span-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ubicación en el mapa
+                    </label>
+                  <div className="h-96 w-full rounded-md border border-gray-300">
+                      <MapContainer
+                        center={[40.4168, -3.7038]}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%' }}
+                      >
+                        <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <LocationMarker onLocationSelect={handleLocationSelect} />
+                      {selectedLocation && (
+                        <>
+                          <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
                         <MapController coordinates={selectedLocation} />
-                      </>
-                    )}
-                  </MapContainer>
+                        </>
+                        )}
+                      </MapContainer>
+                    </div>
+                      <p className="mt-2 text-sm text-gray-500">
+                    Haz clic en el mapa para seleccionar la ubicación del inmueble.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 flex items-center">
-                  <svg className="h-4 w-4 mr-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Haz clic en el mapa para seleccionar la ubicación del inmueble.
-                </p>
+              </div>
+              <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
+                </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   );
 } 

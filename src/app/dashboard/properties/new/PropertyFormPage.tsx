@@ -60,22 +60,22 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: '',
     population: '',
-    status: PropertyStatus.SIN_EMPEZAR,
-    action: PropertyAction.IR_A_DIRECCION,
-    type: PropertyType.CASA,
+    status: 'SIN_EMPEZAR' as PropertyStatus,
+    action: 'IR_A_DIRECCION' as PropertyAction,
+    type: 'CASA' as PropertyType,
     ownerName: '',
     ownerPhone: '',
     captureDate: new Date(),
-    responsibleId: null,
     hasSimpleNote: false,
     isOccupied: false,
-    clientId: null,
+    isLocated: false,
+    occupiedBy: '',
+    responsible: '',
     zoneId: null,
+    clientId: null,
     latitude: null,
     longitude: null,
-    occupiedBy: null,
-    isLocated: false,
-    responsible: null
+    responsibleId: undefined
   });
 
   // Función para determinar si un punto está dentro de un polígono
@@ -146,7 +146,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
               type: propertyData.type as PropertyType,
               ownerName: propertyData.ownerName,
               ownerPhone: propertyData.ownerPhone,
-              captureDate: propertyData.captureDate,
+              captureDate: new Date(propertyData.captureDate),
               responsibleId: propertyData.responsibleId,
               hasSimpleNote: propertyData.hasSimpleNote,
               isOccupied: propertyData.isOccupied,
@@ -154,9 +154,9 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
               zoneId: propertyData.zoneId || null,
               latitude: propertyData.latitude || null,
               longitude: propertyData.longitude || null,
-              occupiedBy: propertyData.occupiedBy || null,
+              occupiedBy: propertyData.occupiedBy || '',
               isLocated: propertyData.isLocated,
-              responsible: propertyData.responsible || null
+              responsible: propertyData.responsible || ''
             });
             
             if (propertyData.latitude && propertyData.longitude) {
@@ -236,7 +236,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
     if (type === 'checkbox') {
@@ -244,6 +244,21 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
       setFormData(prev => ({
         ...prev,
         [name]: checkbox.checked
+      }));
+    } else if (name === 'status') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value as PropertyStatus
+      }));
+    } else if (name === 'action') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value as PropertyAction
+      }));
+    } else if (name === 'type') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value as PropertyType
       }));
     } else {
       setFormData(prev => ({
@@ -253,46 +268,34 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     }
   };
 
-  const handleOccupiedByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setFormData((prev: PropertyCreateInput) => ({
-      ...prev,
-      occupiedBy: value,
-      clientId: value === 'PROPIETARIO' ? prev.clientId : null
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const data = {
-        address: formData.address,
-        population: formData.population,
-        status: 'SIN_EMPEZAR',
-        action: 'IR_A_DIRECCION',
-        type: 'CASA',
-        ownerName: formData.ownerName,
-        ownerPhone: formData.ownerPhone,
-        captureDate: new Date(),
-        responsibleId: formData.responsibleId,
-        hasSimpleNote: formData.hasSimpleNote || false,
-        isOccupied: formData.isOccupied || false,
-        clientId: formData.clientId,
-        zoneId: formData.zoneId,
+      const submitData = {
+        ...formData,
+        captureDate: formData.captureDate || new Date(),
+        responsibleId: formData.responsibleId || undefined,
+        clientId: formData.clientId || undefined,
+        zoneId: formData.zoneId || undefined,
         latitude: selectedLocation?.lat || null,
         longitude: selectedLocation?.lng || null,
-        occupiedBy: formData.isOccupied ? formData.occupiedBy : null,
+        occupiedBy: formData.isOccupied ? formData.occupiedBy : '',
         isLocated: formData.isLocated || false,
-        responsible: formData.responsible || null,
+        responsible: formData.responsible || '',
       };
 
       if (propertyId) {
-        await updateProperty(propertyId, data);
+        await updateProperty(propertyId, {
+          ...submitData,
+          captureDate: submitData.captureDate.toISOString(),
+          latitude: submitData.latitude || undefined,
+          longitude: submitData.longitude || undefined,
+        });
         toast.success('Propiedad actualizada correctamente');
       } else {
-        await createProperty(data);
+        await createProperty(submitData);
         toast.success('Propiedad creada correctamente');
       }
 
@@ -306,257 +309,198 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="md:grid md:grid-cols-3 md:gap-6">
-        <div className="md:col-span-1">
-          <div className="px-4 sm:px-0">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">
-              {isEditing ? 'Editar inmueble' : 'Nuevo inmueble'}
-            </h3>
-            <p className="mt-1 text-sm text-gray-600">
-              Ingresa la información básica del inmueble. Puedes completar más detalles más adelante.
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700">
+            <h2 className="text-xl font-bold text-white">
+              {propertyId ? 'Editar inmueble' : 'Nuevo inmueble'}
+            </h2>
+            <p className="mt-1 text-sm text-blue-100">
+              Completa la información del inmueble
             </p>
           </div>
-        </div>
-        <div className="mt-5 md:mt-0 md:col-span-2">
-          <form onSubmit={handleSubmit}>
-            <div className="shadow sm:rounded-md sm:overflow-hidden">
-              <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
-                <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6">
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Dirección
-                    </label>
-                    <div className="mt-1 flex rounded-md shadow-sm">
-                      <input
-                        type="text"
-                        name="address"
-                        id="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
-                        placeholder="Calle, número, piso, puerta"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddressSearch}
-                        disabled={isSearching}
-                        className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        {isSearching ? 'Buscando...' : 'Buscar'}
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="population" className="block text-sm font-medium text-gray-700">
-                      Población
-                    </label>
+          <form onSubmit={handleSubmit} className="divide-y divide-gray-200">
+            {/* Información básica */}
+            <div className="px-6 py-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Información básica
+              </h3>
+              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <div className="sm:col-span-4">
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                    Dirección
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      name="address"
+                      id="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="population" className="block text-sm font-medium text-gray-700">
+                    Población
+                  </label>
+                  <div className="mt-1">
                     <input
                       type="text"
                       name="population"
                       id="population"
                       value={formData.population}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                       required
                     />
                   </div>
+                </div>
+              </div>
+            </div>
 
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
-                      Zona
-                    </label>
+            {/* Estado y tipo */}
+            <div className="px-6 py-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Estado y tipo
+              </h3>
+              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <div className="sm:col-span-2">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                    Estado
+                  </label>
+                  <div className="mt-1">
                     <select
-                      id="zoneId"
-                      name="zoneId"
-                      value={formData.zoneId}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      required
                     >
-                      <option value="">Seleccionar zona</option>
-                      {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </option>
-                      ))}
+                      <option value="SIN_EMPEZAR">Sin empezar</option>
+                      <option value="EMPEZADA">Empezada</option>
                     </select>
-                    {formData.zoneId && (
-                      <p className="mt-1 text-sm text-green-600">
-                        Zona asignada automáticamente según la ubicación
-                      </p>
-                    )}
                   </div>
+                </div>
 
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
-                      Propietario
-                    </label>
-                    <input
-                      type="text"
-                      name="ownerName"
-                      id="ownerName"
-                      value={formData.ownerName}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                <div className="sm:col-span-2">
+                  <label htmlFor="action" className="block text-sm font-medium text-gray-700">
+                    Acción
+                  </label>
+                  <div className="mt-1">
+                    <select
+                      id="action"
+                      name="action"
+                      value={formData.action}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                       required
+                    >
+                      <option value="IR_A_DIRECCION">Ir a dirección</option>
+                      <option value="REPETIR">Repetir</option>
+                      <option value="LOCALIZAR_VERIFICADO">Localizar verificado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                    Tipo
+                  </label>
+                  <div className="mt-1">
+                    <select
+                      id="type"
+                      name="type"
+                      value={formData.type}
+                      onChange={handleChange}
+                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      required
+                    >
+                      <option value="PISO">Piso</option>
+                      <option value="CASA">Casa</option>
+                      <option value="LOCAL_COMERCIAL">Local</option>
+                      <option value="TERRENO">Terreno</option>
+                      <option value="CHALET">Chalet</option>
+                      <option value="APARTAMENTO">Apartamento</option>
+                      <option value="ATICO">Ático</option>
+                      <option value="DUPLEX">Dúplex</option>
+                      <option value="OFICINA">Oficina</option>
+                      <option value="GARAJE">Garaje</option>
+                      <option value="TRASTERO">Trastero</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ocupación */}
+            <div className="px-6 py-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Estado de ocupación
+              </h3>
+              <div className="space-y-4">
+                <div className="relative flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="isOccupied"
+                      name="isOccupied"
+                      type="checkbox"
+                      checked={formData.isOccupied}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                   </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
-                      Teléfono
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="isOccupied" className="font-medium text-gray-700">
+                      Ocupado
                     </label>
-                    <input
-                      type="text"
-                      name="ownerPhone"
-                      id="ownerPhone"
-                      value={formData.ownerPhone}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      required
-                    />
+                    <p className="text-gray-500">Marca esta opción si el inmueble está ocupado</p>
                   </div>
+                </div>
 
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="isOccupied" className="block text-sm font-medium text-gray-700">
-                      Estado de ocupación
+                {formData.isOccupied && (
+                  <div className="sm:col-span-4 mt-4 ml-7">
+                    <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
+                      Ocupado por
                     </label>
                     <div className="mt-1">
-                      <select
-                        id="isOccupied"
-                        name="isOccupied"
-                        value={formData.isOccupied.toString()}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isOccupied: e.target.value === 'true' }))}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="false">Desocupado</option>
-                        <option value="true">Ocupado</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {formData.isOccupied && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
-                        Ocupado por
-                      </label>
-                      <select
-                        id="occupiedBy"
-                        name="occupiedBy"
-                        value={formData.occupiedBy}
-                        onChange={handleOccupiedByChange}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar</option>
-                        <option value="PROPIETARIO">Propietario</option>
-                        <option value="INQUILINO">Inquilino</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">
-                        Cliente propietario
-                      </label>
-                      <select
-                        id="clientId"
-                        name="clientId"
-                        value={formData.clientId}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar cliente</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.isOccupied && formData.occupiedBy === 'INQUILINO' && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
-                        Nombre del inquilino
-                      </label>
                       <input
                         type="text"
-                        name="tenantName"
-                        id="tenantName"
-                        value={formData.tenantName}
-                        onChange={handleInputChange}
-                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                        required
+                        name="occupiedBy"
+                        id="occupiedBy"
+                        value={formData.occupiedBy || ''}
+                        onChange={handleChange}
+                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                       />
                     </div>
-                  )}
-
-                  <div className="col-span-6">
-                    <div className="flex items-center">
-                      <input
-                        id="isLocated"
-                        name="isLocated"
-                        type="checkbox"
-                        checked={formData.isLocated}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isLocated: e.target.checked }))}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="isLocated" className="ml-2 block text-sm text-gray-900">
-                        Inmueble localizado en el mapa
-                      </label>
-                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+            </div>
 
-                <div className="col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación en el mapa
-                  </label>
-                  <div className="h-96 w-full rounded-md border border-gray-300">
-                    <MapContainer
-                      center={[40.4168, -3.7038]}
-                      zoom={13}
-                      style={{ height: '100%', width: '100%' }}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <LocationMarker onLocationSelect={handleLocationSelect} />
-                      {selectedLocation && (
-                        <>
-                          <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
-                          <MapController coordinates={selectedLocation} />
-                        </>
-                      )}
-                    </MapContainer>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Haz clic en el mapa para seleccionar la ubicación del inmueble.
-                  </p>
-                </div>
-              </div>
-              <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
-                </button>
-              </div>
+            {/* Botones de acción */}
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Guardando...' : propertyId ? 'Actualizar' : 'Crear'}
+              </button>
             </div>
           </form>
         </div>

@@ -121,183 +121,193 @@ export default function PropertyDetailClient({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* General Information */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Información General</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Localizado:</span>
-              <button 
-                onClick={handleToggleLocated}
-                disabled={isUpdating}
-                className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                title="Marcar como localizado"
-              >
-                {property.isLocated && (
-                  <CheckIcon 
-                    className={`absolute inset-0 m-auto h-4 w-4 ${
-                      isUpdating ? 'text-gray-400' : 'text-green-600'
-                    }`}
-                  />
-                )}
-              </button>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-500">Población</label>
-              <p className="font-medium">{property.population}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Zona</label>
-              <p className="font-medium">{property.zone?.name || 'N/A'}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Dirección</label>
-              <p className="font-medium">{property.address}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Ocupado por</label>
-              <p className="font-medium">{property.occupiedBy || 'N/A'}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Último contacto</label>
-              {activities.length > 0 ? (
-                <div>
-                  <p className="font-medium">
-                    {new Date(activities[0].date).toLocaleDateString('es-ES')}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Tipo: {activities[0].type}
-                  </p>
-                </div>
-              ) : (
-                <p className="font-medium">N/A</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Nombre propietario</label>
-              <p className="font-medium">{property.ownerName}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Teléfono</label>
-              <p className="font-medium">{property.ownerPhone}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm text-gray-500">Responsable</label>
-              <p className="font-medium">{property.responsible || 'N/A'}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Activities */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Actividades</h2>
+      {/* Información General */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Información General</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Localizado:</span>
             <button 
-              onClick={() => setIsActivityFormOpen(true)}
-              className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+              onClick={handleToggleLocated}
+              disabled={isUpdating}
+              className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title="Marcar como localizado"
             >
-              <PlusIcon className="h-5 w-5" />
+              {property.isLocated && (
+                <CheckIcon 
+                  className={`absolute inset-0 m-auto h-4 w-4 ${
+                    isUpdating ? 'text-gray-400' : 'text-green-600'
+                  }`}
+                />
+              )}
             </button>
           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="text-sm text-gray-500">Población</label>
+            <p className="font-medium">{property.population}</p>
+          </div>
           
-          <div className="space-y-4">
+          <div>
+            <label className="text-sm text-gray-500">Zona</label>
+            <p className="font-medium">{property.zone?.name || 'N/A'}</p>
+          </div>
+          
+          <div>
+            <label className="text-sm text-gray-500">Dirección</label>
+            <p className="font-medium">{property.address}</p>
+          </div>
+          
+          <div>
+            <label className="text-sm text-gray-500">Ocupado por</label>
+            <p className="font-medium">{property.occupiedBy || 'N/A'}</p>
+          </div>
+          
+          <div>
+            <label className="text-sm text-gray-500">Último contacto</label>
             {activities.length > 0 ? (
-              activities.map((activity, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-gray-500">{activity.date}</p>
-                      <p className="font-medium">Tipo: {activity.type}</p>
-                      {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
-                      {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
-                    </div>
-                    <span className={`px-2 py-1 text-sm rounded-full ${
-                      activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {activity.status}
-                    </span>
-                  </div>
-                </div>
-              ))
+              <div>
+                <p className="font-medium">
+                  {new Date(activities[0].date).toLocaleDateString('es-ES')}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Tipo: {activities[0].type}
+                </p>
+              </div>
             ) : (
-              <p className="text-center text-gray-500 py-4">No hay actividades registradas</p>
+              <p className="font-medium">N/A</p>
             )}
           </div>
-        </div>
-
-        {/* DPV */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">DPV</h2>
-            <button 
-              onClick={() => setIsDPVFormOpen(true)}
-              className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <PlusIcon className="h-5 w-5" />
-            </button>
+          
+          <div>
+            <label className="text-sm text-gray-500">Nombre propietario</label>
+            <p className="font-medium">{property.ownerName}</p>
           </div>
           
-          {dpv ? (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-500">Links:</label>
-                <ul className="list-disc list-inside text-blue-600">
-                  {dpv.links.map((link, index) => (
-                    <li key={index}><a href={link} className="hover:underline">{link}</a></li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div>
-                <label className="text-sm text-gray-500">Inmobiliaria:</label>
-                <p className="font-medium">{dpv.realEstate || 'N/A'}</p>
-              </div>
-              
-              <div>
-                <label className="text-sm text-gray-500">Teléfono:</label>
-                <p className="font-medium">{dpv.phone || 'N/A'}</p>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div>
-                  <label className="text-sm text-gray-500">Precio Actual:</label>
-                  <p className="font-medium">{dpv.currentPrice ? `${dpv.currentPrice} €` : 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500">Valoración Estimada:</label>
-                  <p className="font-medium">{dpv.estimatedValue ? `${dpv.estimatedValue} €` : 'N/A'}</p>
-                </div>
-              </div>
-              
+          <div>
+            <label className="text-sm text-gray-500">Teléfono</label>
+            <p className="font-medium">{property.ownerPhone}</p>
+          </div>
+          
+          <div>
+            <label className="text-sm text-gray-500">Responsable</label>
+            <p className="font-medium">{property.responsible || 'N/A'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenedor principal con layout vertical */}
+      <div className="flex flex-col gap-4">
+        {/* Actividades y DPV en columnas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Activities */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Actividades</h2>
               <button 
-                onClick={() => setIsDPVFormOpen(true)}
-                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                onClick={() => setIsActivityFormOpen(true)}
+                className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
               >
-                Editar
+                <PlusIcon className="h-5 w-5" />
               </button>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No hay información DPV registrada</p>
+            
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {activities.length > 0 ? (
+                activities.map((activity, index) => (
+                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm text-gray-500">{new Date(activity.date).toLocaleDateString('es-ES')}</p>
+                        <p className="font-medium">Tipo: {activity.type}</p>
+                        {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
+                        {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
+                      </div>
+                      <span className={`px-2 py-1 text-sm rounded-full ${
+                        activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {activity.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">No hay actividades registradas</p>
+              )}
+            </div>
+          </div>
+
+          {/* DPV */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">DPV</h2>
               <button 
                 onClick={() => setIsDPVFormOpen(true)}
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center justify-center p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
               >
-                Agregar DPV
+                <PlusIcon className="h-5 w-5" />
               </button>
             </div>
-          )}
+            
+            {dpv ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-500">Links:</label>
+                  <ul className="list-disc list-inside text-blue-600 mt-1">
+                    {dpv.links.map((link, index) => (
+                      <li key={index} className="mb-1">
+                        <a href={link} className="hover:underline break-all" target="_blank" rel="noopener noreferrer">
+                          {link}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">Inmobiliaria:</label>
+                    <p className="font-medium">{dpv.realEstate || 'N/A'}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm text-gray-500">Teléfono:</label>
+                    <p className="font-medium">{dpv.phone || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">Precio Actual:</label>
+                    <p className="font-medium">{dpv.currentPrice ? `${dpv.currentPrice.toLocaleString()} €` : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">Valoración Estimada:</label>
+                    <p className="font-medium">{dpv.estimatedValue ? `${dpv.estimatedValue.toLocaleString()} €` : 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setIsDPVFormOpen(true)}
+                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center mt-2"
+                >
+                  Editar
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">No hay información DPV registrada</p>
+                <button 
+                  onClick={() => setIsDPVFormOpen(true)}
+                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Agregar DPV
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -8,6 +8,8 @@ import { Property } from '@/types/property';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { MagnifyingGlassIcon, FunnelIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
 
 // Importar componentes de Leaflet dinámicamente para evitar el error de window
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
@@ -351,14 +353,62 @@ const MapWithDraw = ({
             }}
           >
             <Popup>
-              <div className="p-2">
-                <h3 className="font-semibold">{property.address}</h3>
-                <p className="text-sm text-gray-600">{property.population}</p>
-                <p className="text-sm text-gray-600">Estado: {property.status}</p>
-                <p className="text-sm text-gray-600">Propietario: {property.ownerName}</p>
-                <p className="text-sm text-gray-600">Teléfono: {property.ownerPhone}</p>
-                <p className="text-sm text-gray-600">Tipo: {property.type}</p>
-                <p className="text-sm text-gray-600">Acción: {property.action}</p>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
+                  <span className="text-sm font-medium text-gray-900">{property.population}</span>
+                </div>
+                <div className="space-y-2">
+                  {property.dpv && (
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-900">DPV: </span>
+                      <span className="text-gray-900">{property.dpv.toString()}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      property.status === 'SIN_EMPEZAR' 
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      property.action === 'IR_A_DIRECCION' 
+                        ? 'bg-blue-100 text-blue-800'
+                        : property.action === 'REPETIR'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {property.action === 'IR_A_DIRECCION' 
+                        ? 'Ir a dirección' 
+                        : property.action === 'REPETIR'
+                        ? 'Repetir'
+                        : 'Localizar verificado'}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-900`}>
+                      {property.type}
+                    </span>
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
+                    <p className="text-gray-900">Tel: {property.ownerPhone}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onPropertyClick(property)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Ver en mapa
+                    </button>
+                    <button
+                      onClick={() => router.push(`/dashboard/properties/${property.id}`)}
+                      className="text-sm text-gray-900 hover:text-gray-700 font-medium"
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
+                </div>
               </div>
             </Popup>
           </Marker>
@@ -386,6 +436,17 @@ export default function ZonesPage() {
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showDrawingControl, setShowDrawingControl] = useState(false);
+  const [filters, setFilters] = useState({
+    status: '',
+    type: '',
+    action: '',
+    isOccupied: '',
+    isLocated: ''
+  });
+  const router = useRouter();
 
   // Importar estilos de leaflet-draw
   useEffect(() => {
@@ -700,7 +761,7 @@ export default function ZonesPage() {
                   id="zoneName"
                   value={newZoneName}
                   onChange={(e) => setNewZoneName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1  block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   placeholder="Ej: Zona Centro"
                 />
               </div>
@@ -774,9 +835,9 @@ export default function ZonesPage() {
 
       {/* Lista de zonas e inmuebles */}
       <div className="h-[40vh] border-t border-gray-200">
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">
+        <div className="p-2">
+          <div className="flex justify-between items-center mb-1">
+            <h2 className="text-lg font-semibold text-gray-900">
               {selectedZone ? `Inmuebles en ${selectedZone.name}` : 'Todos los Inmuebles'}
             </h2>
             <div className="flex space-x-2">
@@ -797,8 +858,7 @@ export default function ZonesPage() {
                   <button
                     onClick={() => {
                       setSelectedZone(null);
-                      setSelectedPropertyId(null); // Limpiar la propiedad seleccionada
-                      // Recargar todas las propiedades
+                      setSelectedPropertyId(null);
                       getProperties().then(data => {
                         if (data) {
                           const validProperties = filterValidProperties(data);
@@ -816,27 +876,35 @@ export default function ZonesPage() {
           </div>
           
           {selectedZone ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto h-[calc(40vh-5rem)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 overflow-y-auto h-[calc(40vh-3rem)]">
               {properties.map((property) => (
                 <div
                   key={property.id}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-2 rounded-lg border cursor-pointer transition-colors ${
                     selectedProperty?.id === property.id
                       ? 'border-indigo-500 bg-indigo-50'
                       : 'border-gray-200 hover:border-indigo-300'
                   }`}
                   onClick={() => handlePropertyClick(property)}
                 >
-                  <h3 className="font-semibold">{property.address}</h3>
-                  <p className="text-sm text-gray-600">{property.population}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-gray-900 text-sm">{property.address}</h3>
+                    <span className="text-xs text-gray-900 mt-1">{property.population}</span>
+                    {property.dpv && (
+                      <div className="mt-1 text-xs text-gray-900">
+                        <span className="font-medium">DPV: </span>
+                        {property.dpv.toString()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.type}
                     </span>
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.status}
                     </span>
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.action}
                     </span>
                   </div>
@@ -844,27 +912,35 @@ export default function ZonesPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto h-[calc(40vh-5rem)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 overflow-y-auto h-[calc(40vh-3rem)]">
               {properties.map((property) => (
                 <div
                   key={property.id}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-2 rounded-lg border cursor-pointer transition-colors ${
                     selectedProperty?.id === property.id
                       ? 'border-indigo-500 bg-indigo-50'
                       : 'border-gray-200 hover:border-indigo-300'
                   }`}
                   onClick={() => handlePropertyClick(property)}
                 >
-                  <h3 className="font-semibold">{property.address}</h3>
-                  <p className="text-sm text-gray-600">{property.population}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-gray-900 text-sm">{property.address}</h3>
+                    <span className="text-xs text-gray-900 mt-1">{property.population}</span>
+                    {property.dpv && (
+                      <div className="mt-1 text-xs text-gray-900">
+                        <span className="font-medium">DPV: </span>
+                        {property.dpv.toString()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.type}
                     </span>
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.status}
                     </span>
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                    <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-900">
                       {property.action}
                     </span>
                   </div>

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon, MapIcon } from '@heroicons/react/24/outline';
-import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty } from './actions';
-import { Property, Activity } from '@/types/property';
+import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId } from './actions';
+import { Property, Activity, DPV } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { getZones, updateZone, Zone } from '../zones/actions';
 import dynamic from 'next/dynamic';
@@ -12,6 +12,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+import { Dialog } from '@headlessui/react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
 
 // Importar componentes de Leaflet dinámicamente para evitar el error de window
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
@@ -74,6 +77,9 @@ export default function PropertiesPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedPropertyDetails, setSelectedPropertyDetails] = useState<Property | null>(null);
   const [selectedPropertyActivities, setSelectedPropertyActivities] = useState<Activity[]>([]);
+  const [selectedPropertyDPV, setSelectedPropertyDPV] = useState<DPV | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -330,10 +336,24 @@ export default function PropertiesPage() {
     setEditFormData({});
   };
 
-  const handleShowDetails = (property: Property) => {
+  const handlePropertyClick = async (property: Property) => {
+    setIsLoadingDetails(true);
     setSelectedPropertyDetails(property);
-    setSelectedPropertyActivities(activitiesMap[property.id] || []);
     setShowDetailsModal(true);
+    
+    try {
+      const [activities, dpv] = await Promise.all([
+        getActivitiesByPropertyId(property.id),
+        getDPVByPropertyId(property.id)
+      ]);
+      
+      setSelectedPropertyActivities(activities);
+      setSelectedPropertyDPV(dpv);
+    } catch (error) {
+      console.error('Error loading property details:', error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   if (isLoading) {
@@ -398,7 +418,7 @@ export default function PropertiesPage() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
                           <button
-                            onClick={() => handleShowDetails(property)}
+                            onClick={() => handlePropertyClick(property)}
                             className="text-blue-600 hover:text-blue-900 hover:underline"
                           >
                             {property.address}
@@ -843,131 +863,169 @@ export default function PropertiesPage() {
         </div>
       )}
 
-      {/* Modal de detalles del inmueble */}
-      {showDetailsModal && selectedPropertyDetails && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Detalles del Inmueble: {selectedPropertyDetails.address}</h3>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Información General</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Dirección</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.address}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Población</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.population}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Estado</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.status}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Acción</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.action}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Tipo</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.type}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Fecha de Captura</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.captureDate}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Zona</label>
-                      {selectedPropertyDetails.zone ? (
-                        <div className="mt-1 flex items-center">
-                          <span 
-                            className="inline-block w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: zones.find(z => z.id === selectedPropertyDetails.zone?.id)?.color || '#FF0000' }}
-                          ></span>
-                          <p className="text-sm text-gray-900">{selectedPropertyDetails.zone.name}</p>
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-sm text-gray-900">-</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Información del Propietario</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Nombre del Propietario</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.ownerName}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Teléfono del Propietario</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.ownerPhone}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Ocupado por</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.occupiedBy || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Responsable</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPropertyDetails.responsible || '-'}</p>
-                    </div>
-                    <div className="flex items-center">
-                      <label className="block text-sm font-medium text-gray-700 mr-2">Está ocupado</label>
-                      <span className={`inline-flex h-4 w-4 rounded-full ${selectedPropertyDetails.isOccupied ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                    </div>
-                    <div className="flex items-center">
-                      <label className="block text-sm font-medium text-gray-700 mr-2">Está localizado</label>
-                      <span className={`inline-flex h-4 w-4 rounded-full ${selectedPropertyDetails.isLocated ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                    </div>
-                    <div className="flex items-center">
-                      <label className="block text-sm font-medium text-gray-700 mr-2">Tiene nota simple</label>
-                      <span className={`inline-flex h-4 w-4 rounded-full ${selectedPropertyDetails.hasSimpleNote ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sección de Actividades */}
-              <div className="mt-8">
-                <h4 className="text-md font-medium text-gray-900 mb-4">Actividades</h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-300">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Fecha</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notas</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {selectedPropertyActivities.map((activity) => (
-                        <tr key={activity.id}>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{activity.type}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{activity.status}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{activity.date}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{activity.notes || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+      {/* Property Details Modal */}
+      <Dialog
+        open={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-4xl w-full rounded-lg bg-white p-6">
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-lg font-medium">
+                Detalles del Inmueble
+              </Dialog.Title>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="rounded-full p-1 hover:bg-gray-100"
               >
-                Cerrar
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-          </div>
+
+            {isLoadingDetails ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : selectedPropertyDetails ? (
+              <div className="space-y-6">
+                {/* Información General */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-medium mb-4">Información General</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-500">Dirección</label>
+                      <p className="font-medium">{selectedPropertyDetails.address}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Población</label>
+                      <p className="font-medium">{selectedPropertyDetails.population}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Propietario</label>
+                      <p className="font-medium">{selectedPropertyDetails.ownerName}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Teléfono</label>
+                      <p className="font-medium">{selectedPropertyDetails.ownerPhone}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Estado</label>
+                      <p className="font-medium">{selectedPropertyDetails.status}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Tipo</label>
+                      <p className="font-medium">{selectedPropertyDetails.type}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actividades */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Actividades</h3>
+                    <button 
+                      onClick={() => {
+                        setShowDetailsModal(false);
+                        router.push(`/dashboard/properties/${selectedPropertyDetails.id}`);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Ver todas
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                    {selectedPropertyActivities.length > 0 ? (
+                      selectedPropertyActivities.slice(0, 5).map((activity, index) => (
+                        <div key={index} className="border rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm text-gray-500">{new Date(activity.date).toLocaleDateString('es-ES')}</p>
+                              <p className="font-medium">Tipo: {activity.type}</p>
+                              {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
+                              {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
+                            </div>
+                            <span className={`px-2 py-1 text-sm rounded-full ${
+                              activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {activity.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-500 py-4">No hay actividades registradas</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* DPV */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">DPV</h3>
+                    <button 
+                      onClick={() => {
+                        setShowDetailsModal(false);
+                        router.push(`/dashboard/properties/${selectedPropertyDetails.id}`);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
+                  
+                  {selectedPropertyDPV ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm text-gray-500">Links:</label>
+                        <ul className="list-disc list-inside text-blue-600 mt-1">
+                          {selectedPropertyDPV.links.map((link: string, index: number) => (
+                            <li key={index} className="mb-1">
+                              <a href={link} className="hover:underline break-all" target="_blank" rel="noopener noreferrer">
+                                {link}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-gray-500">Inmobiliaria:</label>
+                          <p className="font-medium">{selectedPropertyDPV.realEstate || 'N/A'}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm text-gray-500">Teléfono:</label>
+                          <p className="font-medium">{selectedPropertyDPV.phone || 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-gray-500">Precio Actual:</label>
+                          <p className="font-medium">{selectedPropertyDPV.currentPrice ? `${selectedPropertyDPV.currentPrice.toLocaleString()} €` : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Valoración Estimada:</label>
+                          <p className="font-medium">{selectedPropertyDPV.estimatedValue ? `${selectedPropertyDPV.estimatedValue.toLocaleString()} €` : 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-4">No hay información DPV registrada</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">No se encontró la información del inmueble</p>
+            )}
+          </Dialog.Panel>
         </div>
-      )}
+      </Dialog>
     </div>
   );
 } 
