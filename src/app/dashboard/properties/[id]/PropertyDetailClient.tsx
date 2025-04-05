@@ -1,30 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Property, Activity } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createPropertyNews, getPropertyNews } from '../actions';
-import { PlusIcon, XMarkIcon, NewspaperIcon } from '@heroicons/react/24/outline';
+import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
+import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createPropertyNews, getPropertyNews, createAssignment, getAssignmentsByPropertyId } from '../actions';
+import { PlusIcon, XMarkIcon, NewspaperIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
 import { PropertyNewsForm } from '../PropertyNewsForm';
-
-interface DPV {
-  links: string[];
-  realEstate: string;
-  phone: string;
-  currentPrice: number;
-  estimatedValue: number;
-  propertyId: string;
-}
+import { AssignmentForm } from '../AssignmentForm';
 
 interface PropertyDetailClientProps {
   propertyId: string;
-  initialProperty: Property | null;
+  initialProperty: Property;
   initialActivities: Activity[];
-  initialDPV: any | null;
-  initialNews: any[];
+  initialDPV: DPV | null;
+  initialNews: PropertyNews[];
+  initialAssignments: Assignment[];
 }
 
 export default function PropertyDetailClient({ 
@@ -32,23 +25,19 @@ export default function PropertyDetailClient({
   initialProperty, 
   initialActivities, 
   initialDPV,
-  initialNews 
+  initialNews,
+  initialAssignments 
 }: PropertyDetailClientProps) {
   const [property, setProperty] = useState<Property | null>(initialProperty);
+  const [activities, setActivities] = useState<Activity[]>(initialActivities);
+  const [dpv, setDPV] = useState<DPV | null>(initialDPV);
+  const [news, setNews] = useState<PropertyNews[]>(initialNews);
+  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [isDPVFormOpen, setIsDPVFormOpen] = useState(false);
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
+  const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activities, setActivities] = useState<Activity[]>(initialActivities);
-  const [news, setNews] = useState<any[]>(initialNews);
-  const [dpv, setDPV] = useState<DPV | null>(initialDPV ? {
-    links: initialDPV.links as string[],
-    realEstate: initialDPV.realEstate || '',
-    phone: initialDPV.phone || '',
-    currentPrice: initialDPV.currentPrice || 0,
-    estimatedValue: initialDPV.estimatedValue || 0,
-    propertyId: propertyId
-  } : null);
 
   const handleToggleLocated = async () => {
     if (!property || isUpdating) return;
@@ -136,6 +125,22 @@ export default function PropertyDetailClient({
       }
     } catch (error) {
       console.error('Error creating news:', error);
+    }
+  };
+
+  const handleAssignmentSubmit = async (data: any) => {
+    try {
+      const result = await createAssignment({
+        ...data,
+        propertyId
+      });
+      
+      if (result) {
+        setAssignments(prev => [result, ...prev]);
+        setIsAssignmentFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating assignment:', error);
     }
   };
 
@@ -315,7 +320,10 @@ export default function PropertyDetailClient({
               <p className="text-center text-gray-500 py-4">No hay información de DPV</p>
             )}
           </div>
+        </div>
 
+        {/* Noticias y Encargos en columnas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Noticias */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
@@ -352,6 +360,59 @@ export default function PropertyDetailClient({
                 ))
               ) : (
                 <p className="text-center text-gray-500 py-4">No hay noticias registradas</p>
+              )}
+            </div>
+          </div>
+
+          {/* Encargos */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-blue-600">Encargos</h2>
+              <button 
+                onClick={() => setIsAssignmentFormOpen(true)}
+                className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
+                title="Crear encargo"
+              >
+                <ClipboardDocumentListIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {assignments.length > 0 ? (
+                assignments.map((item) => (
+                  <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
+                        <p className="font-medium">Tipo: {item.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
+                        <p className="text-sm">Precio: {item.price.toLocaleString()} €</p>
+                        <p className="text-sm">Fecha límite: {new Date(item.exclusiveUntil).toLocaleDateString('es-ES')}</p>
+                        <p className="text-sm">Origen: {item.origin}</p>
+                        <p className="text-sm">Cliente: {item.client?.name}</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs text-gray-500">Honorarios vendedor:</p>
+                            <p className="text-sm font-medium">
+                              {item.sellerFeeType === 'PERCENTAGE' 
+                                ? `${item.sellerFeeValue}% (${(item.price * item.sellerFeeValue / 100).toLocaleString()} €)`
+                                : `${item.sellerFeeValue.toLocaleString()} €`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Honorarios comprador:</p>
+                            <p className="text-sm font-medium">
+                              {item.buyerFeeType === 'PERCENTAGE'
+                                ? `${item.buyerFeeValue}% (${(item.price * item.buyerFeeValue / 100).toLocaleString()} €)`
+                                : `${item.buyerFeeValue.toLocaleString()} €`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">No hay encargos para esta propiedad</p>
               )}
             </div>
           </div>
@@ -456,6 +517,41 @@ export default function PropertyDetailClient({
                   setIsNewsFormOpen(false);
                   getPropertyNews(propertyId).then(newsData => {
                     setNews(newsData);
+                  });
+                }}
+              />
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Modal de Encargos */}
+      <Dialog
+        open={isAssignmentFormOpen}
+        onClose={() => setIsAssignmentFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <Dialog.Title className="text-lg font-medium">Nuevo Encargo</Dialog.Title>
+              <button
+                onClick={() => setIsAssignmentFormOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <AssignmentForm 
+                propertyId={propertyId}
+                onSuccess={() => {
+                  setIsAssignmentFormOpen(false);
+                  getAssignmentsByPropertyId(propertyId).then(assignmentsData => {
+                    setAssignments(assignmentsData);
                   });
                 }}
               />

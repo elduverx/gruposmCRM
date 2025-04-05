@@ -1,7 +1,7 @@
 'use server';
 
 import { PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/client';
-import { Property, PropertyCreateInput, Activity, DPV, PropertyNews } from '@/types/property';
+import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
@@ -378,25 +378,36 @@ export async function createPropertyNews(data: {
   valuation: string;
   priority: string;
   responsible: string;
-  value?: number;
+  value: number;
   propertyId: string;
 }): Promise<PropertyNews | null> {
   try {
-    const propertyNews = await prisma.propertyNews.create({
+    // Verificar si ya existe una noticia para esta propiedad
+    const existingNews = await prisma.propertyNews.findFirst({
+      where: {
+        propertyId: data.propertyId
+      }
+    });
+
+    if (existingNews) {
+      throw new Error('Ya existe una noticia para esta propiedad');
+    }
+
+    const news = await prisma.propertyNews.create({
       data: {
         type: data.type,
         action: data.action,
         valuation: data.valuation,
         priority: data.priority,
         responsible: data.responsible,
-        value: data.value || null,
-        propertyId: data.propertyId
+        value: data.value,
+        propertyId: data.propertyId,
       }
     });
     
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
-    revalidatePath('/dashboard/news');
-    return propertyNews;
+    revalidatePath('/dashboard/properties');
+    return news;
   } catch (error) {
     console.error('Error creating property news:', error);
     return null;
@@ -417,5 +428,150 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNews[
   } catch (error) {
     console.error('Error getting property news:', error);
     return [];
+  }
+}
+
+export async function createAssignment(data: {
+  type: string;
+  price: number;
+  exclusiveUntil: Date;
+  origin: string;
+  clientId: string;
+  sellerFeeType: string;
+  sellerFeeValue: number;
+  buyerFeeType: string;
+  buyerFeeValue: number;
+  propertyId: string;
+}): Promise<Assignment | null> {
+  try {
+    const assignment = await prisma.assignment.create({
+      data: {
+        type: data.type,
+        price: data.price,
+        exclusiveUntil: data.exclusiveUntil,
+        origin: data.origin,
+        clientId: data.clientId,
+        sellerFeeType: data.sellerFeeType,
+        sellerFeeValue: data.sellerFeeValue,
+        buyerFeeType: data.buyerFeeType,
+        buyerFeeValue: data.buyerFeeValue,
+        propertyId: data.propertyId
+      },
+      include: {
+        client: true
+      }
+    });
+    
+    revalidatePath(`/dashboard/properties/${data.propertyId}`);
+    return assignment;
+  } catch (error) {
+    console.error('Error creating assignment:', error);
+    return null;
+  }
+}
+
+export async function getAssignmentsByPropertyId(propertyId: string): Promise<Assignment[]> {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        propertyId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      include: {
+        client: true
+      }
+    });
+    return assignments;
+  } catch (error) {
+    console.error('Error getting assignments:', error);
+    return [];
+  }
+}
+
+export async function getAssignments(): Promise<Assignment[]> {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        },
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true
+          }
+        }
+      }
+    });
+    return assignments;
+  } catch (error) {
+    console.error('Error getting assignments:', error);
+    return [];
+  }
+}
+
+export async function updateAssignment(id: string, data: {
+  type: string;
+  price: number;
+  exclusiveUntil: Date;
+  origin: string;
+  clientId: string;
+  sellerFeeType: string;
+  sellerFeeValue: number;
+  buyerFeeType: string;
+  buyerFeeValue: number;
+}): Promise<Assignment | null> {
+  try {
+    const assignment = await prisma.assignment.update({
+      where: { id },
+      data: {
+        type: data.type,
+        price: data.price,
+        exclusiveUntil: data.exclusiveUntil,
+        origin: data.origin,
+        clientId: data.clientId,
+        sellerFeeType: data.sellerFeeType,
+        sellerFeeValue: data.sellerFeeValue,
+        buyerFeeType: data.buyerFeeType,
+        buyerFeeValue: data.buyerFeeValue,
+      },
+      include: {
+        client: true,
+        property: true
+      }
+    });
+    
+    revalidatePath('/dashboard/assignments');
+    revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
+    return assignment;
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    return null;
+  }
+}
+
+export async function deleteAssignment(id: string): Promise<boolean> {
+  try {
+    const assignment = await prisma.assignment.delete({
+      where: { id }
+    });
+    
+    revalidatePath('/dashboard/assignments');
+    revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting assignment:', error);
+    return false;
   }
 } 

@@ -76,20 +76,24 @@ model News {
 }
 
 model Assignment {
-  id          String           @id @default(cuid())
-  title       String
-  description String
-  status      AssignmentStatus @default(PENDING)
-  dueDate     DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  propertyId  String
-  clientId    String
-  client      Client           @relation(fields: [clientId], references: [id])
-  property    Property         @relation(fields: [propertyId], references: [id])
+  id              String   @id @default(cuid())
+  type            String   // SALE o RENT
+  price           Float
+  exclusiveUntil  DateTime
+  origin          String
+  clientId        String
+  sellerFeeType   String   // PERCENTAGE o FIXED
+  sellerFeeValue  Float
+  buyerFeeType    String   // PERCENTAGE o FIXED
+  buyerFeeValue   Float
+  propertyId      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  property        Property @relation(fields: [propertyId], references: [id])
+  client          Client   @relation(fields: [clientId], references: [id])
 
-  @@index([clientId], map: "Assignment_clientId_fkey")
   @@index([propertyId], map: "Assignment_propertyId_fkey")
+  @@index([clientId], map: "Assignment_clientId_fkey")
 }
 
 model Zone {

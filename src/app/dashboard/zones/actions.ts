@@ -134,4 +134,61 @@ export async function getPropertiesInZone(zoneId: string) {
     console.error('Error fetching properties in zone:', error);
     throw new Error('Error al cargar los inmuebles de la zona');
   }
+}
+
+export async function updatePropertyZoneByCoordinates(propertyId: string): Promise<void> {
+  try {
+    // Obtener la propiedad con sus coordenadas
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { latitude: true, longitude: true }
+    });
+
+    if (!property || !property.latitude || !property.longitude) {
+      return;
+    }
+
+    // Obtener todas las zonas
+    const zones = await prisma.zone.findMany();
+
+    // Encontrar la zona que contiene las coordenadas de la propiedad
+    for (const zone of zones) {
+      const coordinates = JSON.parse(zone.coordinates as string);
+      if (isPointInPolygon(
+        [property.latitude, property.longitude],
+        coordinates.map((coord: { lat: number; lng: number }) => [coord.lat, coord.lng])
+      )) {
+        // Actualizar la zona de la propiedad
+        await prisma.property.update({
+          where: { id: propertyId },
+          data: { zoneId: zone.id }
+        });
+        break;
+      }
+    }
+
+    revalidatePath('/dashboard/zones');
+    revalidatePath('/dashboard/properties');
+  } catch (error) {
+    console.error('Error updating property zone by coordinates:', error);
+    throw new Error('Error al actualizar la zona de la propiedad');
+  }
+}
+
+// Función auxiliar para determinar si un punto está dentro de un polígono
+function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+
+    const intersect = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
 } 

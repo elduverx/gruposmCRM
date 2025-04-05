@@ -1,6 +1,34 @@
 import { Prisma } from '@prisma/client';
 import { Client } from './client';
-import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+
+export const PropertyStatus = {
+  SIN_EMPEZAR: 'SIN_EMPEZAR',
+  EMPEZADA: 'EMPEZADA'
+} as const;
+
+export const PropertyAction = {
+  IR_A_DIRECCION: 'IR_A_DIRECCION',
+  REPETIR: 'REPETIR',
+  LOCALIZAR_VERIFICADO: 'LOCALIZAR_VERIFICADO'
+} as const;
+
+export const PropertyType = {
+  CHALET: 'CHALET',
+  PISO: 'PISO',
+  CASA: 'CASA',
+  APARTAMENTO: 'APARTAMENTO',
+  ATICO: 'ATICO',
+  DUPLEX: 'DUPLEX',
+  TERRENO: 'TERRENO',
+  LOCAL_COMERCIAL: 'LOCAL_COMERCIAL',
+  OFICINA: 'OFICINA',
+  GARAJE: 'GARAJE',
+  TRASTERO: 'TRASTERO'
+} as const;
+
+export type PropertyStatus = typeof PropertyStatus[keyof typeof PropertyStatus];
+export type PropertyAction = typeof PropertyAction[keyof typeof PropertyAction];
+export type PropertyType = typeof PropertyType[keyof typeof PropertyType];
 
 // interface Zone {
 //   id: string;
@@ -14,14 +42,29 @@ import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 
 export interface Assignment {
   id: string;
-  title: string;
-  description: string;
-  status: string;
-  dueDate: Date | null;
+  type: string; // SALE o RENT
+  price: number;
+  exclusiveUntil: Date;
+  origin: string;
+  clientId: string;
+  sellerFeeType: string; // PERCENTAGE o FIXED
+  sellerFeeValue: number;
+  buyerFeeType: string; // PERCENTAGE o FIXED
+  buyerFeeValue: number;
+  propertyId: string;
   createdAt: Date;
   updatedAt: Date;
-  propertyId: string;
-  clientId: string;
+  client?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+  };
+  property?: {
+    id: string;
+    address: string;
+    population: string;
+  };
 }
 
 export type PropertyWithRelations = Prisma.PropertyGetPayload<{
@@ -43,8 +86,6 @@ export interface Activity {
   createdAt: string;
   updatedAt: string;
 }
-
-export type { PropertyStatus, PropertyAction, PropertyType };
 
 export interface Property {
   id: string;

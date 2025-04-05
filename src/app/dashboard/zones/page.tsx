@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { getProperties } from '../properties/actions';
-import { getZones, createZone, Zone, updateZone, deleteZone } from './actions';
-import { Property } from '@/types/property';
+import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from '../properties/actions';
+import { getZones, createZone, Zone, updateZone, deleteZone, updatePropertyZoneByCoordinates } from './actions';
+import { Property, Activity, DPV } from '@/types/property';
+import { PropertyStatus, PropertyAction } from '@/types/property';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -368,22 +369,22 @@ const MapWithDraw = ({
                   )}
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      property.status === 'SIN_EMPEZAR' 
+                      property.status === PropertyStatus.SIN_EMPEZAR 
                         ? 'bg-yellow-100 text-yellow-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
+                      {property.status === PropertyStatus.SIN_EMPEZAR ? 'Sin empezar' : 'Empezada'}
                     </span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      property.action === 'IR_A_DIRECCION' 
+                      property.action === PropertyAction.IR_A_DIRECCION 
                         ? 'bg-blue-100 text-blue-800'
-                        : property.action === 'REPETIR'
+                        : property.action === PropertyAction.REPETIR
                         ? 'bg-purple-100 text-purple-800'
                         : 'bg-indigo-100 text-indigo-800'
                     }`}>
-                      {property.action === 'IR_A_DIRECCION' 
+                      {property.action === PropertyAction.IR_A_DIRECCION 
                         ? 'Ir a dirección' 
-                        : property.action === 'REPETIR'
+                        : property.action === PropertyAction.REPETIR
                         ? 'Repetir'
                         : 'Localizar verificado'}
                     </span>
@@ -434,6 +435,7 @@ export default function ZonesPage() {
   const [newZoneColor, setNewZoneColor] = useState('#FF0000');
   const [zoneCoordinates, setZoneCoordinates] = useState<{ lat: number; lng: number }[]>([]);
   const [showZoneForm, setShowZoneForm] = useState(false);
+  const [showZoneModal, setShowZoneModal] = useState(false);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
@@ -519,13 +521,20 @@ export default function ZonesPage() {
   const handleZoneClick = async (zone: Zone) => {
     setSelectedZone(zone);
     setSelectedProperty(null);
-    setSelectedPropertyId(null); // Limpiar la propiedad seleccionada al cambiar de zona
+    setSelectedPropertyId(null);
     
     try {
       // Filtrar propiedades que están dentro de la zona
       const propertiesInZone = allProperties.filter(property => 
         isPropertyInZone(property, zone.coordinates)
       );
+      
+      // Actualizar la zona de cada propiedad que está dentro
+      for (const property of propertiesInZone) {
+        if (property.id) {
+          await updatePropertyZoneByCoordinates(property.id);
+        }
+      }
       
       setProperties(propertiesInZone);
       
@@ -569,6 +578,13 @@ export default function ZonesPage() {
         isPropertyInZone(property, newZone.coordinates)
       );
       
+      // Actualizar la zona de cada propiedad que está dentro
+      for (const property of propertiesInZone) {
+        if (property.id) {
+          await updatePropertyZoneByCoordinates(property.id);
+        }
+      }
+      
       // Actualizar la lista de propiedades mostradas
       setProperties(propertiesInZone);
       
@@ -595,6 +611,40 @@ export default function ZonesPage() {
     } catch (error) {
       console.error('Error creating zone:', error);
       alert('Error al crear la zona');
+    }
+  };
+
+  const handleSaveZone = async () => {
+    if (!selectedZone) return;
+    
+    try {
+      const updatedZone = await updateZone(selectedZone.id, {
+        name: newZoneName,
+        description: newZoneDescription,
+        color: newZoneColor,
+        coordinates: selectedZone.coordinates
+      });
+      
+      // Actualizar la zona en la lista
+      setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
+      
+      // Filtrar propiedades que están dentro de la zona actualizada
+      const propertiesInZone = allProperties.filter(property => 
+        isPropertyInZone(property, updatedZone.coordinates)
+      );
+      
+      // Actualizar la zona de cada propiedad que está dentro
+      for (const property of propertiesInZone) {
+        if (property.id) {
+          await updatePropertyZoneByCoordinates(property.id);
+        }
+      }
+      
+      setShowZoneModal(false);
+      alert('Zona actualizada correctamente');
+    } catch (error) {
+      console.error('Error updating zone:', error);
+      alert('Error al actualizar la zona');
     }
   };
 

@@ -1,79 +1,53 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { createPropertyNews } from './actions';
-import { getProperties } from './actions';
-import { Property } from '@/types/property';
+import { PropertyNews } from '@/types/property';
 
 interface PropertyNewsFormProps {
-  propertyId?: string;
-  dpvValue?: number;
+  propertyId: string;
   onSuccess?: () => void;
 }
 
-export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNewsFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
+export function PropertyNewsForm({ propertyId, onSuccess }: PropertyNewsFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPrices, setShowPrices] = useState(false);
-  const [properties, setProperties] = useState<Property[]>([]);
   const [formData, setFormData] = useState({
     type: 'DPV',
     action: 'SALE',
     valuation: 'PRECIOSM',
     priority: 'LOW',
     responsible: '',
-    value: dpvValue || 0,
+    value: 0,
     precioSM: 0,
-    precioCliente: 0,
-    propertyId: propertyId || ''
+    precioCliente: 0
   });
-
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const data = await getProperties();
-        setProperties(data);
-      } catch (error) {
-        console.error('Error fetching properties:', error);
-        toast.error('Error al cargar las propiedades');
-      }
-    };
-
-    if (!propertyId) {
-      fetchProperties();
-    }
-  }, [propertyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.propertyId) {
-      toast.error('Debes seleccionar una propiedad');
-      return;
-    }
-    
-    setIsLoading(true);
+    setLoading(true);
+    setError(null);
 
     try {
-      const newsData = {
-        type: formData.type,
-        action: formData.action,
-        valuation: formData.valuation,
-        priority: formData.priority,
-        responsible: formData.responsible,
+      const data = {
+        ...formData,
         value: showPrices ? parseFloat(formData.precioCliente.toString()) : parseFloat(formData.value.toString()),
-        propertyId: formData.propertyId
+        propertyId
       };
 
-      await createPropertyNews(newsData);
-      toast.success('Noticia creada correctamente');
-      onSuccess?.();
+      const result = await createPropertyNews(data);
+      if (result) {
+        onSuccess?.();
+      } else {
+        setError('Ya existe una noticia para esta propiedad');
+      }
     } catch (error) {
-      console.error('Error creating news:', error);
-      toast.error('Error al crear la noticia');
+      console.error('Error:', error);
+      setError('Error al crear la noticia');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -95,23 +69,9 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!propertyId && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Propiedad</label>
-          <select
-            name="propertyId"
-            value={formData.propertyId}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            required
-          >
-            <option value="">Selecciona una propiedad</option>
-            {properties.map((property) => (
-              <option key={property.id} value={property.id}>
-                {property.address} - {property.population}
-              </option>
-            ))}
-          </select>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{error}</span>
         </div>
       )}
 
@@ -121,7 +81,7 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
           name="type"
           value={formData.type}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         >
           <option value="DPV">DPV</option>
@@ -135,7 +95,7 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
           name="action"
           value={formData.action}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         >
           <option value="SALE">Venta</option>
@@ -152,20 +112,25 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
               id="showPrices"
               checked={showPrices}
               onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
             />
+            <label htmlFor="showPrices" className="ml-2 block text-sm text-gray-700">
+              Mostrar precios
+            </label>
           </div>
         </div>
-        <select
-          name="valuation"
-          value={formData.valuation}
-          onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        >
-          <option value="PRECIOSM">Precio SM</option>
-          <option value="PRECIOCLIENTE">Precio Cliente</option>
-        </select>
+        {!showPrices && (
+          <select
+            name="valuation"
+            value={formData.valuation}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            required
+          >
+            <option value="PRECIOSM">Precio SM</option>
+            <option value="PRECIOCLIENTE">Precio Cliente</option>
+          </select>
+        )}
       </div>
 
       <div>
@@ -174,12 +139,11 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
           name="priority"
           value={formData.priority}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         >
-          <option value="LOW">Baja</option>
-          <option value="MEDIUM">Media</option>
           <option value="HIGH">Alta</option>
+          <option value="LOW">Baja</option>
         </select>
       </div>
 
@@ -190,7 +154,7 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
           name="responsible"
           value={formData.responsible}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         />
       </div>
@@ -203,8 +167,10 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
             name="value"
             value={formData.value}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
+            min="0"
+            step="0.01"
           />
         </div>
       ) : (
@@ -216,8 +182,10 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
               name="precioSM"
               value={formData.precioSM}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               required
+              min="0"
+              step="0.01"
             />
           </div>
           <div>
@@ -227,8 +195,10 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
               name="precioCliente"
               value={formData.precioCliente}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               required
+              min="0"
+              step="0.01"
             />
           </div>
           <div className="p-3 bg-gray-50 rounded-md">
@@ -237,9 +207,9 @@ export function PropertyNewsForm({ propertyId, dpvValue, onSuccess }: PropertyNe
         </>
       )}
 
-      <div className="pt-4">
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? 'Creando...' : 'Crear Noticia'}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Creando...' : 'Crear Noticia'}
         </Button>
       </div>
     </form>
