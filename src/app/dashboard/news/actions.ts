@@ -14,7 +14,17 @@ export async function getPropertyNews() {
         property: true
       }
     });
-    return news;
+
+    return news.map(item => ({
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      property: item.property ? {
+        ...item.property,
+        createdAt: item.property.createdAt.toISOString(),
+        updatedAt: item.property.updatedAt.toISOString()
+      } : undefined
+    }));
   } catch (error) {
     console.error('Error getting property news:', error);
     return [];

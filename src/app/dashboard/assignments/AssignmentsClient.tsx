@@ -7,6 +7,7 @@ import { Dialog } from '@headlessui/react';
 import { AssignmentForm } from '../properties/AssignmentForm';
 import Link from 'next/link';
 import { deleteAssignment } from '../properties/actions';
+import { formatNumber } from '@/lib/utils';
 
 interface AssignmentsClientProps {
   initialAssignments: Assignment[];
@@ -112,7 +113,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                           {assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {assignment.price.toLocaleString()} €
+                          {formatNumber(assignment.price)} €
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {new Date(assignment.exclusiveUntil).toLocaleDateString('es-ES')}

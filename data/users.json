@@ -16,5 +16,23 @@
     "role": "ADMIN",
     "createdAt": "2025-04-06T13:02:06.436Z",
     "updatedAt": "2025-04-06T13:02:06.436Z"
+  },
+  {
+    "id": "1743945125806",
+    "name": "user",
+    "email": "us@gmail.com",
+    "password": "$2a$10$kL3u9K7UnIjfl.agDtsvrO.U8rSYN5.kqt2iLQxK0A8NIQfbjEJuK",
+    "role": "USER",
+    "createdAt": "2025-04-06T13:12:05.806Z",
+    "updatedAt": "2025-04-06T13:12:05.806Z"
+  },
+  {
+    "id": "1743945857047",
+    "name": "maria",
+    "email": "m@gmail.com",
+    "password": "$2a$10$sWcFL9cGmQu/GKeRxwyN9.rIqQu.C8/RyACQLom76KBOCKnAXA.Z6",
+    "role": "USER",
+    "createdAt": "2025-04-06T13:24:17.047Z",
+    "updatedAt": "2025-04-06T13:24:17.047Z"
   }
 ]

@@ -2,37 +2,109 @@
 
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from '../properties/actions';
-import { getZones, createZone, Zone, updateZone, deleteZone, updatePropertyZoneByCoordinates } from './actions';
-import { Property, Activity, DPV } from '@/types/property';
-import { PropertyStatus, PropertyAction } from '@/types/property';
+import { getProperties } from '../properties/actions';
+import { getZones, createZone, Zone, updateZone, deleteZone } from './actions';
+import { Property } from '@/types/property';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { MagnifyingGlassIcon, FunnelIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import React from 'react';
+import { MapContainer as LeafletMapContainer, TileLayer as LeafletTileLayer, Marker as LeafletMarker, Popup as LeafletPopup, Polygon as LeafletPolygon } from 'react-leaflet';
 
-// Importar componentes de Leaflet dinámicamente para evitar el error de window
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse" />
-});
+// Componente para el formulario de zonas
+interface ZoneFormProps {
+  zone?: Zone | null;
+  onSubmit: (formData: { name: string; description: string; color: string }) => void;
+  onCancel: () => void;
+}
 
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), {
-  ssr: false
-});
+function ZoneForm({ zone, onSubmit, onCancel }: ZoneFormProps) {
+  const [formData, setFormData] = useState({
+    name: zone?.name || '',
+    description: zone?.description || '',
+    color: zone?.color || '#FF0000'
+  });
 
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), {
-  ssr: false
-});
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
 
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), {
-  ssr: false
-});
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-const Polygon = dynamic(() => import('react-leaflet').then(mod => mod.Polygon), {
-  ssr: false
-});
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 className="text-2xl font-semibold mb-6">
+          {zone ? 'Editar Zona' : 'Nueva Zona'}
+        </h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Nombre</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Descripción</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Color</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="color"
+                name="color"
+                value={formData.color}
+                onChange={handleChange}
+                className="h-10 w-20 rounded-md border-gray-300"
+              />
+              <span className="text-sm text-gray-500">{formData.color}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              {zone ? 'Guardar Cambios' : 'Crear Zona'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 // Fix para los iconos por defecto de Leaflet
 let icon: L.Icon | L.DivIcon | undefined = undefined;
@@ -51,20 +123,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Componente para el mapa con la funcionalidad de dibujo
-const MapWithDraw = ({ 
-  center, 
-  zoom, 
-  properties, 
-  zones, 
-  newZoneColor, 
-  zoneCoordinates, 
-  onZoneCreated, 
-  onPropertyClick, 
-  onZoneClick,
-  selectedPropertyId,
-  onEditZone,
-  onDeleteZone
-}: { 
+const MapWithDraw = React.forwardRef<L.Map, { 
   center: [number, number], 
   zoom: number, 
   properties: Property[], 
@@ -76,15 +135,37 @@ const MapWithDraw = ({
   onZoneClick: (zone: Zone) => void,
   selectedPropertyId: string | null,
   onEditZone: (zone: Zone) => void,
-  onDeleteZone: (zone: Zone) => void
-}) => {
-  const mapRef = useRef<L.Map | null>(null);
+  onDeleteZone: (zone: Zone) => void,
+  onMarkerRefsUpdate: (refs: { [key: string]: L.Marker | null }) => void,
+  setSelectedPropertyId: (id: string | null) => void
+}>(({ 
+  center, 
+  zoom, 
+  properties, 
+  zones, 
+  newZoneColor, 
+  zoneCoordinates, 
+  onZoneCreated, 
+  onPropertyClick, 
+  onZoneClick,
+  selectedPropertyId,
+  onEditZone,
+  onDeleteZone,
+  onMarkerRefsUpdate,
+  setSelectedPropertyId
+}, ref) => {
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
   const initializedRef = useRef<boolean>(false);
   const router = useRouter();
   
+  // Efecto para notificar al componente padre cuando los marcadores cambian
+  useEffect(() => {
+    // Notificar al componente padre sobre los cambios en los marcadores
+    onMarkerRefsUpdate(markerRefs.current);
+  }, [properties, onMarkerRefsUpdate]);
+
   // Efecto para abrir el popup cuando se selecciona una propiedad
   useEffect(() => {
     if (selectedPropertyId && markerRefs.current[selectedPropertyId]) {
@@ -101,185 +182,98 @@ const MapWithDraw = ({
         } catch (error) {
           console.error(`Error al abrir el popup para la propiedad ${selectedPropertyId}:`, error);
         }
-      }, 300); // Aumentar el tiempo de espera para asegurar que el mapa esté listo
+      }, 300); // Reducir el tiempo de espera de 1000ms a 300ms
     }
   }, [selectedPropertyId]);
 
+  // Efecto para centrar el mapa cuando cambia el centro o el zoom
+  useEffect(() => {
+    if (ref && (ref as React.MutableRefObject<L.Map>).current) {
+      const map = (ref as React.MutableRefObject<L.Map>).current;
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, ref]);
+
   // Efecto para inicializar el control de dibujo
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current) return;
-    
-    // Guardar una referencia al mapa actual
-    const currentMap = mapRef.current;
-    
-    const initializeDrawControl = async () => {
-      try {
-        const L = await import('leaflet');
-        const { default: LeafletDraw } = await import('leaflet-draw');
-        
-        // Crear un grupo de características para almacenar las zonas dibujadas
-        if (!featureGroupRef.current) {
-          featureGroupRef.current = new L.FeatureGroup().addTo(currentMap);
-        }
-        
-        // Crear el control de dibujo
-        if (!drawControlRef.current) {
-          drawControlRef.current = new L.Control.Draw({
-            draw: {
-              // Deshabilitar todas las herramientas de dibujo excepto polígono
-              polyline: false,
-              rectangle: false,
-              circle: false,
-              circlemarker: false,
-              marker: false,
-              polygon: {
-                allowIntersection: false,
-                drawError: {
-                  color: '#e1e100',
-                  message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
-                },
-                shapeOptions: {
-                  color: newZoneColor
-                }
-              }
-            },
-            edit: {
-              featureGroup: featureGroupRef.current,
-              remove: false
-            }
-          });
-          
-          // Añadir el control al mapa
-          currentMap.addControl(drawControlRef.current);
-          
-          // Evento cuando se completa el dibujo de un polígono
-          currentMap.on('draw:created', (e: { layer: L.Layer }) => {
-            const layer = e.layer;
-            featureGroupRef.current?.addLayer(layer);
-            
-            // Obtener las coordenadas del polígono
-            if (layer instanceof L.Polygon) {
-              const latLngs = layer.getLatLngs()[0];
-              if (Array.isArray(latLngs)) {
-                const coordinates = latLngs.map((latLng: L.LatLng | L.LatLng[]) => {
-                  if (latLng instanceof L.LatLng) {
-                    return {
-                      lat: latLng.lat,
-                      lng: latLng.lng
-                    };
-                  }
-                  return null;
-                }).filter((coord): coord is { lat: number; lng: number } => coord !== null);
-                
-                // Llamar a la función de callback con las coordenadas
-                onZoneCreated(coordinates);
+    if (typeof window !== 'undefined' && ref && (ref as React.MutableRefObject<L.Map>).current) {
+      const map = (ref as React.MutableRefObject<L.Map>).current;
+      
+      // Crear un grupo de características para almacenar las zonas dibujadas
+      if (!featureGroupRef.current) {
+        featureGroupRef.current = new L.FeatureGroup().addTo(map);
+      }
+      
+      // Crear el control de dibujo
+      if (!drawControlRef.current) {
+        const drawControl = new L.Control.Draw({
+          draw: {
+            polyline: false,
+            rectangle: false,
+            circle: false,
+            circlemarker: false,
+            marker: false,
+            polygon: {
+              allowIntersection: false,
+              drawError: {
+                color: '#e1e100',
+                message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
+              },
+              shapeOptions: {
+                color: newZoneColor
               }
             }
-          });
-        }
-      } catch (error) {
-        console.error('Error al inicializar el control de dibujo:', error);
-      }
-    };
-    
-    // Iniciar el control de dibujo
-    initializeDrawControl();
-    
-    // Función de limpieza
-    return () => {
-      if (drawControlRef.current && currentMap) {
-        currentMap.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
-      }
-      if (featureGroupRef.current && currentMap) {
-        currentMap.removeLayer(featureGroupRef.current);
-        featureGroupRef.current = null;
-      }
-    };
-  }, [onZoneCreated, newZoneColor]);
-
-  // Efecto para asegurar que el control de dibujo permanezca visible
-  useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current || !initializedRef.current) return;
-    
-    // Guardar una referencia al mapa actual
-    const currentMap = mapRef.current;
-    
-    const ensureDrawControlVisible = async () => {
-      try {
-        const L = await import('leaflet');
-        
-        // Verificar si el control de dibujo ya está en el mapa
-        if (!currentMap) return;
-        
-        // @ts-expect-error - La propiedad _toolbar no está en los tipos de Leaflet
-        const drawControls = currentMap._toolbar?._container?.children;
-        
-        if (!drawControls || drawControls.length === 0) {
-          console.log('Reinicializando control de dibujo...');
-          
-          // Crear FeatureGroup si no existe
-          if (!featureGroupRef.current) {
-            featureGroupRef.current = new L.FeatureGroup();
-            currentMap.addLayer(featureGroupRef.current);
+          },
+          edit: {
+            featureGroup: featureGroupRef.current,
+            remove: false
           }
+        });
+        
+        drawControlRef.current = drawControl;
+        map.addControl(drawControl);
+        
+        // Evento cuando se completa el dibujo de un polígono
+        map.on('draw:created', (e: { layer: L.Layer }) => {
+          const layer = e.layer;
+          featureGroupRef.current?.addLayer(layer);
           
-          // Configurar el control de dibujo
-          const drawControl = new L.Control.Draw({
-            draw: {
-              polyline: false,
-              rectangle: false,
-              circle: false,
-              circlemarker: false,
-              marker: false,
-              polygon: {
-                allowIntersection: false,
-                drawError: {
-                  color: '#e1e100',
-                  message: '<strong>Error:</strong> Los polígonos no pueden intersectarse!'
-                },
-                shapeOptions: {
-                  color: '#FF0000'
+          if (layer instanceof L.Polygon) {
+            const latLngs = layer.getLatLngs()[0];
+            if (Array.isArray(latLngs)) {
+              const coordinates = latLngs.map((latLng: L.LatLng | L.LatLng[]) => {
+                if (latLng instanceof L.LatLng) {
+                  return {
+                    lat: latLng.lat,
+                    lng: latLng.lng
+                  };
                 }
-              }
-            },
-            edit: {
-              featureGroup: featureGroupRef.current,
-              remove: true
+                return null;
+              }).filter((coord): coord is { lat: number; lng: number } => coord !== null);
+              
+              onZoneCreated(coordinates);
             }
-          });
-          
-          // Guardar referencia al control
-          drawControlRef.current = drawControl;
-          
-          // Añadir el control al mapa
-          currentMap.addControl(drawControl);
-          console.log('Control de dibujo reinicializado');
-        }
-      } catch (error) {
-        console.error('Error al asegurar que el control de dibujo esté visible:', error);
+          }
+        });
       }
-    };
-    
-    // Asegurar que el control de dibujo esté visible
-    ensureDrawControlVisible();
-  }, [selectedPropertyId]);
+    }
+  }, [ref, newZoneColor, onZoneCreated]);
 
   return (
-    <MapContainer
+    <LeafletMapContainer
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
-      ref={mapRef as unknown as React.RefObject<L.Map>}
+      ref={ref as React.RefObject<L.Map>}
     >
-      <TileLayer
+      <LeafletTileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       
       {/* Mostrar zonas */}
       {zones.map((zone) => (
-        <Polygon
+        <LeafletPolygon
           key={zone.id}
           positions={zone.coordinates.map(coord => [coord.lat, coord.lng])}
           pathOptions={{ 
@@ -292,7 +286,7 @@ const MapWithDraw = ({
             click: () => onZoneClick(zone)
           }}
         >
-          <Popup>
+          <LeafletPopup>
             <div className="p-2">
               <h3 className="font-semibold">{zone.name}</h3>
               {zone.description && (
@@ -319,13 +313,13 @@ const MapWithDraw = ({
                 </button>
               </div>
             </div>
-          </Popup>
-        </Polygon>
+          </LeafletPopup>
+        </LeafletPolygon>
       ))}
       
       {/* Mostrar zona en creación */}
       {zoneCoordinates.length > 0 && (
-        <Polygon
+        <LeafletPolygon
           positions={zoneCoordinates.map(coord => [coord.lat, coord.lng])}
           pathOptions={{ 
             color: newZoneColor, 
@@ -339,22 +333,26 @@ const MapWithDraw = ({
       {/* Mostrar propiedades */}
       {properties.map((property) => (
         property.latitude && property.longitude ? (
-          <Marker
+          <LeafletMarker
             key={property.id}
             position={[property.latitude, property.longitude]}
             icon={icon}
             ref={(ref) => {
               if (ref) {
                 markerRefs.current[property.id] = ref;
+                // Notificar inmediatamente cuando se crea un nuevo marcador
+                onMarkerRefsUpdate(markerRefs.current);
               }
             }}
             eventHandlers={{
               click: () => {
                 onPropertyClick(property);
+                // Asegurarse de que la propiedad seleccionada se actualice en el componente padre
+                setSelectedPropertyId(property.id);
               }
             }}
           >
-            <Popup>
+            <LeafletPopup>
               <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
@@ -369,22 +367,22 @@ const MapWithDraw = ({
                   )}
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      property.status === PropertyStatus.SIN_EMPEZAR 
+                      property.status === 'SIN_EMPEZAR' 
                         ? 'bg-yellow-100 text-yellow-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {property.status === PropertyStatus.SIN_EMPEZAR ? 'Sin empezar' : 'Empezada'}
+                      {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
                     </span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      property.action === PropertyAction.IR_A_DIRECCION 
+                      property.action === 'IR_A_DIRECCION' 
                         ? 'bg-blue-100 text-blue-800'
-                        : property.action === PropertyAction.REPETIR
+                        : property.action === 'REPETIR'
                         ? 'bg-purple-100 text-purple-800'
                         : 'bg-indigo-100 text-indigo-800'
                     }`}>
-                      {property.action === PropertyAction.IR_A_DIRECCION 
+                      {property.action === 'IR_A_DIRECCION' 
                         ? 'Ir a dirección' 
-                        : property.action === PropertyAction.REPETIR
+                        : property.action === 'REPETIR'
                         ? 'Repetir'
                         : 'Localizar verificado'}
                     </span>
@@ -412,13 +410,15 @@ const MapWithDraw = ({
                   </div>
                 </div>
               </div>
-            </Popup>
-          </Marker>
+            </LeafletPopup>
+          </LeafletMarker>
         ) : null
       ))}
-    </MapContainer>
+    </LeafletMapContainer>
   );
-};
+});
+
+MapWithDraw.displayName = 'MapWithDraw';
 
 export default function ZonesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -435,7 +435,6 @@ export default function ZonesPage() {
   const [newZoneColor, setNewZoneColor] = useState('#FF0000');
   const [zoneCoordinates, setZoneCoordinates] = useState<{ lat: number; lng: number }[]>([]);
   const [showZoneForm, setShowZoneForm] = useState(false);
-  const [showZoneModal, setShowZoneModal] = useState(false);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
@@ -521,20 +520,13 @@ export default function ZonesPage() {
   const handleZoneClick = async (zone: Zone) => {
     setSelectedZone(zone);
     setSelectedProperty(null);
-    setSelectedPropertyId(null);
+    setSelectedPropertyId(null); // Limpiar la propiedad seleccionada al cambiar de zona
     
     try {
       // Filtrar propiedades que están dentro de la zona
       const propertiesInZone = allProperties.filter(property => 
         isPropertyInZone(property, zone.coordinates)
       );
-      
-      // Actualizar la zona de cada propiedad que está dentro
-      for (const property of propertiesInZone) {
-        if (property.id) {
-          await updatePropertyZoneByCoordinates(property.id);
-        }
-      }
       
       setProperties(propertiesInZone);
       
@@ -578,13 +570,6 @@ export default function ZonesPage() {
         isPropertyInZone(property, newZone.coordinates)
       );
       
-      // Actualizar la zona de cada propiedad que está dentro
-      for (const property of propertiesInZone) {
-        if (property.id) {
-          await updatePropertyZoneByCoordinates(property.id);
-        }
-      }
-      
       // Actualizar la lista de propiedades mostradas
       setProperties(propertiesInZone);
       
@@ -614,40 +599,6 @@ export default function ZonesPage() {
     }
   };
 
-  const handleSaveZone = async () => {
-    if (!selectedZone) return;
-    
-    try {
-      const updatedZone = await updateZone(selectedZone.id, {
-        name: newZoneName,
-        description: newZoneDescription,
-        color: newZoneColor,
-        coordinates: selectedZone.coordinates
-      });
-      
-      // Actualizar la zona en la lista
-      setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
-      
-      // Filtrar propiedades que están dentro de la zona actualizada
-      const propertiesInZone = allProperties.filter(property => 
-        isPropertyInZone(property, updatedZone.coordinates)
-      );
-      
-      // Actualizar la zona de cada propiedad que está dentro
-      for (const property of propertiesInZone) {
-        if (property.id) {
-          await updatePropertyZoneByCoordinates(property.id);
-        }
-      }
-      
-      setShowZoneModal(false);
-      alert('Zona actualizada correctamente');
-    } catch (error) {
-      console.error('Error updating zone:', error);
-      alert('Error al actualizar la zona');
-    }
-  };
-
   const handleCancelZoneCreation = () => {
     setZoneCoordinates([]);
     setNewZoneName('');
@@ -657,9 +608,7 @@ export default function ZonesPage() {
   };
 
   const handleStartEditing = (zone: Zone) => {
-    setSelectedZone(zone);
     setEditingZone(zone);
-    setIsEditing(true);
     setNewZoneName(zone.name);
     setNewZoneDescription(zone.description || '');
     setNewZoneColor(zone.color);
@@ -765,6 +714,22 @@ export default function ZonesPage() {
     );
   };
 
+  const handleZoneFormSubmit = (formData: { name: string; description: string; color: string }) => {
+    if (editingZone) {
+      // Actualizar zona existente
+      setNewZoneName(formData.name);
+      setNewZoneDescription(formData.description);
+      setNewZoneColor(formData.color);
+      handleEditZone();
+    } else {
+      // Crear nueva zona
+      setNewZoneName(formData.name);
+      setNewZoneDescription(formData.description);
+      setNewZoneColor(formData.color);
+      handleCreateZone();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -796,70 +761,20 @@ export default function ZonesPage() {
           </div>
         </div>
         
+        {/* Formulario de zona */}
         {showZoneForm && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-md">
-            <h3 className="text-lg font-medium text-gray-900">
-              {isEditing ? 'Editar Zona' : 'Detalles de la Zona'}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label htmlFor="zoneName" className="block text-sm font-medium text-gray-700">
-                  Nombre de la Zona
-                </label>
-                <input
-                  type="text"
-                  id="zoneName"
-                  value={newZoneName}
-                  onChange={(e) => setNewZoneName(e.target.value)}
-                  className="mt-1  block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Ej: Zona Centro"
-                />
-              </div>
-              <div>
-                <label htmlFor="zoneDescription" className="block text-sm font-medium text-gray-700">
-                  Descripción
-                </label>
-                <input
-                  type="text"
-                  id="zoneDescription"
-                  value={newZoneDescription}
-                  onChange={(e) => setNewZoneDescription(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Ej: Área central de la ciudad"
-                />
-              </div>
-              <div>
-                <label htmlFor="zoneColor" className="block text-sm font-medium text-gray-700">
-                  Color
-                </label>
-                <input
-                  type="color"
-                  id="zoneColor"
-                  value={newZoneColor}
-                  onChange={(e) => setNewZoneColor(e.target.value)}
-                  className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex space-x-2">
-              <button
-                onClick={isEditing ? handleEditZone : handleCreateZone}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              >
-                {isEditing ? 'Guardar Cambios' : 'Guardar Zona'}
-              </button>
-              <button
-                onClick={() => {
-                  handleCancelZoneCreation();
-                  setIsEditing(false);
-                  setEditingZone(null);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
+          <ZoneForm
+            zone={editingZone}
+            onSubmit={handleZoneFormSubmit}
+            onCancel={() => {
+              setShowZoneForm(false);
+              setEditingZone(null);
+              setZoneCoordinates([]);
+              setNewZoneName('');
+              setNewZoneDescription('');
+              setNewZoneColor('#FF0000');
+            }}
+          />
         )}
       </div>
       
@@ -879,6 +794,12 @@ export default function ZonesPage() {
             selectedPropertyId={selectedPropertyId}
             onEditZone={handleStartEditing}
             onDeleteZone={handleDeleteZone}
+            onMarkerRefsUpdate={(refs) => {
+              // Implementa la lógica para notificar cambios en los marcadores
+            }}
+            setSelectedPropertyId={(id) => {
+              setSelectedPropertyId(id);
+            }}
           />
         )}
       </div>

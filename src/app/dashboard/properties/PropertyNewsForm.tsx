@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/ui/button';
 import { createPropertyNews } from './actions';
 import { PropertyNews } from '@/types/property';
 

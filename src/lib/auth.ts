@@ -12,12 +12,24 @@ if (JWT_SECRET === 'your-secret-key') {
 // Verificar si el token es válido y devolver el usuario decodificado
 export const verifyToken = (token: string) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    console.log('Token decodificado:', decoded);
+    if (!token) {
+      console.error('Token no proporcionado');
+      throw new Error('Token no proporcionado');
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; exp: number };
+    console.log('Token decodificado:', { userId: decoded.userId, role: decoded.role });
+
+    // Verificar si el token ha expirado
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (decoded.exp && decoded.exp < currentTime) {
+      console.error('Token expirado');
+      throw new Error('Token expirado');
+    }
+
     return decoded;
   } catch (error) {
     console.error('Error al verificar token:', error);
-    // No devolvemos null, sino que lanzamos el error para que pueda ser manejado
     throw error;
   }
 };
@@ -56,12 +68,10 @@ export const isAdmin = async (request: Request) => {
       return isAdminUser;
     } catch (error) {
       console.error('Error al verificar token en isAdmin:', error);
-      // En lugar de devolver false, lanzamos el error para que pueda ser manejado
       throw error;
     }
   } catch (error) {
     console.error('Error en isAdmin:', error);
-    // En lugar de devolver false, lanzamos el error para que pueda ser manejado
     throw error;
   }
 };
@@ -72,6 +82,9 @@ export const generateToken = (userId: string, role: string) => {
   return jwt.sign(
     { userId, role },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { 
+      expiresIn: '24h',
+      algorithm: 'HS256'
+    }
   );
 }; 

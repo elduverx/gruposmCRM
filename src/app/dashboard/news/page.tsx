@@ -6,14 +6,17 @@ import { PropertyNews } from '@/types/property';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { PropertyNewsForm } from '../properties/PropertyNewsForm';
+import { formatNumber } from '@/lib/utils';
 
 export default function NewsPage() {
   const router = useRouter();
   const [news, setNews] = useState<PropertyNews[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
 
   const loadNews = async () => {
+    setIsLoading(true);
     try {
       const data = await getPropertyNews();
       setNews(data);
@@ -31,11 +34,14 @@ export default function NewsPage() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta noticia?')) {
-      const success = await deletePropertyNews(id);
-      if (success) {
-        toast.success('Noticia eliminada correctamente');
-        loadNews();
-      } else {
+      try {
+        const success = await deletePropertyNews(id);
+        if (success) {
+          toast.success('Noticia eliminada correctamente');
+          await loadNews();
+        }
+      } catch (error) {
+        console.error('Error deleting news:', error);
         toast.error('Error al eliminar la noticia');
       }
     }
@@ -47,15 +53,34 @@ export default function NewsPage() {
     }
   };
 
+  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const result = await createPropertyNews({
+        ...data,
+        propertyId: selectedPropertyId
+      });
+      
+      if (result) {
+        toast.success('Noticia creada correctamente');
+        setIsModalOpen(false);
+        await loadNews();
+      }
+    } catch (error) {
+      console.error('Error creating news:', error);
+      toast.error('Error al crear la noticia');
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Noticias de Propiedades</h1>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={isLoading}
         >
-          Nueva Noticia
+          {isLoading ? 'Cargando...' : 'Nueva Noticia'}
         </button>
       </div>
 
@@ -106,7 +131,7 @@ export default function NewsPage() {
                   <td className="py-3 px-4">{item.valuation}</td>
                   <td className="py-3 px-4">{item.priority}</td>
                   <td className="py-3 px-4">{item.responsible}</td>
-                  <td className="py-3 px-4">{item.value ? `€${item.value.toLocaleString('es-ES')}` : '-'}</td>
+                  <td className="py-3 px-4">{item.value ? `€${formatNumber(item.value)}` : '-'}</td>
                   <td className="py-3 px-4">{new Date(item.createdAt).toLocaleDateString('es-ES')}</td>
                   <td className="py-3 px-4">
                     <button
@@ -141,10 +166,8 @@ export default function NewsPage() {
               </button>
             </div>
             <PropertyNewsForm
-              onSuccess={() => {
-                setIsModalOpen(false);
-                loadNews();
-              }}
+              propertyId={selectedPropertyId}
+              onSuccess={handleNewsSubmit}
             />
           </div>
         </div>

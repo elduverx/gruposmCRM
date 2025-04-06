@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/ui/button';
 import { createAssignment, updateAssignment } from './actions';
 import { Client } from '@/types/client';
 import { getClients } from '../clients/actions';

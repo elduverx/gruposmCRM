@@ -1,78 +1,109 @@
-import * as React from 'react';
+import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      'rounded-lg border border-gray-200 bg-white text-gray-950 shadow-sm',
-      className
-    )}
-    {...props}
-  />
-));
-Card.displayName = 'Card';
+interface CardProps {
+  children: ReactNode;
+  className?: string;
+  variant?: 'default' | 'bordered' | 'elevated';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+}
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex flex-col space-y-1.5 p-6', className)}
-    {...props}
-  />
-));
-CardHeader.displayName = 'CardHeader';
+export default function Card({
+  children,
+  className,
+  variant = 'default',
+  padding = 'md',
+}: CardProps) {
+  const baseStyles = 'bg-white rounded-lg';
+  
+  const variantStyles = {
+    default: 'shadow-sm',
+    bordered: 'border border-gray-200',
+    elevated: 'shadow-md',
+  };
 
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn(
-      'text-2xl font-semibold leading-none tracking-tight',
-      className
-    )}
-    {...props}
-  />
-));
-CardTitle.displayName = 'CardTitle';
+  const paddingStyles = {
+    none: '',
+    sm: 'p-3',
+    md: 'p-5',
+    lg: 'p-7',
+  };
 
-const CardDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn('text-sm text-gray-500', className)}
-    {...props}
-  />
-));
-CardDescription.displayName = 'CardDescription';
+  return (
+    <div
+      className={cn(
+        baseStyles,
+        variantStyles[variant],
+        paddingStyles[padding],
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
-));
-CardContent.displayName = 'CardContent';
+interface CardHeaderProps {
+  children: ReactNode;
+  className?: string;
+}
 
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex items-center p-6 pt-0', className)}
-    {...props}
-  />
-));
-CardFooter.displayName = 'CardFooter';
+export function CardHeader({ children, className }: CardHeaderProps) {
+  return (
+    <div className={cn('mb-4', className)}>
+      {children}
+    </div>
+  );
+}
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }; 
+interface CardTitleProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function CardTitle({ children, className }: CardTitleProps) {
+  return (
+    <h3 className={cn('text-lg font-semibold text-gray-900', className)}>
+      {children}
+    </h3>
+  );
+}
+
+interface CardDescriptionProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function CardDescription({ children, className }: CardDescriptionProps) {
+  return (
+    <p className={cn('text-sm text-gray-500', className)}>
+      {children}
+    </p>
+  );
+}
+
+interface CardContentProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function CardContent({ children, className }: CardContentProps) {
+  return (
+    <div className={cn('', className)}>
+      {children}
+    </div>
+  );
+}
+
+interface CardFooterProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function CardFooter({ children, className }: CardFooterProps) {
+  return (
+    <div className={cn('mt-4 pt-4 border-t border-gray-100', className)}>
+      {children}
+    </div>
+  );
+} 

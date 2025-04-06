@@ -13,4 +13,11 @@ export function formatDate(date: string | Date) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+export function formatNumber(number: number): string {
+  return number.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 } 

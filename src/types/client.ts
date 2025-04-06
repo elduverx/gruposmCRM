@@ -1,4 +1,5 @@
 import { Property } from './property';
+import { Assignment } from './property';
 
 export interface Client {
   id: string;
@@ -11,18 +12,6 @@ export interface Client {
   updatedAt: Date;
   properties: Property[];
   assignments?: Assignment[];
-}
-
-export interface Assignment {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  dueDate: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  propertyId: string;
-  clientId: string;
 }
 
 export interface ClientFormData {

@@ -2,19 +2,38 @@
 
 import { useState } from 'react';
 import { PropertyNews } from '@/types/property';
-import { Button } from '@/components/ui/button';
-import { PlusIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@/components/ui/dialog';
-import { PropertyNewsForm } from '../properties/PropertyNewsForm';
-import { formatDate } from '@/lib/utils';
+import { PropertyNewsForm } from '@/app/dashboard/properties/PropertyNewsForm';
+import { formatDate, formatNumber } from '@/lib/utils';
+import Button from '@/components/ui/button';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
+import { getPropertyNews } from './actions';
 
 interface NewsClientProps {
   news: PropertyNews[];
 }
 
-export function NewsClient({ news }: NewsClientProps) {
+export function NewsClient({ news: initialNews }: NewsClientProps) {
+  const [news, setNews] = useState<PropertyNews[]>(initialNews);
+  const [isLoading, setIsLoading] = useState(false);
   const [showNewsForm, setShowNewsForm] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+
+  const refreshNews = async () => {
+    try {
+      const updatedNews = await getPropertyNews();
+      setNews(updatedNews);
+    } catch (error) {
+      console.error('Error refreshing news:', error);
+      toast.error('Error al actualizar las noticias');
+    }
+  };
+
+  const handleNewsSubmit = async () => {
+    setShowNewsForm(false);
+    await refreshNews();
+  };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -53,9 +72,12 @@ export function NewsClient({ news }: NewsClientProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Noticias</h2>
-        <Button onClick={() => setShowNewsForm(true)}>
+        <Button 
+          onClick={() => setShowNewsForm(true)}
+          disabled={isLoading}
+        >
           <PlusIcon className="h-5 w-5 mr-2" />
-          Nueva Noticia
+          {isLoading ? 'Cargando...' : 'Nueva Noticia'}
         </Button>
       </div>
 
@@ -116,7 +138,7 @@ export function NewsClient({ news }: NewsClientProps) {
                     {item.responsible}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {item.value ? `€${item.value.toLocaleString('es-ES')}` : '-'}
+                    {item.value ? `€${formatNumber(item.value)}` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {formatDate(item.createdAt)}
@@ -135,7 +157,7 @@ export function NewsClient({ news }: NewsClientProps) {
       >
         <PropertyNewsForm 
           propertyId={selectedPropertyId || ''} 
-          onSuccess={() => setShowNewsForm(false)} 
+          onSuccess={handleNewsSubmit}
         />
       </Dialog>
     </div>

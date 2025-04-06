@@ -10,6 +10,8 @@ import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
 import { PropertyNewsForm } from '../PropertyNewsForm';
 import { AssignmentForm } from '../AssignmentForm';
+import { formatNumber } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface PropertyDetailClientProps {
   propertyId: string;
@@ -52,9 +54,11 @@ export default function PropertyDetailClient({
           ...prev!,
           isLocated: !prev!.isLocated
         }));
+        toast.success('Estado de localización actualizado correctamente');
       }
     } catch (error) {
       console.error('Error updating property:', error);
+      toast.error('Error al actualizar el estado de localización');
     } finally {
       setIsUpdating(false);
     }
@@ -62,7 +66,7 @@ export default function PropertyDetailClient({
 
   const handleActivitySubmit = async (newActivity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      await createActivity({
+      const result = await createActivity({
         propertyId: propertyId,
         type: newActivity.type,
         status: newActivity.status,
@@ -71,19 +75,21 @@ export default function PropertyDetailClient({
         notes: newActivity.notes
       });
       
-      // Reload activities
-      const activitiesData = await getActivitiesByPropertyId(propertyId);
-      if (activitiesData) {
-        setActivities(activitiesData);
+      if (result) {
+        const activitiesData = await getActivitiesByPropertyId(propertyId);
+        if (activitiesData) {
+          setActivities(activitiesData);
+          toast.success('Actividad creada correctamente');
+        }
       }
-      
       setIsActivityFormOpen(false);
     } catch (error) {
       console.error('Error creating activity:', error);
+      toast.error('Error al crear la actividad');
     }
   };
 
-  const handleDPVSubmit = async (data: DPV) => {
+  const handleDPVSubmit = async (data: Omit<DPV, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       const result = await createOrUpdateDPV(propertyId, {
         links: data.links,
@@ -95,23 +101,17 @@ export default function PropertyDetailClient({
       });
       
       if (result) {
-        setDPV({
-          links: result.links as string[],
-          realEstate: result.realEstate || '',
-          phone: result.phone || '',
-          currentPrice: result.currentPrice || 0,
-          estimatedValue: result.estimatedValue || 0,
-          propertyId: propertyId
-        });
+        setDPV(result);
+        toast.success('DPV actualizado correctamente');
       }
-      
       setIsDPVFormOpen(false);
     } catch (error) {
       console.error('Error updating DPV:', error);
+      toast.error('Error al actualizar el DPV');
     }
   };
 
-  const handleNewsSubmit = async (data: any) => {
+  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       const result = await createPropertyNews({
         ...data,
@@ -121,14 +121,16 @@ export default function PropertyDetailClient({
       
       if (result) {
         setNews(prev => [result, ...prev]);
-        setIsNewsFormOpen(false);
+        toast.success('Noticia creada correctamente');
       }
+      setIsNewsFormOpen(false);
     } catch (error) {
       console.error('Error creating news:', error);
+      toast.error('Error al crear la noticia');
     }
   };
 
-  const handleAssignmentSubmit = async (data: any) => {
+  const handleAssignmentSubmit = async (data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       const result = await createAssignment({
         ...data,
@@ -137,10 +139,12 @@ export default function PropertyDetailClient({
       
       if (result) {
         setAssignments(prev => [result, ...prev]);
-        setIsAssignmentFormOpen(false);
+        toast.success('Encargo creado correctamente');
       }
+      setIsAssignmentFormOpen(false);
     } catch (error) {
       console.error('Error creating assignment:', error);
+      toast.error('Error al crear el encargo');
     }
   };
 
@@ -308,11 +312,11 @@ export default function PropertyDetailClient({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-700">Precio Actual:</label>
-                    <p className="font-medium">{dpv.currentPrice ? `${dpv.currentPrice.toLocaleString()} €` : 'N/A'}</p>
+                    <p className="font-medium">{dpv.currentPrice ? `${formatNumber(dpv.currentPrice)} €` : 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-700">Valoración Estimada:</label>
-                    <p className="font-medium">{dpv.estimatedValue ? `${dpv.estimatedValue.toLocaleString()} €` : 'N/A'}</p>
+                    <p className="font-medium">{dpv.estimatedValue ? `${formatNumber(dpv.estimatedValue)} €` : 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -385,7 +389,7 @@ export default function PropertyDetailClient({
                       <div>
                         <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
                         <p className="font-medium">Tipo: {item.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
-                        <p className="text-sm">Precio: {item.price.toLocaleString()} €</p>
+                        <p className="text-sm">Precio: {formatNumber(item.price)} €</p>
                         <p className="text-sm">Fecha límite: {new Date(item.exclusiveUntil).toLocaleDateString('es-ES')}</p>
                         <p className="text-sm">Origen: {item.origin}</p>
                         <p className="text-sm">Cliente: {item.client?.name}</p>
@@ -394,16 +398,16 @@ export default function PropertyDetailClient({
                             <p className="text-xs text-gray-500">Honorarios vendedor:</p>
                             <p className="text-sm font-medium">
                               {item.sellerFeeType === 'PERCENTAGE' 
-                                ? `${item.sellerFeeValue}% (${(item.price * item.sellerFeeValue / 100).toLocaleString()} €)`
-                                : `${item.sellerFeeValue.toLocaleString()} €`}
+                                ? `${item.sellerFeeValue}% (${formatNumber(item.price * item.sellerFeeValue / 100)} €)`
+                                : `${formatNumber(item.sellerFeeValue)} €`}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500">Honorarios comprador:</p>
                             <p className="text-sm font-medium">
                               {item.buyerFeeType === 'PERCENTAGE'
-                                ? `${item.buyerFeeValue}% (${(item.price * item.buyerFeeValue / 100).toLocaleString()} €)`
-                                : `${item.buyerFeeValue.toLocaleString()} €`}
+                                ? `${item.buyerFeeValue}% (${formatNumber(item.price * item.buyerFeeValue / 100)} €)`
+                                : `${formatNumber(item.buyerFeeValue)} €`}
                             </p>
                           </div>
                         </div>
