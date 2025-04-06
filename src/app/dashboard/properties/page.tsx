@@ -4,13 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon, MapIcon } from '@heroicons/react/24/outline';
 import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from './actions';
-import { Property, Activity, DPV } from '@/types/property';
+import { Property, Activity, DPV, PropertyStatus, PropertyAction, PropertyType } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { getZones, updateZone, Zone } from '../zones/actions';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
 import ActivityForm from '@/components/ActivityForm';
 
 export default function PropertiesPage() {

@@ -1,16 +1,56 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { BuildingOfficeIcon, UserGroupIcon, ClipboardDocumentListIcon, NewspaperIcon } from "@heroicons/react/24/outline";
 
-const stats = [
-  { name: "Total Inmuebles", value: "0", icon: BuildingOfficeIcon },
-  { name: "Total Clientes", value: "0", icon: UserGroupIcon },
-  { name: "Encargos Pendientes", value: "0", icon: ClipboardDocumentListIcon },
-  { name: "Noticias Recientes", value: "0", icon: NewspaperIcon },
-];
+interface Stats {
+  name: string;
+  value: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
 
 export default function Home() {
+  const [stats, setStats] = useState<Stats[]>([
+    { name: "Total Inmuebles", value: "0", icon: BuildingOfficeIcon },
+    { name: "Total Clientes", value: "0", icon: UserGroupIcon },
+    { name: "Encargos Pendientes", value: "0", icon: ClipboardDocumentListIcon },
+    { name: "Noticias Recientes", value: "0", icon: NewspaperIcon },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [propertiesRes, clientsRes, assignmentsRes, newsRes] = await Promise.all([
+          fetch('/api/properties/count'),
+          fetch('/api/clients/count'),
+          fetch('/api/assignments/count'),
+          fetch('/api/news/count')
+        ]);
+
+        const [properties, clients, assignments, news] = await Promise.all([
+          propertiesRes.json(),
+          clientsRes.json(),
+          assignmentsRes.json(),
+          newsRes.json()
+        ]);
+
+        setStats([
+          { name: "Total Inmuebles", value: properties.count.toString(), icon: BuildingOfficeIcon },
+          { name: "Total Clientes", value: clients.count.toString(), icon: UserGroupIcon },
+          { name: "Encargos Pendientes", value: assignments.count.toString(), icon: ClipboardDocumentListIcon },
+          { name: "Noticias Recientes", value: news.count.toString(), icon: NewspaperIcon },
+        ]);
+      } catch (error) {
+        console.error('Error al obtener estadísticas:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Inicio</h1>
 
       <div className="mt-8">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
