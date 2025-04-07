@@ -130,7 +130,8 @@ const MapWithDraw = React.forwardRef<L.Map, {
   onEditZone: (zone: Zone) => void,
   onDeleteZone: (zone: Zone) => void,
   onMarkerRefsUpdate: (refs: { [key: string]: L.Marker | null }) => void,
-  setSelectedPropertyId: (id: string | null) => void
+  setSelectedPropertyId: (id: string | null) => void,
+  handleZoneClick: (zone: Zone) => void
 }>(({ 
   center, 
   zoom, 
@@ -145,7 +146,8 @@ const MapWithDraw = React.forwardRef<L.Map, {
   onEditZone,
   onDeleteZone,
   onMarkerRefsUpdate,
-  setSelectedPropertyId
+  setSelectedPropertyId,
+  handleZoneClick
 }, ref) => {
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
@@ -267,6 +269,9 @@ const MapWithDraw = React.forwardRef<L.Map, {
           }}
           eventHandlers={{
             click: () => {
+              handleZoneClick(zone);
+            },
+            dblclick: () => {
               setSelectedZone(zone);
               setShowZoneForm(true);
             }
@@ -332,7 +337,6 @@ const MapWithDraw = React.forwardRef<L.Map, {
             }}
             eventHandlers={{
               click: () => {
-                onPropertyClick(property);
                 setSelectedPropertyId(property.id);
               }
             }}
@@ -351,14 +355,14 @@ const MapWithDraw = React.forwardRef<L.Map, {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
                       property.status === 'SIN_EMPEZAR' 
                         ? 'bg-yellow-100 text-yellow-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
                       {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
                     </span>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
                       property.action === 'IR_A_DIRECCION' 
                         ? 'bg-blue-100 text-blue-800'
                         : property.action === 'REPETIR'
@@ -371,7 +375,7 @@ const MapWithDraw = React.forwardRef<L.Map, {
                         ? 'Repetir'
                         : 'Localizar verificado'}
                     </span>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-900`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-gray-100 text-gray-900`}>
                       {property.type}
                     </span>
                   </div>
@@ -380,12 +384,6 @@ const MapWithDraw = React.forwardRef<L.Map, {
                     <p className="text-gray-900">Tel: {property.ownerPhone}</p>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
-                    <button
-                      onClick={() => onPropertyClick(property)}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Ver en mapa
-                    </button>
                     <button
                       onClick={() => router.push(`/dashboard/properties/${property.id}`)}
                       className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
@@ -448,7 +446,6 @@ export default function ZonesPage() {
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [center, setCenter] = useState<[number, number]>([39.4025, -0.4022]); // Catarroja, Valencia
   const [zoom, setZoom] = useState(14); // Zoom más cercano para ver mejor Catarroja
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [newZoneName, setNewZoneName] = useState('');
   const [newZoneDescription, setNewZoneDescription] = useState('');
@@ -460,7 +457,6 @@ export default function ZonesPage() {
   const [showDrawingControl, setShowDrawingControl] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
-    type: '',
     action: '',
     isOccupied: '',
     isLocated: ''
@@ -469,11 +465,10 @@ export default function ZonesPage() {
   const [editableLayers, setEditableLayers] = useState<L.FeatureGroup | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState('#FF0000');
   const [activeTab, setActiveTab] = useState<'map' | 'zones'>('map');
-  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
-  const [showPropertyDetails, setShowPropertyDetails] = useState(false);
   const [showZoneDetails, setShowZoneDetails] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipMessage, setTooltipMessage] = useState('');
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
 
   // Importar estilos de leaflet-draw
   useEffect(() => {
@@ -482,6 +477,45 @@ export default function ZonesPage() {
       import('leaflet-draw/dist/leaflet.draw.css');
     }
   }, []);
+
+  // Efecto para filtrar propiedades cuando cambia el término de búsqueda o los filtros
+  useEffect(() => {
+    let filtered = allProperties;
+
+    // Filtrar por término de búsqueda
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(property => 
+        property.address.toLowerCase().includes(searchLower) ||
+        property.population.toLowerCase().includes(searchLower) ||
+        property.ownerName.toLowerCase().includes(searchLower) ||
+        property.ownerPhone.toLowerCase().includes(searchLower) ||
+        (property.type && property.type.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Filtrar por estado
+    if (filters.status) {
+      filtered = filtered.filter(property => property.status === filters.status);
+    }
+
+    // Filtrar por acción
+    if (filters.action) {
+      filtered = filtered.filter(property => property.action === filters.action);
+    }
+
+    // Filtrar por ocupación
+    if (filters.isOccupied !== '') {
+      filtered = filtered.filter(property => property.isOccupied === (filters.isOccupied === 'true'));
+    }
+
+    // Filtrar por localización
+    if (filters.isLocated !== '') {
+      filtered = filtered.filter(property => property.isLocated === (filters.isLocated === 'true'));
+    }
+
+    setFilteredProperties(filtered);
+  }, [searchTerm, filters, allProperties]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -530,24 +564,16 @@ export default function ZonesPage() {
     fetchData();
   }, []);
 
-  const handlePropertyClick = (property: Property) => {
-    setSelectedProperty(property);
+  const onPropertyClick = (property: Property) => {
     setSelectedPropertyId(property.id);
-    setShowPropertyDetails(true);
-    
-    // Verificar que las coordenadas existan antes de centrar el mapa
     if (property.latitude && property.longitude) {
       setCenter([property.latitude, property.longitude]);
       setZoom(15);
     }
-    
-    // Asegurarse de que el popup se abra cuando se selecciona una propiedad
-    console.log(`Propiedad seleccionada: ${property.id}`);
   };
 
   const handleZoneClick = async (zone: Zone) => {
     setSelectedZone(zone);
-    setSelectedProperty(null);
     setSelectedPropertyId(null); // Limpiar la propiedad seleccionada al cambiar de zona
     setShowZoneDetails(true);
     
@@ -558,6 +584,7 @@ export default function ZonesPage() {
       );
       
       setProperties(propertiesInZone);
+      setFilteredProperties(propertiesInZone);
       
       // Calcular el centro de la zona
       const centerLat = zone.coordinates.reduce((sum, coord) => sum + coord.lat, 0) / zone.coordinates.length;
@@ -713,7 +740,7 @@ export default function ZonesPage() {
                 onClick={() => {
                   setShowZoneForm(true);
                   setSelectedZone(null);
-              setZoneCoordinates([]);
+                  setZoneCoordinates([]);
                 }}
                 className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center"
               >
@@ -722,33 +749,13 @@ export default function ZonesPage() {
                 </svg>
                 Nueva Zona
               </button>
-              <button
-                onClick={() => setIsMapFullscreen(!isMapFullscreen)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors flex items-center"
-              >
-                {isMapFullscreen ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 9V7a2 2 0 012-2h2V3H7a4 4 0 00-4 4v2h2zm10 0V7a4 4 0 00-4-4h-2v2h2a2 2 0 012 2v2h2zm0 2v2a2 2 0 01-2 2h-2v2h2a4 4 0 004-4v-2h-2zm-10 0v2a4 4 0 004 4h2v-2H9a2 2 0 01-2-2v-2H5z" clipRule="evenodd" />
-                    </svg>
-                    Salir de pantalla completa
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 111.414-1.414L15 13.586V12a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                    Pantalla completa
-                  </>
-                )}
-              </button>
-      </div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className={`container mx-auto px-4 py-6 ${isMapFullscreen ? 'max-w-full' : ''}`}>
+      <main className="container mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
@@ -779,296 +786,332 @@ export default function ZonesPage() {
 
         {/* Map View */}
         {activeTab === 'map' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden h-[600px] relative">
-                <LeafletMapContainer
-            center={center}
-            zoom={zoom}
-                  style={{ height: '100%', width: '100%' }}
-                  whenReady={(mapInstance) => setMap(mapInstance.target)}
-                >
-                  <LeafletTileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  />
-                  <DrawControl
-                    editableLayers={editableLayers}
-                    onCreated={handlePolygonCreated}
-                    onEdited={handlePolygonEdited}
-                    onDeleted={handlePolygonDeleted}
-                    polygonColor={selectedColor}
-                  />
-                  {zones.map((zone) => (
-                    <LeafletPolygon
-                      key={zone.id}
-                      positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
-                      pathOptions={{
-                        color: zone.color || '#FF0000',
-                        fillColor: zone.color || '#FF0000',
-                        fillOpacity: 0.2
-                      }}
-                      eventHandlers={{
-                        click: () => {
-                          setSelectedZone(zone);
-                          setShowZoneForm(true);
-                        }
-                      }}
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden h-[600px] relative">
+                  <LeafletMapContainer
+                    center={center}
+                    zoom={zoom}
+                    style={{ height: '100%', width: '100%' }}
+                    whenReady={(mapInstance) => setMap(mapInstance.target)}
+                  >
+                    <LeafletTileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
-                  ))}
-                  
-                  {/* Mostrar inmuebles en el mapa */}
-                  {properties.map((property) => (
-                    property.latitude && property.longitude ? (
-                      <LeafletMarker
-                        key={property.id}
-                        position={[property.latitude, property.longitude]}
-                        icon={icon}
+                    <DrawControl
+                      editableLayers={editableLayers}
+                      onCreated={handlePolygonCreated}
+                      onEdited={handlePolygonEdited}
+                      onDeleted={handlePolygonDeleted}
+                      polygonColor={selectedColor}
+                    />
+                    {zones.map((zone) => (
+                      <LeafletPolygon
+                        key={zone.id}
+                        positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
+                        pathOptions={{
+                          color: zone.color || '#FF0000',
+                          fillColor: zone.color || '#FF0000',
+                          fillOpacity: 0.2
+                        }}
                         eventHandlers={{
                           click: () => {
-                            onPropertyClick(property);
-                            setSelectedPropertyId(property.id);
+                            handleZoneClick(zone);
+                          },
+                          dblclick: () => {
+                            setSelectedZone(zone);
+                            setShowZoneForm(true);
                           }
                         }}
-                      >
-                        <LeafletPopup>
-                          <div className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
-                              <span className="text-sm font-medium text-gray-900">{property.population}</span>
-                            </div>
-                            <div className="space-y-2">
-                              {property.dpv && (
-                                <div className="text-sm">
-                                  <span className="font-medium text-gray-900">DPV: </span>
-                                  <span className="text-gray-900">{property.dpv.toString()}</span>
+                      />
+                    ))}
+                    
+                    {/* Mostrar inmuebles en el mapa */}
+                    {filteredProperties.map((property) => (
+                      property.latitude && property.longitude ? (
+                        <LeafletMarker
+                          key={property.id}
+                          position={[property.latitude, property.longitude]}
+                          icon={icon}
+                          eventHandlers={{
+                            click: () => {
+                              setSelectedPropertyId(property.id);
+                            }
+                          }}
+                        >
+                          <LeafletPopup>
+                            <div className="p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
+                                <span className="text-sm font-medium text-gray-900">{property.population}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {property.dpv && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-gray-900">DPV: </span>
+                                    <span className="text-gray-900">{property.dpv.toString()}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                                    property.status === 'SIN_EMPEZAR' 
+                                      ? 'bg-yellow-100 text-yellow-800' 
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
+                                  </span>
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                                    property.action === 'IR_A_DIRECCION' 
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : property.action === 'REPETIR'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-indigo-100 text-indigo-800'
+                                  }`}>
+                                    {property.action === 'IR_A_DIRECCION' 
+                                      ? 'Ir a dirección' 
+                                      : property.action === 'REPETIR'
+                                      ? 'Repetir'
+                                      : 'Localizar verificado'}
+                                  </span>
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-gray-100 text-gray-900`}>
+                                    {property.type}
+                                  </span>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  property.status === 'SIN_EMPEZAR' 
-                                    ? 'bg-yellow-100 text-yellow-800' 
-                                    : 'bg-green-100 text-green-800'
-                                }`}>
-                                  {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
-                                </span>
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  property.action === 'IR_A_DIRECCION' 
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : property.action === 'REPETIR'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-indigo-100 text-indigo-800'
-                                }`}>
-                                  {property.action === 'IR_A_DIRECCION' 
-                                    ? 'Ir a dirección' 
-                                    : property.action === 'REPETIR'
-                                    ? 'Repetir'
-                                    : 'Localizar verificado'}
-                                </span>
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-900`}>
-                                  {property.type}
-                                </span>
-      </div>
-                              <div className="text-sm">
-                                <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
-                                <p className="text-gray-900">Tel: {property.ownerPhone}</p>
-                              </div>
-                              <div className="flex items-center gap-2 mt-3">
-                  <button
-                                  onClick={() => onPropertyClick(property)}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                                  Ver en mapa
-                  </button>
-                  <button
-                                  onClick={() => router.push(`/dashboard/properties/${property.id}`)}
-                                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
-                                >
-                                  Ver detalles
-                                </button>
+                                <div className="text-sm">
+                                  <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
+                                  <p className="text-gray-900">Tel: {property.ownerPhone}</p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/dashboard/properties/${property.id}`);
+                                    }}
+                                    className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
+                                  >
+                                    Ver detalles
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </LeafletPopup>
-                      </LeafletMarker>
-                    ) : null
-                  ))}
-                </LeafletMapContainer>
-                <div className="absolute top-4 right-4 bg-white p-2 rounded-md shadow-md z-10">
-                  <div className="flex flex-col space-y-2">
-                  <button
-                      onClick={() => setShowDrawingControl(!showDrawingControl)}
-                      className={`p-2 rounded-md ${showDrawingControl ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}
-                      title="Activar/Desactivar herramientas de dibujo"
-                  >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                  </button>
-                  <button
-                    onClick={() => {
-                        setCenter([39.4025, -0.4022]);
-                        setZoom(14);
-                      }}
-                      className="p-2 rounded-md bg-gray-100 text-gray-800"
-                      title="Centrar mapa"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
-                  </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="bg-white rounded-lg shadow-lg p-4 h-[600px] overflow-y-auto">
-              <div className="mb-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Buscar inmuebles..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                  <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center text-sm text-gray-600 hover:text-gray-800"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-                  </svg>
-                  Filtros {showFilters ? '(Ocultar)' : '(Mostrar)'}
-                  </button>
-                
-                {showFilters && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Estado</label>
-                        <select 
-                          className="w-full text-sm border border-gray-300 rounded-md p-1"
-                          value={filters.status}
-                          onChange={(e) => setFilters({...filters, status: e.target.value})}
-                        >
-                          <option value="">Todos</option>
-                          <option value="SIN_EMPEZAR">Sin empezar</option>
-                          <option value="EMPEZADA">Empezada</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Tipo</label>
-                        <select 
-                          className="w-full text-sm border border-gray-300 rounded-md p-1"
-                          value={filters.type}
-                          onChange={(e) => setFilters({...filters, type: e.target.value})}
-                        >
-                          <option value="">Todos</option>
-                          <option value="CASA">Casa</option>
-                          <option value="PISO">Piso</option>
-                          <option value="LOCAL">Local</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-end">
-                      <button 
-                        onClick={() => setFilters({
-                          status: '',
-                          type: '',
-                          action: '',
-                          isOccupied: '',
-                          isLocated: ''
-                        })}
-                        className="text-xs text-gray-600 hover:text-gray-800"
+                          </LeafletPopup>
+                        </LeafletMarker>
+                      ) : null
+                    ))}
+                  </LeafletMapContainer>
+                  <div className="absolute top-4 right-4 bg-white p-2 rounded-md shadow-md z-10">
+                    <div className="flex flex-col space-y-2">
+                      <button
+                        onClick={() => setShowDrawingControl(!showDrawingControl)}
+                        className={`p-2 rounded-md ${showDrawingControl ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}
+                        title="Activar/Desactivar herramientas de dibujo"
                       >
-                        Limpiar filtros
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCenter([39.4025, -0.4022]);
+                          setZoom(14);
+                        }}
+                        className="p-2 rounded-md bg-gray-100 text-gray-800"
+                        title="Centrar mapa"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
                       </button>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold mb-2">Zonas</h2>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {zones.length > 0 ? (
-                    zones.map((zone) => (
-                      <div
-                        key={zone.id}
-                        className={`border rounded-md p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                          selectedZone?.id === zone.id ? 'bg-blue-50 border-blue-200' : ''
-                        }`}
-                        onClick={() => handleZoneClick(zone)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium">{zone.name}</h3>
-                            <p className="text-xs text-gray-500 truncate">{zone.description}</p>
-                          </div>
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: zone.color }}
-                          />
+              {/* Sidebar */}
+              <div className="bg-white rounded-lg shadow-lg p-4 h-[600px] overflow-y-auto">
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Buscar inmuebles..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                    </svg>
+                    Filtros {showFilters ? '(Ocultar)' : '(Mostrar)'}
+                  </button>
+                  
+                  {showFilters && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Estado</label>
+                          <select 
+                            className="w-full text-sm border border-gray-300 rounded-md p-1"
+                            value={filters.status}
+                            onChange={(e) => setFilters({...filters, status: e.target.value})}
+                          >
+                            <option value="">Todos</option>
+                            <option value="SIN_EMPEZAR">Sin empezar</option>
+                            <option value="EMPEZADA">Empezada</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Acción</label>
+                          <select 
+                            className="w-full text-sm border border-gray-300 rounded-md p-1"
+                            value={filters.action}
+                            onChange={(e) => setFilters({...filters, action: e.target.value})}
+                          >
+                            <option value="">Todas</option>
+                            <option value="IR_A_DIRECCION">Ir a dirección</option>
+                            <option value="REPETIR">Repetir</option>
+                            <option value="LOCALIZAR_VERIFICADO">Localizar verificado</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Ocupación</label>
+                          <select 
+                            className="w-full text-sm border border-gray-300 rounded-md p-1"
+                            value={filters.isOccupied}
+                            onChange={(e) => setFilters({...filters, isOccupied: e.target.value})}
+                          >
+                            <option value="">Todos</option>
+                            <option value="true">Ocupado</option>
+                            <option value="false">No ocupado</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Localización</label>
+                          <select 
+                            className="w-full text-sm border border-gray-300 rounded-md p-1"
+                            value={filters.isLocated}
+                            onChange={(e) => setFilters({...filters, isLocated: e.target.value})}
+                          >
+                            <option value="">Todos</option>
+                            <option value="true">Localizado</option>
+                            <option value="false">No localizado</option>
+                          </select>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-2">No hay zonas creadas</p>
-              )}
-            </div>
-          </div>
-          
-              {selectedZone && (
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold mb-2">Inmuebles en {selectedZone.name}</h2>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {properties.length > 0 ? (
-                      properties.map((property) => (
-                <div
-                  key={property.id}
-                          className={`border rounded-md p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            selectedProperty?.id === property.id ? 'bg-blue-50 border-blue-200' : ''
-                  }`}
-                  onClick={() => handlePropertyClick(property)}
-                >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{property.address}</h3>
-                              <p className="text-xs text-gray-500">{property.population}</p>
+                      <div className="mt-2 flex justify-end">
+                        <button 
+                          onClick={() => setFilters({
+                            status: '',
+                            action: '',
+                            isOccupied: '',
+                            isLocated: ''
+                          })}
+                          className="text-xs text-gray-600 hover:text-gray-800"
+                        >
+                          Limpiar filtros
+                        </button>
                       </div>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              property.status === 'SIN_EMPEZAR' 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-xs text-gray-600">
-                            <p>Propietario: {property.ownerName}</p>
-                            <p>Tel: {property.ownerPhone}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold mb-2">Zonas</h2>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {zones.length > 0 ? (
+                      zones.map((zone) => (
+                        <div
+                          key={zone.id}
+                          className={`border rounded-md p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                            selectedZone?.id === zone.id ? 'bg-blue-50 border-blue-200' : ''
+                          }`}
+                          onClick={() => handleZoneClick(zone)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">{zone.name}</h3>
+                              <p className="text-xs text-gray-500 truncate">{zone.description}</p>
+                            </div>
+                            <div
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: zone.color }}
+                            />
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-500 text-center py-2">No hay inmuebles en esta zona</p>
+                      <p className="text-gray-500 text-center py-2">No hay zonas creadas</p>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+
+            {/* Lista de inmuebles en la parte inferior */}
+            {selectedZone && (
+              <div className="mt-6 bg-white rounded-lg shadow-lg p-4">
+                <h2 className="text-lg font-semibold mb-4">Inmuebles en {selectedZone.name}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProperties.length > 0 ? (
+                    filteredProperties.map((property) => (
+                      <div
+                        key={property.id}
+                        className={`border rounded-md p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                          selectedPropertyId === property.id ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                        onClick={() => onPropertyClick(property)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">{property.address}</h3>
+                            <p className="text-xs text-gray-500">{property.population}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                            property.status === 'SIN_EMPEZAR' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600">
+                          <p>Propietario: {property.ownerName}</p>
+                          <p>Tel: {property.ownerPhone}</p>
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/dashboard/properties/${property.id}`);
+                            }}
+                            className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
+                          >
+                            Ver detalles
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-2 col-span-full">No hay inmuebles en esta zona</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Zones List View */}
@@ -1108,8 +1151,7 @@ export default function ZonesPage() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => {
-                              setSelectedZone(zone);
-                              setShowZoneForm(true);
+                              onEditZone(zone);
                             }}
                             className="text-blue-600 hover:text-blue-800"
                             title="Editar zona"
@@ -1132,7 +1174,7 @@ export default function ZonesPage() {
                       <p className="text-gray-600 mb-4">{zone.description || 'Sin descripción'}</p>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">
-                          {properties.filter(p => isPropertyInZone(p, zone.coordinates)).length} inmuebles
+                          {filteredProperties.filter(p => isPropertyInZone(p, zone.coordinates)).length} inmuebles
                     </span>
                         <button
                           onClick={() => {
@@ -1214,84 +1256,6 @@ export default function ZonesPage() {
               }}
               initialData={selectedZone || undefined}
             />
-          </div>
-        </div>
-      )}
-
-      {/* Property Details Modal */}
-      {showPropertyDetails && selectedProperty && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Detalles de la Propiedad</h2>
-              <button
-                onClick={() => setShowPropertyDetails(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">{selectedProperty.address}</h3>
-                <p className="text-gray-600">{selectedProperty.population}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  selectedProperty.status === 'SIN_EMPEZAR' 
-                    ? 'bg-yellow-100 text-yellow-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {selectedProperty.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
-                    </span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  selectedProperty.action === 'IR_A_DIRECCION' 
-                    ? 'bg-blue-100 text-blue-800'
-                    : selectedProperty.action === 'REPETIR'
-                    ? 'bg-purple-100 text-purple-800'
-                    : 'bg-indigo-100 text-indigo-800'
-                }`}>
-                  {selectedProperty.action === 'IR_A_DIRECCION' 
-                    ? 'Ir a dirección' 
-                    : selectedProperty.action === 'REPETIR'
-                    ? 'Repetir'
-                    : 'Localizar verificado'}
-                    </span>
-                <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-900">
-                  {selectedProperty.type}
-                    </span>
-                  </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="font-medium mb-2">Información del propietario</h4>
-                <p className="text-gray-600">Nombre: {selectedProperty.ownerName}</p>
-                <p className="text-gray-600">Teléfono: {selectedProperty.ownerPhone}</p>
-                </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="font-medium mb-2">Ubicación</h4>
-                <p className="text-gray-600">Latitud: {selectedProperty.latitude}</p>
-                <p className="text-gray-600">Longitud: {selectedProperty.longitude}</p>
-            </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  onClick={() => setShowPropertyDetails(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cerrar
-                </button>
-                <button
-                  onClick={() => router.push(`/dashboard/properties/${selectedProperty.id}`)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Ver detalles completos
-                </button>
-        </div>
-      </div>
           </div>
         </div>
       )}

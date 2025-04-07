@@ -8,7 +8,7 @@ import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
-import PropertyNewsForm from '../PropertyNewsForm';
+import PropertyNewsForm from './PropertyNewsForm';
 import { AssignmentForm } from '../AssignmentForm';
 import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -20,6 +20,17 @@ interface PropertyDetailClientProps {
   initialDPV: DPV | null;
   initialNews: PropertyNews[];
   initialAssignments: Assignment[];
+}
+
+interface NewsFormData {
+  type: string;
+  action: string;
+  valuation: string;
+  priority: 'HIGH' | 'LOW';
+  responsible: string;
+  value: number;
+  precioSM: number | null;
+  precioCliente: number | null;
 }
 
 export default function PropertyDetailClient({ 
@@ -126,29 +137,10 @@ export default function PropertyDetailClient({
     }
   };
 
-  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'propertyId' | 'createdAt' | 'updatedAt' | 'property'>): Promise<void> => {
-    try {
-      // Convertir valuation de string a boolean y asegurar que los campos requeridos no sean null
-      const newsData = {
-        ...data,
-        valuation: data.valuation === 'true',
-        responsible: data.responsible || '', // Asegurar que responsible no sea null
-        value: data.value || 0 // Asegurar que value no sea null
-      };
-      
-      await createPropertyNews(propertyId, newsData);
-      toast.success('Noticia creada correctamente');
-      setIsNewsFormOpen(false);
-      // Recargar la página para mostrar los cambios
-      window.location.reload();
-    } catch (error) {
-      console.error('Error creating news:', error);
-      if (error instanceof Error && error.message === 'Ya existe una noticia para esta propiedad') {
-        toast.error('Ya existe una noticia para esta propiedad');
-      } else {
-        toast.error('Error al crear la noticia');
-      }
-    }
+  const handleNewsSubmit = (data: NewsFormData): void => {
+    setIsNewsFormOpen(false);
+    // Recargar la página para mostrar los cambios
+    window.location.reload();
   };
 
   const handleAssignmentSubmit = async (data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>) => {

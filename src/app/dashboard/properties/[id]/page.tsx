@@ -20,13 +20,36 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     getPropertyNews(propertyId),
     getAssignmentsByPropertyId(propertyId)
   ]);
+
+  if (!property) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">Inmueble no encontrado</h1>
+          <p className="mt-2 text-gray-600">El inmueble que buscas no existe o ha sido eliminado.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Convertir el tipo de priority de string a 'HIGH' | 'LOW' y las fechas a Date
+  const typedNews = news.map(item => ({
+    ...item,
+    priority: item.priority as 'HIGH' | 'LOW',
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+    property: {
+      ...item.property,
+      id: item.propertyId
+    }
+  }));
   
   return <PropertyDetailClient 
     propertyId={propertyId} 
     initialProperty={property} 
     initialActivities={activities} 
     initialDPV={dpv}
-    initialNews={news}
+    initialNews={typedNews}
     initialAssignments={assignments}
   />;
 } 

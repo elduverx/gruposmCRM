@@ -132,7 +132,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <p className="text-xs text-gray-500">{isAdmin ? 'Administrador' : 'Usuario'}</p>
               <button
                 onClick={logout}
-                className="mt-1 w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                className="mt-1 w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
               >
                 <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
                 Cerrar sesión
