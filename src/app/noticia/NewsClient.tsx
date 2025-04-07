@@ -88,10 +88,7 @@ export default function NewsClient({ news }: NewsClientProps) {
                         Valoración
                       </th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Precio SM
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Precio Cliente
+                        Precio
                       </th>
                       <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                         <span className="sr-only">Acciones</span>
@@ -126,13 +123,21 @@ export default function NewsClient({ news }: NewsClientProps) {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {item.valuation}
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            item.valuation === 'true' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.valuation === 'true' ? 'Sí' : 'No'}
+                          </span>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {item.precioSM ? formatNumber(item.precioSM) : '0'} €
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {item.precioCliente ? formatNumber(item.precioCliente) : '0'} €
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.valuation === 'true' ? (
+                            <>
+                              <div>SM: {formatNumber(item.precioSM || 0)}€</div>
+                              <div>Cliente: {formatNumber(item.precioCliente || 0)}€</div>
+                            </>
+                          ) : (
+                            formatNumber(item.value || 0) + '€'
+                          )}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                           <div className="flex justify-end gap-2">

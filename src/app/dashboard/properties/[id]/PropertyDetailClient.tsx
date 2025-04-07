@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createPropertyNews, getPropertyNews, createAssignment, getAssignmentsByPropertyId } from '../actions';
-import { PlusIcon, XMarkIcon, NewspaperIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, XMarkIcon, NewspaperIcon, ClipboardDocumentListIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
@@ -126,9 +126,17 @@ export default function PropertyDetailClient({
     }
   };
 
-  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'propertyId' | 'createdAt' | 'updatedAt' | 'property'>) => {
+  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'propertyId' | 'createdAt' | 'updatedAt' | 'property'>): Promise<void> => {
     try {
-      await createPropertyNews(propertyId, data);
+      // Convertir valuation de string a boolean y asegurar que los campos requeridos no sean null
+      const newsData = {
+        ...data,
+        valuation: data.valuation === 'true',
+        responsible: data.responsible || '', // Asegurar que responsible no sea null
+        value: data.value || 0 // Asegurar que value no sea null
+      };
+      
+      await createPropertyNews(propertyId, newsData);
       toast.success('Noticia creada correctamente');
       setIsNewsFormOpen(false);
       // Recargar la página para mostrar los cambios
@@ -158,6 +166,23 @@ export default function PropertyDetailClient({
     } catch (error) {
       console.error('Error creating assignment:', error);
       toast.error('Error al crear el encargo');
+    }
+  };
+
+  const handleEditAssignment = (assignment: Assignment) => {
+    // Implementar la lógica de edición
+    console.log('Editar asignación:', assignment);
+  };
+
+  const handleDeleteAssignment = async (assignmentId: string) => {
+    try {
+      // Implementar la lógica de eliminación
+      console.log('Eliminar asignación:', assignmentId);
+      // Recargar la página para mostrar los cambios
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      toast.error('Error al eliminar la asignación');
     }
   };
 
@@ -357,33 +382,40 @@ export default function PropertyDetailClient({
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {news.length > 0 ? (
                 news.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium text-gray-900">{item.type}</h3>
+                        <h3 className="text-lg font-medium text-gray-900">{item.type}</h3>
                         <p className="text-sm text-gray-500">{item.action}</p>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         item.priority === 'HIGH' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                       }`}>
                         {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
                       </span>
                     </div>
-                    
-                    <div className="mt-2 text-sm text-gray-600">
-                      <p><span className="font-medium">Responsable:</span> {item.responsible}</p>
-                      <p><span className="font-medium">Valoración:</span> {item.valuation}</p>
-                      {item.value && <p><span className="font-medium">Valor:</span> {formatNumber(item.value)} €</p>}
-                      {item.precioSM && <p><span className="font-medium">Precio SM:</span> {formatNumber(item.precioSM)} €</p>}
-                      {item.precioCliente && <p><span className="font-medium">Precio Cliente:</span> {formatNumber(item.precioCliente)} €</p>}
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(item.createdAt).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        <span className="font-medium">Responsable:</span> {item.responsible || 'No asignado'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        <span className="font-medium">Valoración:</span>{' '}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          item.valuation ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.valuation ? 'Sí' : 'No'}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        <span className="font-medium">Precio:</span>{' '}
+                        {item.valuation === 'true' ? (
+                          <>
+                            <span className="font-medium">SM:</span> {formatNumber(item.precioSM || 0)}€{' '}
+                            <span className="font-medium">Cliente:</span> {formatNumber(item.precioCliente || 0)}€
+                          </>
+                        ) : (
+                          formatNumber(item.value || 0) + '€'
+                        )}
                       </p>
                     </div>
                   </div>
@@ -410,40 +442,60 @@ export default function PropertyDetailClient({
               
               <div className="space-y-4 max-h-[400px] overflow-y-auto">
                 {assignments.length > 0 ? (
-                  assignments.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  assignments.map((assignment) => (
+                    <div key={assignment.id} className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
-                          <p className="font-medium">Tipo: {item.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
-                          <p className="text-sm">Precio: {formatNumber(item.price)} €</p>
-                          <p className="text-sm">Fecha límite: {new Date(item.exclusiveUntil).toLocaleDateString('es-ES')}</p>
-                          <p className="text-sm">Origen: {item.origin}</p>
-                          <p className="text-sm">Cliente: {item.client?.name}</p>
+                          <h3 className="font-medium text-gray-900">
+                            {assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}  {formatNumber(assignment.price)}€
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Cliente: {assignment.client?.name || 'Sin cliente'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Fecha límite: {new Date(assignment.exclusiveUntil).toLocaleDateString('es-ES')}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Origen: {assignment.origin}
+                          </p>
                           <div className="mt-2 grid grid-cols-2 gap-2">
                             <div>
-                              <p className="text-xs text-gray-500">Honorarios vendedor:</p>
-                              <p className="text-sm font-medium">
-                                {item.sellerFeeType === 'PERCENTAGE' 
-                                  ? `${item.sellerFeeValue}% (${formatNumber(item.price * item.sellerFeeValue / 100)} €)`
-                                  : `${formatNumber(item.sellerFeeValue)} €`}
+                              <p className="text-xs font-medium text-gray-500">Comisión vendedor:</p>
+                              <p className="text-sm">
+                                {assignment.sellerFeeType === 'PERCENTAGE' 
+                                  ? `${formatNumber(assignment.sellerFeeValue)}€ (3%)` 
+                                  : `${formatNumber(assignment.sellerFeeValue)}€ (fijo)`}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Honorarios comprador:</p>
-                              <p className="text-sm font-medium">
-                                {item.buyerFeeType === 'PERCENTAGE'
-                                  ? `${item.buyerFeeValue}% (${formatNumber(item.price * item.buyerFeeValue / 100)} €)`
-                                  : `${formatNumber(item.buyerFeeValue)} €`}
+                              <p className="text-xs font-medium text-gray-500">Comisión comprador:</p>
+                              <p className="text-sm">
+                                {assignment.buyerFeeType === 'PERCENTAGE' 
+                                  ? `${formatNumber(assignment.buyerFeeValue)}€ (3%)` 
+                                  : `${formatNumber(assignment.buyerFeeValue)}€ (fijo)`}
                               </p>
                             </div>
                           </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditAssignment(assignment)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssignment(assignment.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500 py-4">No hay encargos para esta propiedad</p>
+                  <p className="text-center text-gray-500">No hay encargos para esta propiedad</p>
                 )}
               </div>
             </div>
@@ -545,6 +597,7 @@ export default function PropertyDetailClient({
               <PropertyNewsForm 
                 propertyId={propertyId}
                 onSuccess={handleNewsSubmit}
+                onCancel={() => setIsNewsFormOpen(false)}
               />
             </div>
           </Dialog.Panel>
@@ -574,7 +627,7 @@ export default function PropertyDetailClient({
             <div className="p-6">
               <AssignmentForm 
                 propertyId={propertyId}
-                onSuccess={() => {
+                onSuccess={(): void => {
                   setIsAssignmentFormOpen(false);
                   getAssignmentsByPropertyId(propertyId).then(assignmentsData => {
                     setAssignments(assignmentsData);

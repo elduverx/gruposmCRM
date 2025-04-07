@@ -164,7 +164,7 @@ export interface PropertyNews {
   propertyId: string;
   type: string;
   action: string;
-  valuation: boolean;
+  valuation: string;
   priority: 'HIGH' | 'LOW';
   responsible: string | null;
   value: number | null;

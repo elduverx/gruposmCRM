@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 
 interface PropertyNewsFormProps {
   propertyId: string;
-  onSuccess: () => void;
+  onSuccess: (data: NewsFormData) => void;
   onCancel: () => void;
 }
 
@@ -17,40 +17,58 @@ interface NewsFormData {
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
-  precioSM: number;
-  precioCliente: number;
+  precioSM: number | null;
+  precioCliente: number | null;
 }
 
 export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: PropertyNewsFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
-    type: '',
-    action: '',
-    valuation: '',
+    type: 'DPV',
+    action: 'Venta',
+    valuation: 'No',
     priority: 'LOW',
     responsible: '',
     value: 0,
-    precioSM: 0,
-    precioCliente: 0,
+    precioSM: null,
+    precioCliente: null,
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checkbox = e.target as HTMLInputElement;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checkbox.checked ? 'Si' : 'No',
+        ...(name === 'valuation' && !checkbox.checked ? {
+          precioSM: null,
+          precioCliente: null
+        } : {})
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    setLoading(true);
     try {
-      await createPropertyNews(propertyId, formData);
+      // Convertir valuation de string a boolean
+      const newsData = {
+        ...formData,
+        valuation: formData.valuation === 'Si'
+      };
+      
+      await createPropertyNews(propertyId, newsData);
       toast.success('Noticia creada correctamente');
-      onSuccess();
+      onSuccess(formData);
     } catch (error) {
       console.error('Error creating news:', error);
       if (error instanceof Error && error.message === 'Ya existe una noticia para esta propiedad') {
@@ -59,7 +77,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
         toast.error('Error al crear la noticia');
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -95,34 +113,40 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
             />
           </div>
 
-          <div>
-            <label htmlFor="action" className="block text-sm font-medium text-gray-700">
+          <div className="col-span-1 md:col-span-2">
+            <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
               Acción
             </label>
-            <textarea
+            <select
               name="action"
               id="action"
               value={formData.action}
               onChange={handleChange}
-              rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               required
-            />
+            >
+              <option value="Venta">Venta</option>
+              <option value="Alquiler">Alquiler</option>
+            </select>
           </div>
 
           <div>
             <label htmlFor="valuation" className="block text-sm font-medium text-gray-700">
               Valoración
             </label>
-            <input
-              type="text"
-              name="valuation"
-              id="valuation"
-              value={formData.valuation}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              required
-            />
+            <div className="mt-1 flex items-center">
+              <input
+                type="checkbox"
+                name="valuation"
+                id="valuation"
+                checked={formData.valuation === 'Si'}
+                onChange={handleChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
+                Ha sido valorado
+              </label>
+            </div>
           </div>
 
           <div>
@@ -157,46 +181,68 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
           </div>
 
           <div>
-            <label htmlFor="value" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="value" className="block text-sm font-medium text-gray-700 mb-1">
               Valor
             </label>
-            <input
-              type="number"
-              name="value"
-              id="value"
-              value={formData.value}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
+            <div className="relative rounded-md shadow-sm">
+              <input
+                type="number"
+                name="value"
+                id="value"
+                value={formData.value}
+                onChange={handleChange}
+                className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                placeholder="0"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">€</span>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700">
-              Precio SM
-            </label>
-            <input
-              type="number"
-              name="precioSM"
-              id="precioSM"
-              value={formData.precioSM}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+          {formData.valuation === 'Si' && (
+            <>
+              <div>
+                <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio SM
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <input
+                    type="number"
+                    name="precioSM"
+                    id="precioSM"
+                    value={formData.precioSM || ''}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="0"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">€</span>
+                  </div>
+                </div>
+              </div>
 
-          <div>
-            <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700">
-              Precio Cliente
-            </label>
-            <input
-              type="number"
-              name="precioCliente"
-              id="precioCliente"
-              value={formData.precioCliente}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+              <div>
+                <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio Cliente
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <input
+                    type="number"
+                    name="precioCliente"
+                    id="precioCliente"
+                    value={formData.precioCliente || ''}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="0"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">€</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="mt-6 flex justify-end space-x-3">
             <button
@@ -208,10 +254,10 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {isLoading ? 'Creando...' : 'Crear'}
+              {loading ? 'Creando...' : 'Crear'}
             </button>
           </div>
         </form>

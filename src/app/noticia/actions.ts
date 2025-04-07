@@ -20,7 +20,12 @@ export async function getAllNews(): Promise<PropertyNews[]> {
     },
   });
 
-  return news as unknown as PropertyNews[];
+  return news.map(item => ({
+    ...item,
+    valuation: item.valuation,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  })) as PropertyNews[];
 }
 
 export async function deleteNews(id: string): Promise<boolean> {
@@ -40,34 +45,40 @@ export async function deleteNews(id: string): Promise<boolean> {
   }
 }
 
-export async function updatePropertyNews(id: string, data: Partial<PropertyNews>): Promise<PropertyNews | null> {
+export async function updatePropertyNews(id: string, data: {
+  type: string;
+  action: string;
+  valuation: boolean;
+  priority: 'HIGH' | 'LOW';
+  responsible: string;
+  value: number;
+  precioSM: number | null;
+  precioCliente: number | null;
+}) {
   try {
+    // Convert numeric values to ensure they're numbers, not strings
+    const numericValue = typeof data.value === 'string' ? parseFloat(data.value) : data.value;
+    const numericPrecioSM = data.precioSM !== null ? (typeof data.precioSM === 'string' ? parseFloat(data.precioSM) : data.precioSM) : null;
+    const numericPrecioCliente = data.precioCliente !== null ? (typeof data.precioCliente === 'string' ? parseFloat(data.precioCliente) : data.precioCliente) : null;
+
     const news = await prisma.propertyNews.update({
       where: { id },
       data: {
         type: data.type,
         action: data.action,
-        valuation: data.valuation,
+        valuation: data.valuation ? 'true' : 'false',
         priority: data.priority,
         responsible: data.responsible,
-        value: data.value,
-        precioSM: data.valuation ? data.precioSM : null,
-        precioCliente: data.valuation ? data.precioCliente : null,
-      },
-      include: {
-        property: {
-          select: {
-            id: true,
-            address: true,
-            population: true,
-          },
-        },
+        value: numericValue,
+        precioSM: data.valuation ? numericPrecioSM : null,
+        precioCliente: data.valuation ? numericPrecioCliente : null,
       },
     });
 
-    return news as unknown as PropertyNews;
+    revalidatePath('/noticia');
+    return news;
   } catch (error) {
-    console.error('Error updating news:', error);
-    return null;
+    console.error('Error updating property news:', error);
+    throw error;
   }
 } 

@@ -392,31 +392,30 @@ export async function createPropertyNews(propertyId: string, data: {
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
-  precioSM: number;
-  precioCliente: number;
+  precioSM: number | null;
+  precioCliente: number | null;
 }) {
   try {
-    // Verificar si ya existe una noticia para esta propiedad
-    const existingNews = await prisma.propertyNews.findFirst({
-      where: { propertyId },
-    });
-
-    if (existingNews) {
-      throw new Error('Ya existe una noticia para esta propiedad');
-    }
+    // Convert numeric values to ensure they're numbers, not strings
+    const numericValue = typeof data.value === 'string' ? parseFloat(data.value) : data.value;
+    const numericPrecioSM = data.precioSM !== null ? (typeof data.precioSM === 'string' ? parseFloat(data.precioSM) : data.precioSM) : null;
+    const numericPrecioCliente = data.precioCliente !== null ? (typeof data.precioCliente === 'string' ? parseFloat(data.precioCliente) : data.precioCliente) : null;
 
     const news = await prisma.propertyNews.create({
       data: {
-        ...data,
-        propertyId,
-        precioSM: data.valuation ? data.precioSM : null,
-        precioCliente: data.valuation ? data.precioCliente : null,
+        type: data.type,
+        action: data.action,
+        valuation: data.valuation ? 'true' : 'false',
+        priority: data.priority,
+        responsible: data.responsible,
+        value: numericValue,
+        precioSM: data.valuation ? numericPrecioSM : null,
+        precioCliente: data.valuation ? numericPrecioCliente : null,
+        propertyId: propertyId,
       },
     });
 
     revalidatePath(`/dashboard/properties/${propertyId}`);
-    revalidatePath('/noticia');
-
     return news;
   } catch (error) {
     console.error('Error creating property news:', error);
@@ -429,6 +428,7 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNewsW
     const news = await prisma.propertyNews.findMany({
       where: { propertyId },
       orderBy: { createdAt: 'desc' },
+      distinct: ['propertyId'],
       include: {
         property: {
           select: {

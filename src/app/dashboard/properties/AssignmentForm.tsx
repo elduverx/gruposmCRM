@@ -6,6 +6,7 @@ import { createAssignment, updateAssignment } from './actions';
 import { Client } from '@/types/client';
 import { getClients } from '../clients/actions';
 import { Assignment } from '@/types/property';
+import { Switch } from '@headlessui/react';
 
 interface AssignmentFormProps {
   propertyId: string;
@@ -28,6 +29,10 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     buyerFeeValue: initialData?.buyerFeeValue || 0,
   });
 
+  // Estados para los toggles
+  const [sellerFeeIsPercentage, setSellerFeeIsPercentage] = useState(formData.sellerFeeType === 'PERCENTAGE');
+  const [buyerFeeIsPercentage, setBuyerFeeIsPercentage] = useState(formData.buyerFeeType === 'PERCENTAGE');
+
   useEffect(() => {
     const fetchClients = async () => {
       try {
@@ -40,6 +45,45 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
 
     fetchClients();
   }, []);
+
+  // Efecto para actualizar los valores de comisión cuando cambia el precio o el tipo de comisión
+  useEffect(() => {
+    if (sellerFeeIsPercentage) {
+      // Si es porcentaje, calcular el 3% del precio
+      const percentageValue = formData.price * 0.03;
+      setFormData(prev => ({
+        ...prev,
+        sellerFeeType: 'PERCENTAGE',
+        sellerFeeValue: percentageValue
+      }));
+    } else {
+      // Si es fijo, establecer 3000€
+      setFormData(prev => ({
+        ...prev,
+        sellerFeeType: 'FIXED',
+        sellerFeeValue: 3000
+      }));
+    }
+  }, [formData.price, sellerFeeIsPercentage]);
+
+  useEffect(() => {
+    if (buyerFeeIsPercentage) {
+      // Si es porcentaje, calcular el 3% del precio
+      const percentageValue = formData.price * 0.03;
+      setFormData(prev => ({
+        ...prev,
+        buyerFeeType: 'PERCENTAGE',
+        buyerFeeValue: percentageValue
+      }));
+    } else {
+      // Si es fijo, establecer 3000€
+      setFormData(prev => ({
+        ...prev,
+        buyerFeeType: 'FIXED',
+        buyerFeeValue: 3000
+      }));
+    }
+  }, [formData.price, buyerFeeIsPercentage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +128,11 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
       ...prev,
       [name]: value
     }));
+  };
+
+  // Función para formatear números con separadores de miles y decimales
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   return (
@@ -158,63 +207,71 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Tipo de comisión vendedor</label>
-          <select
-            name="sellerFeeType"
-            value={formData.sellerFeeType}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="PERCENTAGE">Porcentaje</option>
-            <option value="FIXED">Fijo</option>
-          </select>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Comisión vendedor</h3>
+          <div className="flex space-x-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setSellerFeeIsPercentage(true)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                sellerFeeIsPercentage
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Porcentaje (3%)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSellerFeeIsPercentage(false)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                !sellerFeeIsPercentage
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Fijo (3.000€)
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            {sellerFeeIsPercentage 
+              ? `Valor calculado: ${formatNumber(formData.price * 0.03)}€` 
+              : 'Valor fijo: 3.000€'}
+          </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Valor comisión vendedor</label>
-          <input
-            type="number"
-            name="sellerFeeValue"
-            value={formData.sellerFeeValue}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-            min="0"
-            step="0.01"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Tipo de comisión comprador</label>
-          <select
-            name="buyerFeeType"
-            value={formData.buyerFeeType}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="PERCENTAGE">Porcentaje</option>
-            <option value="FIXED">Fijo</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Valor comisión comprador</label>
-          <input
-            type="number"
-            name="buyerFeeValue"
-            value={formData.buyerFeeValue}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-            min="0"
-            step="0.01"
-          />
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Comisión comprador</h3>
+          <div className="flex space-x-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setBuyerFeeIsPercentage(true)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                buyerFeeIsPercentage
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Porcentaje (3%)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBuyerFeeIsPercentage(false)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                !buyerFeeIsPercentage
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Fijo (3.000€)
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            {buyerFeeIsPercentage 
+              ? `Valor calculado: ${formatNumber(formData.price * 0.03)}€` 
+              : 'Valor fijo: 3.000€'}
+          </p>
         </div>
       </div>
 

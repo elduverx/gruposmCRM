@@ -20,23 +20,24 @@ interface NewsFormData {
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
-  precioSM: number;
-  precioCliente: number;
+  precioSM: number | null;
+  precioCliente: number | null;
 }
 
 export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
     propertyId: '',
-    type: '',
-    action: '',
+    type: 'DPV',
+    action: 'Venta',
     valuation: false,
     priority: 'LOW',
     responsible: '',
     value: 0,
-    precioSM: 0,
-    precioCliente: 0,
+    precioSM: null,
+    precioCliente: null,
   });
 
   useEffect(() => {
@@ -54,16 +55,36 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checkbox = e.target as HTMLInputElement;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checkbox.checked,
+        // Si valuation es false, establecer los precios a null
+        ...(name === 'valuation' && !checkbox.checked ? {
+          precioSM: null,
+          precioCliente: null
+        } : {})
+      }));
+    } else if (type === 'number') {
+      const numValue = value === '' ? null : parseFloat(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
 
     try {
       await createPropertyNews(formData.propertyId, {
@@ -86,7 +107,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
         toast.error('Error al crear la noticia');
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -165,17 +186,19 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                 <label htmlFor="valuation" className="block text-sm font-medium text-gray-700 mb-1">
                   Valoración
                 </label>
-                <select
-                  name="valuation"
-                  id="valuation"
-                  value={formData.valuation.toString()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, valuation: e.target.value === 'true' }))}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  required
-                >
-                  <option value="true">Sí</option>
-                  <option value="false">No</option>
-                </select>
+                <div className="mt-1 flex items-center">
+                  <input
+                    type="checkbox"
+                    name="valuation"
+                    id="valuation"
+                    checked={formData.valuation}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
+                    Ha sido valorado
+                  </label>
+                </div>
               </div>
 
               <div>
@@ -224,7 +247,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                         type="number"
                         name="precioSM"
                         id="precioSM"
-                        value={formData.precioSM}
+                        value={formData.precioSM === null ? '' : formData.precioSM}
                         onChange={handleChange}
                         className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         placeholder="0"
@@ -244,7 +267,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                         type="number"
                         name="precioCliente"
                         id="precioCliente"
-                        value={formData.precioCliente}
+                        value={formData.precioCliente === null ? '' : formData.precioCliente}
                         onChange={handleChange}
                         className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         placeholder="0"
@@ -261,16 +284,17 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                 <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
                   Acción
                 </label>
-                <textarea
+                <select
                   name="action"
                   id="action"
                   value={formData.action}
                   onChange={handleChange}
-                  rows={4}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   required
-                  placeholder="Describe la acción a realizar"
-                />
+                >
+                  <option value="Venta">Venta</option>
+                  <option value="Alquiler">Alquiler</option>
+                </select>
               </div>
             </div>
 
@@ -284,10 +308,10 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
               </button>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                {isLoading ? 'Creando...' : 'Crear'}
+                {loading ? 'Creando...' : 'Crear'}
               </button>
             </div>
           </form>

@@ -12,6 +12,7 @@ export type PropertyNewsWithProperty = Omit<Prisma.PropertyNewsGetPayload<{
 }>, 'createdAt' | 'updatedAt'> & {
   createdAt: string;
   updatedAt: string;
+  valuation: string;
   precioSM: number | null;
   precioCliente: number | null;
 };

@@ -27,29 +27,20 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
-    const checkAccess = async () => {
-      if (!authLoading) {
-        if (!isAuthenticated) {
-          console.log('Usuario no autenticado, redirigiendo a login');
-          router.replace('/login');
-          return;
-        }
-        
-        if (!isAdmin) {
-          console.log('Usuario no tiene permisos de administrador');
-          router.replace('/dashboard');
-          return;
-        }
+    // Verificar autenticación inmediatamente
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        console.log('Usuario no autenticado, redirigiendo a login');
+        router.replace('/login');
+        return;
       }
-    };
-
-    checkAccess();
-  }, [authLoading, isAuthenticated, isAdmin, router]);
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   const fetchUsers = async () => {
     try {
       setError(null);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       if (!token) {
         console.log('No token found');
         router.replace('/login');
@@ -63,11 +54,11 @@ export default function UsersPage() {
       });
 
       if (response.status === 401) {
-        console.log('Token expirado, intentando refrescar');
+        console.log('Unauthorized access, attempting to refresh token');
         const refreshed = await refreshToken();
         if (refreshed) {
-          // Reintentar la petición con el nuevo token
-          const newToken = localStorage.getItem('token');
+          // Reintentar la solicitud con el nuevo token
+          const newToken = localStorage.getItem('authToken');
           const retryResponse = await fetch('/api/users', {
             headers: {
               'Authorization': `Bearer ${newToken}`
@@ -76,25 +67,31 @@ export default function UsersPage() {
           
           if (retryResponse.ok) {
             const data = await retryResponse.json();
+            console.log('Users fetched after token refresh:', data);
             setUsers(data);
             updateStats(data);
             return;
           }
         }
+        console.log('Token refresh failed, redirecting to login');
         router.replace('/login');
         return;
       }
 
       if (!response.ok) {
-        throw new Error('Error al obtener usuarios');
+        const errorData = await response.json();
+        console.error('Error al obtener usuarios:', errorData);
+        setError(errorData.message || 'Error al obtener usuarios');
+        return;
       }
 
       const data = await response.json();
+      console.log('Users fetched:', data);
       setUsers(data);
       updateStats(data);
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error al obtener usuarios');
+      setError('Error al conectar con el servidor');
     } finally {
       setLoading(false);
     }
@@ -110,10 +107,11 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && isAdmin) {
+    if (!authLoading && isAuthenticated) {
+      console.log('Usuario autenticado, cargando usuarios');
       fetchUsers();
     }
-  }, [isAuthenticated, isAdmin]);
+  }, [authLoading, isAuthenticated]);
 
   const handleUsersChange = (newUsers: User[]) => {
     console.log('handleUsersChange llamado con:', newUsers);

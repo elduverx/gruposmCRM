@@ -142,7 +142,7 @@ model PropertyNews {
   id            String   @id @default(cuid())
   type          String
   action        String
-  valuation     Boolean
+  valuation     String
   priority      String
   responsible   String
   value         Float?

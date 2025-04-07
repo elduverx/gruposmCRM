@@ -4,29 +4,40 @@ import { useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
 import { createPropertyNews, getPropertyNews } from './actions';
 import { PropertyNews } from '@/types/property';
+import { useRouter } from 'next/navigation';
 
 interface PropertyNewsFormProps {
   propertyId: string;
-  onSuccess: (data: Omit<PropertyNews, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSuccess?: () => void;
   initialData?: PropertyNews | null;
+}
+
+interface NewsFormData {
+  type: string;
+  action: string;
+  valuation: boolean;
+  priority: 'HIGH' | 'LOW';
+  responsible: string;
+  value: number;
+  precioSM: number | null;
+  precioCliente: number | null;
 }
 
 export default function PropertyNewsForm({ propertyId, onSuccess, initialData }: PropertyNewsFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isValorated, setIsValorated] = useState(false);
   const [existingNews, setExistingNews] = useState<boolean>(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<NewsFormData>({
     type: 'DPV',
-    action: 'SALE',
-    valuation: 'PRECIOSM',
+    action: 'Venta',
+    valuation: false,
     priority: 'LOW',
     responsible: '',
     value: 0,
-    precioSM: null as number | null,
-    precioCliente: null as number | null,
-    propertyId: propertyId
+    precioSM: null,
+    precioCliente: null,
   });
+  const router = useRouter();
 
   useEffect(() => {
     const checkExistingNews = async () => {
@@ -57,13 +68,12 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
       setFormData({
         type: initialData.type,
         action: initialData.action,
-        valuation: initialData.valuation,
+        valuation: initialData.valuation === 'true',
         priority: initialData.priority,
         responsible: initialData.responsible || '',
         value: initialData.value || 0,
         precioSM: initialData.precioSM || null,
         precioCliente: initialData.precioCliente || null,
-        propertyId
       });
     }
   }, [initialData, propertyId]);
@@ -75,23 +85,22 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
 
     try {
       const data = {
-        ...formData,
-        propertyId,
-        // Only include valuation fields if isValorated is true
-        ...(isValorated ? {
-          precioSM: formData.precioSM,
-          precioCliente: formData.precioCliente
-        } : {
-          precioSM: null,
-          precioCliente: null
-        })
+        type: formData.type,
+        action: formData.action,
+        valuation: formData.valuation,
+        priority: formData.priority,
+        responsible: formData.responsible,
+        value: formData.value || 0,
+        precioSM: formData.precioSM || 0,
+        precioCliente: formData.precioCliente || 0
       };
 
-      await onSuccess(data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      setError('Error al crear la noticia');
+      await createPropertyNews(propertyId, data);
+      router.refresh();
+      onSuccess?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear la noticia');
+    } finally {
       setLoading(false);
     }
   };
@@ -101,9 +110,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
     
     if (type === 'checkbox') {
       const checkbox = e.target as HTMLInputElement;
-      if (name === 'isValorated') {
-        setIsValorated(checkbox.checked);
-      }
+      setFormData(prev => ({
+        ...prev,
+        [name]: checkbox.checked,
+        ...(name === 'valuation' && !checkbox.checked ? {
+          precioSM: null,
+          precioCliente: null
+        } : {})
+      }));
+    } else if (type === 'number') {
+      const numValue = value === '' ? null : Number(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numValue
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
@@ -113,7 +133,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
   };
 
   // Calculate benefit based on which price is higher
-  const beneficio = isValorated && formData.precioCliente !== null && formData.precioSM !== null
+  const beneficio = formData.valuation && formData.precioCliente !== null && formData.precioSM !== null
     ? (formData.precioCliente < formData.precioSM 
         ? formData.precioSM - formData.precioCliente 
         : formData.precioCliente - formData.precioSM) 
@@ -144,17 +164,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Acción</label>
+            <div className="col-span-1 md:col-span-2">
+              <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
+                Acción
+              </label>
               <select
                 name="action"
+                id="action"
                 value={formData.action}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
               >
-                <option value="SALE">Venta</option>
-                <option value="RENT">Alquiler</option>
+                <option value="Venta">Venta</option>
+                <option value="Alquiler">Alquiler</option>
               </select>
             </div>
 
@@ -188,43 +211,57 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
           <div className="flex items-center">
             <input
               type="checkbox"
-              id="isValorated"
-              name="isValorated"
-              checked={isValorated}
+              id="valuation"
+              name="valuation"
+              checked={formData.valuation}
               onChange={handleChange}
               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
             />
-            <label htmlFor="isValorated" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
               Ha sido valorado
             </label>
           </div>
 
-          {isValorated ? (
+          {formData.valuation ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Precio Cliente</label>
-                  <input
-                    type="number"
-                    name="precioCliente"
-                    value={formData.precioCliente === null ? '' : formData.precioCliente}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    min="0"
-                    step="0.01"
-                  />
+                  <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700 mb-1">
+                    Precio Cliente
+                  </label>
+                  <div className="relative rounded-md shadow-sm">
+                    <input
+                      type="number"
+                      name="precioCliente"
+                      id="precioCliente"
+                      value={formData.precioCliente || ''}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="0"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">€</span>
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Precio SM</label>
-                  <input
-                    type="number"
-                    name="precioSM"
-                    value={formData.precioSM === null ? '' : formData.precioSM}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    min="0"
-                    step="0.01"
-                  />
+                  <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
+                    Precio SM
+                  </label>
+                  <div className="relative rounded-md shadow-sm">
+                    <input
+                      type="number"
+                      name="precioSM"
+                      id="precioSM"
+                      value={formData.precioSM || ''}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="0"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">€</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="p-3 bg-gray-50 rounded-md">
@@ -233,17 +270,23 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
             </>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Valor</label>
-              <input
-                type="number"
-                name="value"
-                value={formData.value}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-                min="0"
-                step="0.01"
-              />
+              <label htmlFor="value" className="block text-sm font-medium text-gray-700 mb-1">
+                Valor
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <input
+                  type="number"
+                  name="value"
+                  id="value"
+                  value={formData.value}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="0"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">€</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -280,17 +323,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Acción</label>
+        <div className="col-span-1 md:col-span-2">
+          <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
+            Acción
+          </label>
           <select
             name="action"
+            id="action"
             value={formData.action}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
           >
-            <option value="SALE">Venta</option>
-            <option value="RENT">Alquiler</option>
+            <option value="Venta">Venta</option>
+            <option value="Alquiler">Alquiler</option>
           </select>
         </div>
 
@@ -324,43 +370,57 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
       <div className="flex items-center">
         <input
           type="checkbox"
-          id="isValorated"
-          name="isValorated"
-          checked={isValorated}
+          id="valuation"
+          name="valuation"
+          checked={formData.valuation}
           onChange={handleChange}
           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
         />
-        <label htmlFor="isValorated" className="ml-2 block text-sm text-gray-900">
+        <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
           Ha sido valorado
         </label>
       </div>
 
-      {isValorated ? (
+      {formData.valuation ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Precio Cliente</label>
-              <input
-                type="number"
-                name="precioCliente"
-                value={formData.precioCliente === null ? '' : formData.precioCliente}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                min="0"
-                step="0.01"
-              />
+              <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700 mb-1">
+                Precio Cliente
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <input
+                  type="number"
+                  name="precioCliente"
+                  id="precioCliente"
+                  value={formData.precioCliente || ''}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="0"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">€</span>
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Precio SM</label>
-              <input
-                type="number"
-                name="precioSM"
-                value={formData.precioSM === null ? '' : formData.precioSM}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                min="0"
-                step="0.01"
-              />
+              <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
+                Precio SM
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <input
+                  type="number"
+                  name="precioSM"
+                  id="precioSM"
+                  value={formData.precioSM || ''}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="0"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">€</span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="p-3 bg-gray-50 rounded-md">
@@ -369,17 +429,23 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
         </>
       ) : (
         <div>
-          <label className="block text-sm font-medium text-gray-700">Valor</label>
-          <input
-            type="number"
-            name="value"
-            value={formData.value}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-            min="0"
-            step="0.01"
-          />
+          <label htmlFor="value" className="block text-sm font-medium text-gray-700 mb-1">
+            Valor
+          </label>
+          <div className="relative rounded-md shadow-sm">
+            <input
+              type="number"
+              name="value"
+              id="value"
+              value={formData.value}
+              onChange={handleChange}
+              className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              placeholder="0"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">€</span>
+            </div>
+          </div>
         </div>
       )}
 
