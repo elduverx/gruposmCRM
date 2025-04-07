@@ -6,20 +6,23 @@ import { isAdmin, verifyToken } from '@/lib/auth';
 // GET /api/users - Obtener todos los usuarios
 export async function GET(request: Request) {
   try {
-    // Verificar si el usuario es administrador
-    try {
-      const admin = await isAdmin(request);
-      if (!admin) {
-        console.log('Usuario no autorizado');
-        return NextResponse.json(
-          { message: 'No autorizado' },
-          { status: 401 }
-        );
-      }
-    } catch (error) {
-      console.error('Error al verificar si el usuario es administrador:', error);
+    // Verificar si el usuario está autenticado
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Usuario no autenticado');
       return NextResponse.json(
-        { message: 'Error al verificar permisos' },
+        { message: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+      verifyToken(token);
+    } catch (error) {
+      console.error('Error al verificar token:', error);
+      return NextResponse.json(
+        { message: 'Token inválido o expirado' },
         { status: 401 }
       );
     }
@@ -45,7 +48,17 @@ export async function POST(request: Request) {
       isUserAdmin = await isAdmin(request);
     } catch (error) {
       console.error('Error al verificar si el usuario es administrador:', error);
-      // Continuamos sin verificar permisos para permitir la creación inicial de un admin
+      return NextResponse.json(
+        { message: 'Error al verificar permisos' },
+        { status: 401 }
+      );
+    }
+
+    if (!isUserAdmin) {
+      return NextResponse.json(
+        { message: 'No autorizado' },
+        { status: 401 }
+      );
     }
 
     const { name, email, password, role } = await request.json();

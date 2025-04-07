@@ -16,9 +16,10 @@ interface User {
 interface UserListProps {
   users: User[];
   onUsersChange: (users: User[]) => void;
+  isAdmin: boolean;
 }
 
-export default function UserList({ users, onUsersChange }: UserListProps) {
+export default function UserList({ users, onUsersChange, isAdmin }: UserListProps) {
   const [showForm, setShowForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,11 +34,14 @@ export default function UserList({ users, onUsersChange }: UserListProps) {
   });
 
   const handleEdit = (user: User) => {
+    if (!isAdmin) return;
     setSelectedUser(user);
     setShowForm(true);
   };
 
   const handleDelete = async (userId: string) => {
+    if (!isAdmin) return;
+    
     if (!confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
       return;
     }
@@ -206,15 +210,17 @@ export default function UserList({ users, onUsersChange }: UserListProps) {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-900">Lista de Usuarios</h2>
-          <button
-            onClick={() => {
-              setSelectedUser(null);
-              setShowForm(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            Agregar Usuario
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setSelectedUser(null);
+                setShowForm(true);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              Agregar Usuario
+            </button>
+          )}
         </div>
 
         <div className="mb-4">
@@ -255,9 +261,11 @@ export default function UserList({ users, onUsersChange }: UserListProps) {
                 >
                   Fecha de Registro
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -281,20 +289,22 @@ export default function UserList({ users, onUsersChange }: UserListProps) {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
+                  {isAdmin && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(user)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

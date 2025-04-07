@@ -43,9 +43,9 @@ model Property {
   activities      Activity[]
   assignments     Assignment[]
   dpv             DPV?
-  propertyNews    PropertyNews[]
   responsibleUser User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
   zone            Zone?          @relation(fields: [zoneId], references: [id])
+  propertyNews    PropertyNews[]
   clients         Client[]       @relation("ClientProperties")
 
   @@index([clientId], map: "Property_clientId_fkey")
@@ -54,16 +54,17 @@ model Property {
 }
 
 model Client {
-  id          String       @id @default(cuid())
-  name        String
-  email       String       @unique
-  phone       String?
-  address     String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  hasRequest  Boolean      @default(false)
-  assignments Assignment[]
-  properties  Property[]   @relation("ClientProperties")
+  id            String         @id @default(cuid())
+  name          String
+  email         String
+  phone         String?
+  address       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  hasRequest    Boolean        @default(false)
+  assignments   Assignment[]
+  ClientRequest ClientRequest?
+  properties    Property[]     @relation("ClientProperties")
 }
 
 model News {
@@ -76,21 +77,21 @@ model News {
 }
 
 model Assignment {
-  id              String   @id @default(cuid())
-  type            String   // SALE o RENT
-  price           Float
-  exclusiveUntil  DateTime
-  origin          String
-  clientId        String
-  sellerFeeType   String   // PERCENTAGE o FIXED
-  sellerFeeValue  Float
-  buyerFeeType    String   // PERCENTAGE o FIXED
-  buyerFeeValue   Float
-  propertyId      String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  property        Property @relation(fields: [propertyId], references: [id])
-  client          Client   @relation(fields: [clientId], references: [id])
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  propertyId     String
+  clientId       String
+  buyerFeeType   String
+  buyerFeeValue  Float
+  exclusiveUntil DateTime
+  origin         String
+  price          Float
+  sellerFeeType  String
+  sellerFeeValue Float
+  type           String
+  client         Client   @relation(fields: [clientId], references: [id])
+  property       Property @relation(fields: [propertyId], references: [id])
 
   @@index([propertyId], map: "Assignment_propertyId_fkey")
   @@index([clientId], map: "Assignment_clientId_fkey")
@@ -138,19 +139,35 @@ model DPV {
 }
 
 model PropertyNews {
-  id          String   @id @default(cuid())
-  type        String   // DPV o PVA
-  action      String   // SALE o RENT
-  valuation   String   // PRECIOSM o PRECIO_CLIENTE
-  priority    String   // HIGH o LOW
-  responsible String
-  value       Float?
-  propertyId  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  property    Property @relation(fields: [propertyId], references: [id])
+  id            String   @id @default(cuid())
+  type          String
+  action        String
+  valuation     Boolean
+  priority      String
+  responsible   String
+  value         Float?
+  propertyId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  precioCliente Float?
+  precioSM      Float?
+  property      Property @relation(fields: [propertyId], references: [id])
 
   @@index([propertyId], map: "PropertyNews_propertyId_fkey")
+}
+
+model ClientRequest {
+  id           String   @id
+  clientId     String   @unique
+  bedrooms     Int
+  bathrooms    Int
+  minPrice     Float
+  maxPrice     Float
+  propertyType String
+  features     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  Client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -181,11 +198,4 @@ enum PropertyAction {
   IR_A_DIRECCION
   REPETIR
   LOCALIZAR_VERIFICADO
-}
-
-enum AssignmentStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
 }

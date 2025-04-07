@@ -17,21 +17,24 @@ import {
   UserCircleIcon,
   MapIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ArrowRightOnRectangleIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from '@/hooks/useAuth';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Propiedades', href: '/dashboard/properties', icon: BuildingOfficeIcon },
-  { name: 'Clientes', href: '/dashboard/clients', icon: UserGroupIcon },
+// Opciones de navegación para usuarios normales
+const userNavigation = [
+  { name: 'Inicio', href: '/dashboard', icon: HomeIcon },
+  { name: 'Inmuebles', href: '/dashboard/properties', icon: BuildingOfficeIcon },
+  { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
-  { name: 'Noticias', href: '/dashboard/news', icon: NewspaperIcon },
+  { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
+];
+
+// Opciones adicionales para administradores
+const adminNavigation = [
   { name: 'Zonas', href: '/dashboard/zones', icon: MapIcon },
   { name: 'Usuarios', href: '/dashboard/users', icon: UsersIcon },
-  { name: 'Calendario', href: '/dashboard/calendar', icon: CalendarIcon },
-  { name: 'Actividades', href: '/dashboard/activities', icon: CheckCircleIcon },
-  { name: 'Estadísticas', href: '/dashboard/stats', icon: ChartBarIcon },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -40,12 +43,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Determinar si el usuario es administrador
+  const isAdmin = user?.role === 'ADMIN';
+  
+  // Combinar las opciones de navegación según el rol
+  const navigation = isAdmin 
+    ? [...userNavigation, ...adminNavigation] 
+    : userNavigation;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar para móvil - Parte inferior */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
         <div className="flex justify-around items-center h-16">
-          {navigation.slice(0, 5).map((item) => {
+          {userNavigation.slice(0, 5).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -110,18 +121,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </div>
         <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-          <div className="flex items-center">
+          <div className="flex items-center w-full">
             <div className="flex-shrink-0">
               <UserCircleIcon className="h-8 w-8 text-gray-400" />
             </div>
-            <div className={`ml-3 transition-opacity duration-300 ${
+            <div className={`ml-3 flex-1 transition-opacity duration-300 ${
               isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
             }`}>
               <p className="text-sm font-medium text-gray-700">{user?.name}</p>
+              <p className="text-xs text-gray-500">{isAdmin ? 'Administrador' : 'Usuario'}</p>
               <button
                 onClick={logout}
-                className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                className="mt-1 w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
               >
+                <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
                 Cerrar sesión
               </button>
             </div>
@@ -133,22 +146,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className={`lg:flex lg:flex-col lg:flex-1 transition-all duration-300 ease-in-out ${
         isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
       }`}>
-        {/* Barra superior */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white border-b border-gray-200">
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex items-center">
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {navigation.find(item => item.href === pathname)?.name || 'Dashboard'}
-              </h1>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-              <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                <BellIcon className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Contenido */}
         <main className="flex-1 pb-16 lg:pb-0">
           <div className="py-6">

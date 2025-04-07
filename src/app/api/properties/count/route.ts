@@ -8,7 +8,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error getting properties count:', error);
     return NextResponse.json(
-      { error: 'Error al obtener el conteo de propiedades' },
+      { error: 'Error al obtener el conteo de inmuebles' },
       { status: 500 }
     );
   }

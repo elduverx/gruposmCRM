@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 type AuthMode = 'login' | 'register';
 
@@ -12,6 +13,7 @@ export default function AuthForm() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -41,7 +43,7 @@ export default function AuthForm() {
       }
 
       // Usar el contexto de autenticación para iniciar sesión
-      login(data.token, data.user);
+      await login(data.token, data.user);
       
       // Redirigir al dashboard
       router.push('/dashboard');
@@ -53,11 +55,16 @@ export default function AuthForm() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-          {mode === 'login' ? 'Iniciar sesión' : 'Registrarse'}
+          {mode === 'login' ? 'Bienvenido de nuevo' : 'Crear una cuenta'}
         </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          {mode === 'login' 
+            ? 'Ingresa tus credenciales para acceder' 
+            : 'Regístrate para comenzar a usar la plataforma'}
+        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -66,7 +73,7 @@ export default function AuthForm() {
             {mode === 'register' && (
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Nombre
+                  Nombre completo
                 </label>
                 <div className="mt-1">
                   <input
@@ -76,7 +83,8 @@ export default function AuthForm() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
+                    placeholder="Juan Pérez"
                   />
                 </div>
               </div>
@@ -95,7 +103,8 @@ export default function AuthForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
+                  placeholder="correo@ejemplo.com"
                 />
               </div>
             </div>
@@ -104,31 +113,64 @@ export default function AuthForm() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Contraseña
               </label>
-              <div className="mt-1">
+              <div className="mt-1 relative">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm pr-10"
+                  placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
               </div>
             </div>
 
             {error && (
-              <div className="text-red-500 text-sm">{error}</div>
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Error
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      {error}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             <div>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : 'Registrarse'}
+                {loading ? (
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {mode === 'login' ? 'Iniciando sesión...' : 'Registrando...'}
+                  </div>
+                ) : (
+                  mode === 'login' ? 'Iniciar sesión' : 'Registrarse'
+                )}
               </button>
             </div>
           </form>
@@ -148,8 +190,11 @@ export default function AuthForm() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                onClick={() => {
+                  setMode(mode === 'login' ? 'register' : 'login');
+                  setError('');
+                }}
+                className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
                 {mode === 'login' ? 'Registrarse' : 'Iniciar sesión'}
               </button>

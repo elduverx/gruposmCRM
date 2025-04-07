@@ -78,6 +78,8 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
     isLocated: false,
     zoneId: '',
   });
+  // Coordenadas por defecto de Catarroja
+  const defaultLocation = { lat: 39.4025, lng: -0.4022 };
 
   // Función para determinar si un punto está dentro de un polígono
   const isPointInPolygon = (point: { lat: number; lng: number }, polygon: { lat: number; lng: number }[]): boolean => {
@@ -169,6 +171,9 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
       };
       
       fetchProperty();
+    } else {
+      // Si no es edición, establecer la ubicación por defecto en Catarroja
+      setSelectedLocation(defaultLocation);
     }
   }, [propertyId]);
 
@@ -317,28 +322,28 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
               <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6">
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                          Dirección
-                        </label>
-                        <div className="mt-1 flex rounded-md shadow-sm">
-                          <input
-                            type="text"
-                            name="address"
-                            id="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                      Dirección
+                    </label>
+                    <div className="mt-1 flex rounded-md shadow-sm">
+                      <input
+                        type="text"
+                        name="address"
+                        id="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
                         className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
                         placeholder="Calle, número, piso, puerta"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddressSearch}
-                            disabled={isSearching}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddressSearch}
+                        disabled={isSearching}
                         className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            {isSearching ? 'Buscando...' : 'Buscar'}
-                          </button>
+                      >
+                        {isSearching ? 'Buscando...' : 'Buscar'}
+                      </button>
                     </div>
                   </div>
 
@@ -361,22 +366,34 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                     <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
                       Zona
                     </label>
-                    <select
-                      id="zoneId"
-                      name="zoneId"
-                      value={formData.zoneId}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="">Seleccionar zona</option>
-                      {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-1 relative">
+                      <select
+                        id="zoneId"
+                        name="zoneId"
+                        value={formData.zoneId}
+                        onChange={handleInputChange}
+                        className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="">Seleccionar zona</option>
+                        {zones.map((zone) => (
+                          <option key={zone.id} value={zone.id}>
+                            {zone.name}
+                          </option>
+                        ))}
+                      </select>
+                      {formData.zoneId && (
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                          <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                     {formData.zoneId && (
-                      <p className="mt-1 text-sm text-green-600">
+                      <p className="mt-1 text-sm text-green-600 flex items-center">
+                        <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
                         Zona asignada automáticamente según la ubicación
                       </p>
                     )}
@@ -504,34 +521,39 @@ function PropertyFormClient({ propertyId }: { propertyId?: string }) {
                       </label>
                     </div>
                   </div>
-                  </div>
+                </div>
 
-                  <div className="col-span-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ubicación en el mapa
-                    </label>
-                  <div className="h-96 w-full rounded-md border border-gray-300">
-                      <MapContainer
-                        center={[40.4168, -3.7038]}
-                        zoom={13}
-                        style={{ height: '100%', width: '100%' }}
-                      >
-                        <TileLayer
+                <div className="col-span-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ubicación en el mapa
+                  </label>
+                  <div className="h-96 w-full rounded-md border border-gray-300 overflow-hidden shadow-sm">
+                    <MapContainer
+                      center={[defaultLocation.lat, defaultLocation.lng]}
+                      zoom={14}
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                      <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <LocationMarker onLocationSelect={handleLocationSelect} />
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <LocationMarker onLocationSelect={handleLocationSelect} />
                       {selectedLocation && (
                         <>
                           <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
-                        <MapController coordinates={selectedLocation} />
+                          <MapController coordinates={selectedLocation} />
                         </>
-                        )}
-                      </MapContainer>
-                    </div>
-                      <p className="mt-2 text-sm text-gray-500">
-                    Haz clic en el mapa para seleccionar la ubicación del inmueble.
-                  </p>
+                      )}
+                    </MapContainer>
+                  </div>
+                  <div className="mt-2 flex items-center">
+                    <svg className="h-5 w-5 text-blue-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-gray-500">
+                      Haz clic en el mapa para seleccionar la ubicación del inmueble. La zona se asignará automáticamente si está dentro de una zona existente.
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">

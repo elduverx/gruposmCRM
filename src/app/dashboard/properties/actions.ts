@@ -4,6 +4,7 @@ import { PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/cl
 import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { PropertyNewsWithProperty, PropertyNewsCreateInput } from '@/types/prisma';
 
 type PrismaProperty = Prisma.PropertyGetPayload<{
   include: {
@@ -337,8 +338,14 @@ export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null
     
     if (!dpv) return null;
     
+    // Asegurarnos de que links sea un array de strings
+    const links = Array.isArray(dpv.links) 
+      ? dpv.links.filter((link): link is string => typeof link === 'string')
+      : [];
+    
     return {
       ...dpv,
+      links,
       createdAt: dpv.createdAt.toISOString(),
       updatedAt: dpv.updatedAt.toISOString()
     };
@@ -361,8 +368,14 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
     
     revalidatePath(`/dashboard/properties/${propertyId}`);
 
+    // Asegurarnos de que links sea un array de strings
+    const links = Array.isArray(dpv.links) 
+      ? dpv.links.filter((link): link is string => typeof link === 'string')
+      : [];
+
     return {
       ...dpv,
+      links,
       createdAt: dpv.createdAt.toISOString(),
       updatedAt: dpv.updatedAt.toISOString()
     };
@@ -372,21 +385,20 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
   }
 }
 
-export async function createPropertyNews(data: {
+export async function createPropertyNews(propertyId: string, data: {
   type: string;
   action: string;
-  valuation: string;
-  priority: string;
+  valuation: boolean;
+  priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
-  propertyId: string;
-}): Promise<PropertyNews | null> {
+  precioSM: number;
+  precioCliente: number;
+}) {
   try {
     // Verificar si ya existe una noticia para esta propiedad
     const existingNews = await prisma.propertyNews.findFirst({
-      where: {
-        propertyId: data.propertyId
-      }
+      where: { propertyId },
     });
 
     if (existingNews) {
@@ -395,36 +407,54 @@ export async function createPropertyNews(data: {
 
     const news = await prisma.propertyNews.create({
       data: {
-        type: data.type,
-        action: data.action,
-        valuation: data.valuation,
-        priority: data.priority,
-        responsible: data.responsible,
-        value: data.value,
-        propertyId: data.propertyId,
-      }
+        ...data,
+        propertyId,
+        precioSM: data.valuation ? data.precioSM : null,
+        precioCliente: data.valuation ? data.precioCliente : null,
+      },
     });
-    
-    revalidatePath(`/dashboard/properties/${data.propertyId}`);
-    revalidatePath('/dashboard/properties');
+
+    revalidatePath(`/dashboard/properties/${propertyId}`);
+    revalidatePath('/noticia');
+
     return news;
   } catch (error) {
     console.error('Error creating property news:', error);
-    return null;
+    throw error;
   }
 }
 
-export async function getPropertyNews(propertyId: string): Promise<PropertyNews[]> {
+export async function getPropertyNews(propertyId: string): Promise<PropertyNewsWithProperty[]> {
   try {
-    const propertyNews = await prisma.propertyNews.findMany({
-      where: {
-        propertyId
-      },
-      orderBy: {
-        createdAt: 'desc'
+    const news = await prisma.propertyNews.findMany({
+      where: { propertyId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        property: {
+          select: {
+            address: true,
+            population: true
+          }
+        }
       }
     });
-    return propertyNews;
+
+    // Convertir las fechas a strings y asegurarse de que todos los campos estén presentes
+    return news.map(item => ({
+      id: item.id,
+      type: item.type,
+      action: item.action,
+      valuation: item.valuation,
+      priority: item.priority,
+      responsible: item.responsible,
+      value: item.value,
+      precioSM: item.precioSM,
+      precioCliente: item.precioCliente,
+      propertyId: item.propertyId,
+      property: item.property,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString()
+    }));
   } catch (error) {
     console.error('Error getting property news:', error);
     return [];

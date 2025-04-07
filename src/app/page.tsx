@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { BuildingOfficeIcon, UserGroupIcon, ClipboardDocumentListIcon, NewspaperIcon } from "@heroicons/react/24/outline";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  BuildingOfficeIcon, 
+  UserGroupIcon, 
+  ClipboardDocumentListIcon, 
+  NewspaperIcon 
+} from "@heroicons/react/24/outline";
 
 interface Stats {
   name: string;
   value: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  icon: any;
 }
 
 export default function Home() {
@@ -17,7 +24,15 @@ export default function Home() {
     { name: "Noticias Recientes", value: "0", icon: NewspaperIcon },
   ]);
 
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
   useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
     const fetchStats = async () => {
       try {
         const [propertiesRes, clientsRes, assignmentsRes, newsRes] = await Promise.all([
@@ -45,8 +60,22 @@ export default function Home() {
       }
     };
 
-    fetchStats();
-  }, []);
+    if (isAuthenticated) {
+      fetchStats();
+    }
+  }, [isAuthenticated, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div>

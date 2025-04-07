@@ -27,26 +27,29 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
-    // Verificar autenticación y permisos inmediatamente
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        console.log('Usuario no autenticado, redirigiendo a login');
-        router.replace('/login');
-        return;
+    const checkAccess = async () => {
+      if (!authLoading) {
+        if (!isAuthenticated) {
+          console.log('Usuario no autenticado, redirigiendo a login');
+          router.replace('/login');
+          return;
+        }
+        
+        if (!isAdmin) {
+          console.log('Usuario no tiene permisos de administrador');
+          router.replace('/dashboard');
+          return;
+        }
       }
-      
-      if (!isAdmin) {
-        console.log('Usuario no es administrador, redirigiendo a dashboard');
-        router.replace('/dashboard');
-        return;
-      }
-    }
+    };
+
+    checkAccess();
   }, [authLoading, isAuthenticated, isAdmin, router]);
 
   const fetchUsers = async () => {
     try {
       setError(null);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       if (!token) {
         console.log('No token found');
         router.replace('/login');
@@ -60,11 +63,11 @@ export default function UsersPage() {
       });
 
       if (response.status === 401) {
-        console.log('Unauthorized access, attempting to refresh token');
+        console.log('Token expirado, intentando refrescar');
         const refreshed = await refreshToken();
         if (refreshed) {
-          // Reintentar la solicitud con el nuevo token
-          const newToken = localStorage.getItem('authToken');
+          // Reintentar la petición con el nuevo token
+          const newToken = localStorage.getItem('token');
           const retryResponse = await fetch('/api/users', {
             headers: {
               'Authorization': `Bearer ${newToken}`
@@ -73,31 +76,25 @@ export default function UsersPage() {
           
           if (retryResponse.ok) {
             const data = await retryResponse.json();
-            console.log('Users fetched after token refresh:', data);
             setUsers(data);
             updateStats(data);
             return;
           }
         }
-        console.log('Token refresh failed, redirecting to login');
         router.replace('/login');
         return;
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error al obtener usuarios:', errorData);
-        setError(errorData.message || 'Error al obtener usuarios');
-        return;
+        throw new Error('Error al obtener usuarios');
       }
 
       const data = await response.json();
-      console.log('Users fetched:', data);
       setUsers(data);
       updateStats(data);
     } catch (error) {
       console.error('Error:', error);
-      setError('Error al conectar con el servidor');
+      setError(error instanceof Error ? error.message : 'Error al obtener usuarios');
     } finally {
       setLoading(false);
     }
@@ -113,11 +110,10 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && isAdmin) {
-      console.log('Usuario autenticado y es administrador, cargando usuarios');
+    if (isAuthenticated && isAdmin) {
       fetchUsers();
     }
-  }, [authLoading, isAuthenticated, isAdmin]);
+  }, [isAuthenticated, isAdmin]);
 
   const handleUsersChange = (newUsers: User[]) => {
     console.log('handleUsersChange llamado con:', newUsers);
@@ -131,11 +127,6 @@ export default function UsersPage() {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
-  }
-
-  // Si no es administrador, no renderizar nada (la redirección ya se maneja en el useEffect)
-  if (!isAdmin) {
-    return null;
   }
 
   return (
@@ -153,7 +144,7 @@ export default function UsersPage() {
             onClick={() => router.push('/dashboard')}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
           >
-            Volver al Dashboard
+            Volver al Inicio
           </button>
         </div>
       </div>
@@ -178,7 +169,7 @@ export default function UsersPage() {
           <p className="text-3xl font-bold text-purple-600">{stats.regular}</p>
         </div>
       </div>
-      <UserList users={users} onUsersChange={handleUsersChange} />
+      <UserList users={users} onUsersChange={handleUsersChange} isAdmin={isAdmin} />
     </div>
   );
 } 

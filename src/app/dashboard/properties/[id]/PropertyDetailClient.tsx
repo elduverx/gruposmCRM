@@ -8,7 +8,7 @@ import { CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
-import { PropertyNewsForm } from '../PropertyNewsForm';
+import PropertyNewsForm from '../PropertyNewsForm';
 import { AssignmentForm } from '../AssignmentForm';
 import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -40,6 +40,21 @@ export default function PropertyDetailClient({
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Cargar noticias al abrir la página
+  useEffect(() => {
+    const loadNews = async () => {
+      try {
+        const newsData = await getPropertyNews(propertyId);
+        setNews(newsData as unknown as PropertyNews[]);
+      } catch (error) {
+        console.error('Error loading news:', error);
+        toast.error('Error al cargar las noticias');
+      }
+    };
+
+    loadNews();
+  }, [propertyId]);
 
   const handleToggleLocated = async () => {
     if (!property || isUpdating) return;
@@ -111,22 +126,20 @@ export default function PropertyDetailClient({
     }
   };
 
-  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleNewsSubmit = async (data: Omit<PropertyNews, 'id' | 'propertyId' | 'createdAt' | 'updatedAt' | 'property'>) => {
     try {
-      const result = await createPropertyNews({
-        ...data,
-        propertyId,
-        value: data.type === 'DPV' ? dpv?.currentPrice : null
-      });
-      
-      if (result) {
-        setNews(prev => [result, ...prev]);
-        toast.success('Noticia creada correctamente');
-      }
+      await createPropertyNews(propertyId, data);
+      toast.success('Noticia creada correctamente');
       setIsNewsFormOpen(false);
+      // Recargar la página para mostrar los cambios
+      window.location.reload();
     } catch (error) {
       console.error('Error creating news:', error);
-      toast.error('Error al crear la noticia');
+      if (error instanceof Error && error.message === 'Ya existe una noticia para esta propiedad') {
+        toast.error('Ya existe una noticia para esta propiedad');
+      } else {
+        toast.error('Error al crear la noticia');
+      }
     }
   };
 
@@ -347,79 +360,94 @@ export default function PropertyDetailClient({
                   <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
-                        <p className="font-medium">Tipo: {item.type}</p>
-                        <p className="text-sm">Acción: {item.action === 'SALE' ? 'Venta' : 'Alquiler'}</p>
-                        <p className="text-sm">Valoración: {item.valuation === 'PRECIOSM' ? 'PrecioSM' : 'Precio Cliente'}</p>
-                        <p className="text-sm">Responsable: {item.responsible}</p>
-                        {item.value && <p className="text-sm">Valor: {item.value.toLocaleString()} €</p>}
+                        <h3 className="font-medium text-gray-900">{item.type}</h3>
+                        <p className="text-sm text-gray-500">{item.action}</p>
                       </div>
-                      <span className={`px-2 py-1 text-sm rounded-full ${
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         item.priority === 'HIGH' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                       }`}>
                         {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
                       </span>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 py-4">No hay noticias registradas</p>
-              )}
-            </div>
-          </div>
-
-          {/* Encargos */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-blue-600">Encargos</h2>
-              <button 
-                onClick={() => setIsAssignmentFormOpen(true)}
-                className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
-                title="Crear encargo"
-              >
-                <ClipboardDocumentListIcon className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {assignments.length > 0 ? (
-                assignments.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
-                        <p className="font-medium">Tipo: {item.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
-                        <p className="text-sm">Precio: {formatNumber(item.price)} €</p>
-                        <p className="text-sm">Fecha límite: {new Date(item.exclusiveUntil).toLocaleDateString('es-ES')}</p>
-                        <p className="text-sm">Origen: {item.origin}</p>
-                        <p className="text-sm">Cliente: {item.client?.name}</p>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-xs text-gray-500">Honorarios vendedor:</p>
-                            <p className="text-sm font-medium">
-                              {item.sellerFeeType === 'PERCENTAGE' 
-                                ? `${item.sellerFeeValue}% (${formatNumber(item.price * item.sellerFeeValue / 100)} €)`
-                                : `${formatNumber(item.sellerFeeValue)} €`}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Honorarios comprador:</p>
-                            <p className="text-sm font-medium">
-                              {item.buyerFeeType === 'PERCENTAGE'
-                                ? `${item.buyerFeeValue}% (${formatNumber(item.price * item.buyerFeeValue / 100)} €)`
-                                : `${formatNumber(item.buyerFeeValue)} €`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                    
+                    <div className="mt-2 text-sm text-gray-600">
+                      <p><span className="font-medium">Responsable:</span> {item.responsible}</p>
+                      <p><span className="font-medium">Valoración:</span> {item.valuation}</p>
+                      {item.value && <p><span className="font-medium">Valor:</span> {formatNumber(item.value)} €</p>}
+                      {item.precioSM && <p><span className="font-medium">Precio SM:</span> {formatNumber(item.precioSM)} €</p>}
+                      {item.precioCliente && <p><span className="font-medium">Precio Cliente:</span> {formatNumber(item.precioCliente)} €</p>}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(item.createdAt).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">No hay encargos para esta propiedad</p>
+                <p className="text-center text-gray-500 py-4">No hay noticias para esta propiedad</p>
               )}
             </div>
           </div>
+
+          {/* Encargos - Solo mostrar si hay noticias */}
+          {news.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-blue-600">Encargos</h2>
+                <button 
+                  onClick={() => setIsAssignmentFormOpen(true)}
+                  className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
+                  title="Crear encargo"
+                >
+                  <ClipboardDocumentListIcon className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {assignments.length > 0 ? (
+                  assignments.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('es-ES')}</p>
+                          <p className="font-medium">Tipo: {item.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
+                          <p className="text-sm">Precio: {formatNumber(item.price)} €</p>
+                          <p className="text-sm">Fecha límite: {new Date(item.exclusiveUntil).toLocaleDateString('es-ES')}</p>
+                          <p className="text-sm">Origen: {item.origin}</p>
+                          <p className="text-sm">Cliente: {item.client?.name}</p>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-xs text-gray-500">Honorarios vendedor:</p>
+                              <p className="text-sm font-medium">
+                                {item.sellerFeeType === 'PERCENTAGE' 
+                                  ? `${item.sellerFeeValue}% (${formatNumber(item.price * item.sellerFeeValue / 100)} €)`
+                                  : `${formatNumber(item.sellerFeeValue)} €`}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Honorarios comprador:</p>
+                              <p className="text-sm font-medium">
+                                {item.buyerFeeType === 'PERCENTAGE'
+                                  ? `${item.buyerFeeValue}% (${formatNumber(item.price * item.buyerFeeValue / 100)} €)`
+                                  : `${formatNumber(item.buyerFeeValue)} €`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">No hay encargos para esta propiedad</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -516,13 +544,7 @@ export default function PropertyDetailClient({
             <div className="p-6">
               <PropertyNewsForm 
                 propertyId={propertyId}
-                dpvValue={dpv?.currentPrice}
-                onSuccess={() => {
-                  setIsNewsFormOpen(false);
-                  getPropertyNews(propertyId).then(newsData => {
-                    setNews(newsData);
-                  });
-                }}
+                onSuccess={handleNewsSubmit}
               />
             </div>
           </Dialog.Panel>

@@ -8,7 +8,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error getting assignments count:', error);
     return NextResponse.json(
-      { error: 'Error al obtener el conteo de asignaciones' },
+      { error: 'Error al obtener el conteo de encargos' },
       { status: 500 }
     );
   }

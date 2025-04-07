@@ -161,16 +161,19 @@ export interface DPV {
 
 export interface PropertyNews {
   id: string;
+  propertyId: string;
   type: string;
   action: string;
-  valuation: string;
-  priority: string;
-  responsible: string;
+  valuation: boolean;
+  priority: 'HIGH' | 'LOW';
+  responsible: string | null;
   value: number | null;
-  propertyId: string;
-  createdAt: string;
-  updatedAt: string;
-  property?: {
+  precioSM: number | null;
+  precioCliente: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  property: {
+    id: string;
     address: string;
     population: string;
   };

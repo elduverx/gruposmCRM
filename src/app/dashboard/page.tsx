@@ -22,7 +22,7 @@ import 'react-calendar/dist/Calendar.css';
 
 type Value = Date | Date[] | null;
 
-interface DashboardStats {
+interface InicioStats {
   properties: number;
   clients: number;
   assignments: number;
@@ -48,10 +48,10 @@ interface Objective {
   unit: string;
 }
 
-export default function DashboardPage() {
+export default function InicioPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<InicioStats>({
     properties: 0,
     clients: 0,
     assignments: 0,
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           newsRes.json()
         ]);
 
-        const newStats: DashboardStats = {
+        const newStats: InicioStats = {
           properties: properties.count,
           clients: clients.count,
           assignments: assignments.count,
@@ -119,9 +119,9 @@ export default function DashboardPage() {
 
         // Simular datos de objetivos (en un sistema real, esto vendría de una API)
         const mockObjectives: Objective[] = [
-          { id: '1', title: 'Propiedades visitadas', target: 20, current: 15, unit: 'propiedades' },
+          { id: '1', title: 'Inmuebles visitados', target: 20, current: 15, unit: 'inmuebles' },
           { id: '2', title: 'Clientes nuevos', target: 10, current: 7, unit: 'clientes' },
-          { id: '3', title: 'Asignaciones completadas', target: 30, current: 22, unit: 'asignaciones' }
+          { id: '3', title: 'Encargos completados', target: 30, current: 22, unit: 'encargos' }
         ];
         setObjectives(mockObjectives);
         newStats.completedObjectives = mockObjectives.filter(o => o.current >= o.target).length;
@@ -198,7 +198,7 @@ export default function DashboardPage() {
               <BuildingOfficeIcon className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Propiedades</p>
+              <p className="text-sm font-medium text-gray-500">Inmuebles</p>
               <p className="text-2xl font-semibold text-gray-900">{stats.properties}</p>
             </div>
           </div>
