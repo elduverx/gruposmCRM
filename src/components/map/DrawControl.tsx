@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -7,7 +9,7 @@ interface DrawControlProps {
   onCreated?: (e: any) => void;
   onEdited?: (e: any) => void;
   onDeleted?: (e: any) => void;
-  editableLayers?: L.FeatureGroup;
+  editableLayers?: L.FeatureGroup | null;
   polygonColor?: string;
 }
 

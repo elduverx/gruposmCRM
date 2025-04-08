@@ -1,72 +1,65 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import MainLayout from './MainLayout';
 
 // Rutas que requieren permisos de administrador
-const adminRoutes = [
-  '/dashboard/zones',
-  '/dashboard/calendar',
-  '/dashboard/activities',
-  '/dashboard/stats'
-];
+const adminRoutes = ['/dashboard/settings'];
 
-export default function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { isAuthenticated, loading, user } = useAuth();
+// Rutas públicas que no requieren autenticación
+const publicRoutes = ['/login', '/register', '/forgot-password'];
+
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-
-  // Determinar si el usuario es administrador
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
-    if (!loading) {
-      const token = localStorage.getItem('token');
-      
-      // Verificar si el usuario está intentando acceder a una ruta de administrador sin ser admin
-      const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
-      
-      if (!isAuthenticated && pathname !== '/login' && !token) {
-        setShouldRedirect(true);
-      } else if (isAuthenticated && (pathname === '/login' || pathname === '/')) {
-        setShouldRedirect(true);
-      } else if (isAuthenticated && isAdminRoute && !isAdmin) {
-        // Redirigir a dashboard si un usuario normal intenta acceder a una ruta de admin
-        router.push('/dashboard');
-      }
-    }
-  }, [isAuthenticated, loading, pathname, isAdmin, router]);
+    const checkAuth = async () => {
+      if (!loading) {
+        // Si es una ruta pública, permitir el acceso
+        if (pathname && publicRoutes.includes(pathname)) {
+          return;
+        }
 
-  useEffect(() => {
-    if (shouldRedirect) {
-      if (!isAuthenticated && pathname !== '/login') {
-        router.push('/login');
-      } else if (isAuthenticated && (pathname === '/login' || pathname === '/')) {
-        router.push('/dashboard');
-      }
-      setShouldRedirect(false);
-    }
-  }, [shouldRedirect, isAuthenticated, pathname, router]);
+        // Si no hay usuario, redirigir a login
+        if (!user) {
+          router.push('/login');
+          return;
+        }
 
-  // Si está cargando, mostrar un spinner
+        // Verificar acceso a rutas de administrador
+        if (pathname && adminRoutes.includes(pathname) && user.role !== 'admin') {
+          router.push('/dashboard');
+          return;
+        }
+      }
+    };
+
+    checkAuth();
+  }, [user, loading, router, pathname]);
+
+  // Mostrar spinner de carga
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary-500"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>
       </div>
     );
   }
 
-  // Si no está autenticado y no está en la página de login, no mostrar nada
-  if (!isAuthenticated && pathname !== '/login') {
+  // Si es una ruta pública, mostrar el contenido directamente
+  if (pathname && publicRoutes.includes(pathname)) {
+    return <>{children}</>;
+  }
+
+  // Si no hay usuario y no es una ruta pública, no mostrar nada
+  if (!user) {
     return null;
   }
 
-  return <>{children}</>;
+  // Para rutas protegidas, mostrar el MainLayout
+  return <MainLayout>{children}</MainLayout>;
 } 

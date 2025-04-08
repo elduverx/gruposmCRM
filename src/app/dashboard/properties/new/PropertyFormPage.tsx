@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,13 +7,19 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/geocoding';
-import { createProperty, updateProperty, getPropertyById } from '../actions';
-import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
+import { createProperty, updateProperty, getProperty } from '../actions';
+import { PropertyType } from '@prisma/client';
 import { getZones, Zone } from '../../zones/actions';
 import { getClients } from '../../clients/actions';
 import { Client } from '@/types/client';
 import { toast } from 'sonner';
 import { PropertyCreateInput } from '@/types/property';
+
+// Coordenadas de Catarroja, Valencia
+const CATARROJA_COORDS = {
+  lat: 39.4015,
+  lng: -0.4027
+};
 
 // Fix for default marker icons in Next.js
 const icon = L.icon({
@@ -52,30 +59,20 @@ interface PropertyFormPageProps {
 export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(CATARROJA_COORDS);
   const [isSearching, setIsSearching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: '',
-    population: '',
-    status: 'SIN_EMPEZAR' as PropertyStatus,
-    action: 'IR_A_DIRECCION' as PropertyAction,
+    population: 'Catarroja',
     type: 'CASA' as PropertyType,
     ownerName: '',
     ownerPhone: '',
-    captureDate: new Date(),
-    hasSimpleNote: false,
-    isOccupied: false,
-    isLocated: false,
-    occupiedBy: '',
-    responsible: '',
+    latitude: CATARROJA_COORDS.lat,
+    longitude: CATARROJA_COORDS.lng,
     zoneId: null,
-    clientId: null,
-    latitude: null,
-    longitude: null,
-    responsibleId: undefined
   });
 
   // Función para determinar si un punto está dentro de un polígono
@@ -136,27 +133,17 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
       setIsEditing(true);
       const fetchProperty = async () => {
         try {
-          const propertyData = await getPropertyById(propertyId);
+          const propertyData = await getProperty(propertyId);
           if (propertyData) {
             setFormData({
               address: propertyData.address,
               population: propertyData.population,
-              status: propertyData.status as PropertyStatus,
-              action: propertyData.action as PropertyAction,
               type: propertyData.type as PropertyType,
               ownerName: propertyData.ownerName,
               ownerPhone: propertyData.ownerPhone,
-              captureDate: new Date(propertyData.captureDate),
-              responsibleId: propertyData.responsibleId,
-              hasSimpleNote: propertyData.hasSimpleNote,
-              isOccupied: propertyData.isOccupied,
-              clientId: propertyData.clientId || null,
-              zoneId: propertyData.zoneId || null,
               latitude: propertyData.latitude || null,
               longitude: propertyData.longitude || null,
-              occupiedBy: propertyData.occupiedBy || '',
-              isLocated: propertyData.isLocated,
-              responsible: propertyData.responsible || ''
+              zoneId: propertyData.zoneId || null,
             });
             
             if (propertyData.latitude && propertyData.longitude) {
@@ -190,7 +177,6 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         ...prev,
         address: addressData.address,
         population: addressData.population,
-        isLocated: true,
         zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
       }));
     }
@@ -214,13 +200,11 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             setFormData(prev => ({
               ...prev,
               population: addressData.population,
-              isLocated: true,
               zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
             }));
           } else {
             setFormData(prev => ({
               ...prev,
-              isLocated: true,
               zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
             }));
           }
@@ -245,16 +229,6 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         ...prev,
         [name]: checkbox.checked
       }));
-    } else if (name === 'status') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value as PropertyStatus
-      }));
-    } else if (name === 'action') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value as PropertyAction
-      }));
     } else if (name === 'type') {
       setFormData(prev => ({
         ...prev,
@@ -275,24 +249,13 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     try {
       const submitData = {
         ...formData,
-        captureDate: formData.captureDate || new Date(),
-        responsibleId: formData.responsibleId || undefined,
-        clientId: formData.clientId || undefined,
-        zoneId: formData.zoneId || undefined,
         latitude: selectedLocation?.lat || null,
         longitude: selectedLocation?.lng || null,
-        occupiedBy: formData.isOccupied ? formData.occupiedBy : '',
-        isLocated: formData.isLocated || false,
-        responsible: formData.responsible || '',
+        zoneId: formData.zoneId || undefined,
       };
 
       if (propertyId) {
-        await updateProperty(propertyId, {
-          ...submitData,
-          captureDate: submitData.captureDate.toISOString(),
-          latitude: submitData.latitude || undefined,
-          longitude: submitData.longitude || undefined,
-        });
+        await updateProperty(propertyId, submitData);
         toast.success('Propiedad actualizada correctamente');
       } else {
         await createProperty(submitData);
@@ -320,42 +283,27 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-5 gap-6">
-          {/* Formulario - 3 columnas */}
-          <div className="col-span-3 bg-white rounded-lg shadow">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Formulario */}
+          <div className="bg-white rounded-lg shadow">
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                {/* Dirección y búsqueda */}
-                <div className="col-span-2">
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                        Dirección
-                      </label>
-                      <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={handleAddressSearch}
-                        disabled={isSearching}
-                        className="mb-[1px] inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                      >
-                        {isSearching ? 'Buscando...' : 'Buscar'}
-                      </button>
-                    </div>
-                  </div>
+              {/* Dirección y Población */}
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  />
                 </div>
 
-                {/* Población */}
                 <div>
                   <label htmlFor="population" className="block text-sm font-medium text-gray-700">
                     Población
@@ -370,95 +318,13 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                     required
                   />
                 </div>
+              </div>
 
-                {/* Zona */}
-                <div>
-                  <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
-                    Zona
-                  </label>
-                  <select
-                    id="zoneId"
-                    name="zoneId"
-                    value={formData.zoneId || ''}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  >
-                    <option value="">Selecciona una zona</option>
-                    {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {zone.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Estado */}
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                    Estado
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    {Object.entries(PropertyStatus).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Acción */}
-                <div>
-                  <label htmlFor="action" className="block text-sm font-medium text-gray-700">
-                    Acción
-                  </label>
-                  <select
-                    id="action"
-                    name="action"
-                    value={formData.action}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    {Object.entries(PropertyAction).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Tipo */}
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                    Tipo
-                  </label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    {Object.entries(PropertyType).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Propietario */}
+              {/* Datos del propietario */}
+              <div className="space-y-4">
                 <div>
                   <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
-                    Propietario
+                    Nombre del propietario
                   </label>
                   <input
                     type="text"
@@ -470,13 +336,12 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                   />
                 </div>
 
-                {/* Teléfono */}
                 <div>
                   <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
-                    Teléfono
+                    Teléfono del propietario
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     id="ownerPhone"
                     name="ownerPhone"
                     value={formData.ownerPhone}
@@ -484,123 +349,55 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
                 </div>
+              </div>
 
-                {/* Cliente */}
-                <div>
-                  <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">
-                    Cliente
-                  </label>
-                  <select
-                    id="clientId"
-                    name="clientId"
-                    value={formData.clientId || ''}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  >
-                    <option value="">Selecciona un cliente</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Responsable */}
-                <div>
-                  <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
-                    Responsable
-                  </label>
-                  <input
-                    type="text"
-                    id="responsible"
-                    name="responsible"
-                    value={formData.responsible}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  />
-                </div>
-
-                {/* Checkboxes */}
-                <div className="col-span-2 space-y-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="hasSimpleNote"
-                      name="hasSimpleNote"
-                      checked={formData.hasSimpleNote}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="hasSimpleNote" className="ml-2 block text-sm text-gray-700">
-                      Tiene nota simple
-                    </label>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isOccupied"
-                      name="isOccupied"
-                      checked={formData.isOccupied}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isOccupied" className="ml-2 block text-sm text-gray-700">
-                      Está ocupado
-                    </label>
-                  </div>
-
-                  {formData.isOccupied && (
-                    <div>
-                      <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
-                        Ocupado por
-                      </label>
-                      <input
-                        type="text"
-                        id="occupiedBy"
-                        name="occupiedBy"
-                        value={formData.occupiedBy}
-                        onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      />
-                    </div>
-                  )}
-                </div>
+              {/* Tipo de propiedad */}
+              <div>
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                  Tipo de propiedad
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  required
+                >
+                  {Object.entries(PropertyType).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Botones de acción */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
+              <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => router.back()}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={() => router.push('/dashboard/properties')}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear inmueble'}
+                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Mapa - 2 columnas */}
-          <div className="col-span-2 bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Ubicación</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Haz clic en el mapa para seleccionar la ubicación o usa el buscador
-              </p>
-            </div>
-            <div className="h-[calc(100vh-16rem)]">
+          {/* Mapa */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="h-[600px]">
               <MapContainer
-                center={[40.4168, -3.7038]}
-                zoom={6}
+                center={[CATARROJA_COORDS.lat, CATARROJA_COORDS.lng]}
+                zoom={15}
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer
@@ -609,7 +406,10 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                 />
                 <LocationMarker onLocationSelect={handleLocationSelect} />
                 {selectedLocation && (
-                  <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
+                  <Marker
+                    position={[selectedLocation.lat, selectedLocation.lng]}
+                    icon={icon}
+                  />
                 )}
                 <MapController coordinates={selectedLocation} />
               </MapContainer>

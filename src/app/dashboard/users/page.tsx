@@ -34,13 +34,24 @@ export default function UsersPage() {
         router.replace('/login');
         return;
       }
+      
+      // Eliminar la verificación de permisos de administrador
+      // if (!isAdmin) {
+      //   console.log('Usuario no es administrador, redirigiendo a dashboard');
+      //   router.replace('/dashboard');
+      //   return;
+      // }
+      
+      // Si el usuario está autenticado, cargar los usuarios
+      console.log('Usuario autenticado, cargando usuarios');
+      fetchUsers();
     }
   }, [authLoading, isAuthenticated, router]);
 
   const fetchUsers = async () => {
     try {
       setError(null);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       if (!token) {
         console.log('No token found');
         router.replace('/login');
@@ -58,7 +69,7 @@ export default function UsersPage() {
         const refreshed = await refreshToken();
         if (refreshed) {
           // Reintentar la solicitud con el nuevo token
-          const newToken = localStorage.getItem('authToken');
+          const newToken = localStorage.getItem('token');
           const retryResponse = await fetch('/api/users', {
             headers: {
               'Authorization': `Bearer ${newToken}`
@@ -105,13 +116,6 @@ export default function UsersPage() {
       regular: data.length - admins
     });
   };
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      console.log('Usuario autenticado, cargando usuarios');
-      fetchUsers();
-    }
-  }, [authLoading, isAuthenticated]);
 
   const handleUsersChange = (newUsers: User[]) => {
     console.log('handleUsersChange llamado con:', newUsers);

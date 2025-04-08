@@ -40,6 +40,12 @@ model Property {
   type            PropertyType   @default(CASA)
   isLocated       Boolean        @default(false)
   responsible     String?
+  habitaciones    Int?
+  banos           Int?
+  metrosCuadrados Float?
+  parking         Boolean        @default(false)
+  ascensor        Boolean        @default(false)
+  piscina         Boolean        @default(false)
   activities      Activity[]
   assignments     Assignment[]
   dpv             DPV?

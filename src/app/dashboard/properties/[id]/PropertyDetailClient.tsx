@@ -51,6 +51,7 @@ export default function PropertyDetailClient({
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Cargar noticias al abrir la página
   useEffect(() => {
@@ -212,6 +213,11 @@ export default function PropertyDetailClient({
           </div>
           
           <div>
+            <label className="text-sm text-gray-700">Tipo de Propiedad</label>
+            <p className="font-medium">{property.type || 'N/A'}</p>
+          </div>
+          
+          <div>
             <label className="text-sm text-gray-700">Zona</label>
             <p className="font-medium">{property.zone?.name || 'N/A'}</p>
           </div>
@@ -256,6 +262,61 @@ export default function PropertyDetailClient({
             <label className="text-sm text-gray-700">Responsable</label>
             <p className="font-medium">{property.responsible || 'N/A'}</p>
           </div>
+        </div>
+
+        {/* Detalles de la Propiedad */}
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Detalles de la Propiedad</h3>
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+            >
+              {showDetails ? 'Ocultar detalles' : 'Ver más detalles'}
+              <svg
+                className={`ml-1 h-4 w-4 transform transition-transform ${showDetails ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          
+          {showDetails && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm text-gray-700">Habitaciones</label>
+                <p className="font-medium">{property.habitaciones || 'N/A'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-700">Baños</label>
+                <p className="font-medium">{property.banos || 'N/A'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-700">Metros Cuadrados</label>
+                <p className="font-medium">{property.metrosCuadrados ? `${property.metrosCuadrados}m²` : 'N/A'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-700">Parking</label>
+                <p className="font-medium">{property.parking ? 'Sí' : 'No'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-700">Ascensor</label>
+                <p className="font-medium">{property.ascensor ? 'Sí' : 'No'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-700">Piscina</label>
+                <p className="font-medium">{property.piscina ? 'Sí' : 'No'}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

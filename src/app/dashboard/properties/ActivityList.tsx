@@ -1,19 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-
-interface Activity {
-  id: string;
-  type: string;
-  status: string;
-  date: string;
-  client: string | null;
-  notes: string | null;
-  propertyId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import Button from '@/components/ui/button';
+import { Activity } from '@/types/property';
 
 interface ActivityListProps {
   activities: Activity[];

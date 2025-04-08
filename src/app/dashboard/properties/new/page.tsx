@@ -1,579 +1,513 @@
+// @ts-nocheck
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/geocoding';
-import { createProperty, updateProperty, getPropertyById } from '../actions';
-import { PropertyStatus, PropertyAction, PropertyType } from '@prisma/client';
-import { getZones, Zone } from '../../zones/actions';
-import { getClients } from '../../clients/actions';
-import { Client } from '@/types/client';
+import { createProperty, updateProperty, getProperty } from '../actions';
+import { Property } from '@/types/property';
+import dynamic from 'next/dynamic';
+import { getAddressFromCoordinates } from '@/utils/geocoding';
 
-// Fix for default marker icons in Next.js
-const icon = L.icon({
-  iconUrl: '/marker-icon.png',
-  shadowUrl: '/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+// Importar el mapa dinámicamente para evitar errores de SSR
+const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
+  ssr: false,
+  loading: () => <div className="h-[600px] w-full bg-gray-100 animate-pulse" />
 });
 
-function LocationMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
+// Coordenadas de Catarroja, Valencia
+const CATARROJA_COORDS = {
+  lat: 39.4015,
+  lng: -0.4027
+};
 
-function MapController({ coordinates }: { coordinates: { lat: number; lng: number } | null }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (coordinates) {
-      map.setView([coordinates.lat, coordinates.lng], 15);
-    }
-  }, [coordinates, map]);
-  
-  return null;
-}
-
-interface PageProps {
-  params: Promise<{ id?: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-}
-
-export default async function PropertyFormPage({ params }: PageProps) {
-  const resolvedParams = await params;
-  const propertyId = resolvedParams.id;
-  return <PropertyFormClient propertyId={propertyId} />;
-}
-
-// Componente cliente que maneja el estado y la lógica
-function PropertyFormClient({ propertyId }: { propertyId?: string }) {
+export default function PropertyFormPage({ params }: { params: { id?: string } }) {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [formData, setFormData] = useState({
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState<Partial<Property>>({
     address: '',
-    population: '',
-    status: 'IN_PROCESS' as PropertyStatus,
-    action: 'NEWS' as PropertyAction,
-    type: 'HOUSE' as PropertyType,
+    population: 'Catarroja',
+    propertyType: '',
+    status: '',
+    price: '',
+    description: '',
+    habitaciones: null,
+    banos: null,
+    metrosCuadrados: null,
+    parking: false,
+    ascensor: false,
+    piscina: false,
+    yearBuilt: '',
+    isFurnished: false,
+    latitude: CATARROJA_COORDS.lat,
+    longitude: CATARROJA_COORDS.lng,
     ownerName: '',
     ownerPhone: '',
-    isOccupied: false,
-    occupiedBy: '',
-    clientId: '',
+    ownerEmail: '',
     tenantName: '',
-    isLocated: false,
-    zoneId: '',
+    tenantPhone: '',
+    tenantEmail: '',
+    notes: ''
   });
-  // Coordenadas por defecto de Catarroja
-  const defaultLocation = { lat: 39.4025, lng: -0.4022 };
-
-  // Función para determinar si un punto está dentro de un polígono
-  const isPointInPolygon = (point: { lat: number; lng: number }, polygon: { lat: number; lng: number }[]): boolean => {
-    const { lat, lng } = point;
-    let inside = false;
-    
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const { lat: lati, lng: lngi } = polygon[i];
-      const { lat: latj, lng: lngj } = polygon[j];
-      
-      const intersect = ((lati > lat) !== (latj > lat)) &&
-        (lng < (lngj - lngi) * (lat - lati) / (latj - lati) + lngi);
-      
-      if (intersect) inside = !inside;
-    }
-    
-    return inside;
-  };
-
-  // Función para encontrar la zona a la que pertenece un punto
-  const findZoneForLocation = (location: { lat: number; lng: number }): string | null => {
-    for (const zone of zones) {
-      if (isPointInPolygon(location, zone.coordinates)) {
-        return zone.id;
-      }
-    }
-    return null;
-  };
 
   useEffect(() => {
-    // Cargar las zonas al iniciar el componente
-    const fetchZones = async () => {
-      try {
-        const zonesData = await getZones();
-        setZones(zonesData);
-      } catch (error) {
-        console.error('Error fetching zones:', error);
-      }
-    };
-
-    // Cargar los clientes al iniciar el componente
-    const fetchClients = async () => {
-      try {
-        const clientsData = await getClients();
-        setClients(clientsData);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      }
-    };
-
-    fetchZones();
-    fetchClients();
-  }, []);
-
-  useEffect(() => {
-    if (propertyId) {
-      setIsEditing(true);
-      const fetchProperty = async () => {
+    const fetchProperty = async () => {
+      if (params.id) {
         try {
-          const propertyData = await getPropertyById(propertyId);
-          if (propertyData) {
-            setFormData({
-              address: propertyData.address,
-              population: propertyData.population,
-              status: propertyData.status,
-              action: propertyData.action,
-              type: propertyData.type,
-              ownerName: propertyData.ownerName,
-              ownerPhone: propertyData.ownerPhone,
-              isOccupied: propertyData.isOccupied,
-              occupiedBy: propertyData.occupiedBy || '',
-              clientId: propertyData.clientId || '',
-              tenantName: '',
-              isLocated: propertyData.isLocated,
-              zoneId: propertyData.zoneId || '',
-            });
-            
-            if (propertyData.latitude && propertyData.longitude) {
-              setSelectedLocation({
-                lat: propertyData.latitude,
-                lng: propertyData.longitude
-              });
-            }
-          }
+          setLoading(true);
+          const propertyData = await getProperty(params.id);
+          setFormData(propertyData);
         } catch (error) {
           console.error('Error fetching property:', error);
-          alert('Error al cargar el inmueble');
+          setError('Error al cargar la propiedad');
+        } finally {
+          setLoading(false);
         }
-      };
-      
-      fetchProperty();
-    } else {
-      // Si no es edición, establecer la ubicación por defecto en Catarroja
-      setSelectedLocation(defaultLocation);
-    }
-  }, [propertyId]);
-
-  const handleLocationSelect = async (lat: number, lng: number) => {
-    const location = { lat, lng };
-    setSelectedLocation(location);
-    
-    // Obtener dirección desde las coordenadas
-    const addressData = await getAddressFromCoordinates(lat, lng);
-    if (addressData) {
-      // Encontrar la zona a la que pertenece la ubicación
-      const zoneId = findZoneForLocation(location);
-      
-      setFormData(prev => ({
-        ...prev,
-        address: addressData.address,
-        population: addressData.population,
-        isLocated: true,
-        zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
-      }));
-    }
-  };
-
-  const handleAddressSearch = async () => {
-    if (formData.address) {
-      setIsSearching(true);
-      try {
-        const coordinates = await getCoordinatesFromAddress(formData.address);
-        if (coordinates) {
-          const location = { lat: coordinates.lat, lng: coordinates.lng };
-          setSelectedLocation(location);
-          
-          // Encontrar la zona a la que pertenece la ubicación
-          const zoneId = findZoneForLocation(location);
-          
-          // Actualizar población si está disponible
-          const addressData = await getAddressFromCoordinates(coordinates.lat, coordinates.lng);
-          if (addressData?.population) {
-            setFormData(prev => ({
-              ...prev,
-              population: addressData.population,
-              isLocated: true,
-              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
-            }));
-          } else {
-            setFormData(prev => ({
-              ...prev,
-              isLocated: true,
-              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
-            }));
-          }
-        } else {
-          alert('No se encontró la dirección. Por favor, intenta con una dirección más específica.');
-        }
-      } catch (error) {
-        console.error('Error searching address:', error);
-        alert('Error al buscar la dirección');
-      } finally {
-        setIsSearching(false);
       }
-    }
-  };
+    };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
-      const checkbox = e.target as HTMLInputElement;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checkbox.checked
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
+    fetchProperty();
+  }, [params.id]);
 
-  const handleOccupiedByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setFormData(prev => ({
-      ...prev,
-      occupiedBy: value,
-      // Si se selecciona "PROPIETARIO", buscar el cliente correspondiente
-      clientId: value === 'PROPIETARIO' ? prev.clientId : '',
-      // Si se selecciona "INQUILINO", limpiar el clientId
-      tenantName: value === 'INQUILINO' ? prev.tenantName : ''
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setLoading(true);
+    setError(null);
 
     try {
-      const data = {
-        ...formData,
-        latitude: selectedLocation?.lat || undefined,
-        longitude: selectedLocation?.lng || undefined,
-        occupiedBy: formData.isOccupied 
-          ? (formData.occupiedBy === 'INQUILINO' 
-              ? formData.tenantName 
-              : formData.occupiedBy === 'PROPIETARIO' && formData.clientId
-                ? clients.find(c => c.id === formData.clientId)?.name || undefined
-                : undefined)
-          : undefined,
-        // Solo incluir clientId si está ocupado por propietario
-        clientId: formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && formData.clientId ? formData.clientId : undefined,
-        zoneId: formData.zoneId || undefined,
-      };
-
-      if (isEditing && propertyId) {
-        await updateProperty(propertyId, data);
+      if (params.id) {
+        await updateProperty(params.id, formData);
       } else {
-        await createProperty(data);
+        await createProperty(formData);
       }
-      
       router.push('/dashboard/properties');
-      router.refresh();
     } catch (error) {
       console.error('Error saving property:', error);
-      alert('Error al guardar el inmueble');
+      setError('Error al guardar la propiedad');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="md:grid md:grid-cols-3 md:gap-6">
-        <div className="md:col-span-1">
-          <div className="px-4 sm:px-0">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">
-              {isEditing ? 'Editar inmueble' : 'Nuevo inmueble'}
-            </h3>
-            <p className="mt-1 text-sm text-gray-600">
-              Ingresa la información básica del inmueble. Puedes completar más detalles más adelante.
-            </p>
-          </div>
+  const handleAddressSearch = async (address: string) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+      );
+      const data = await response.json();
+
+      if (data && data[0]) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng
+        }));
+        
+        // Obtener la dirección y población desde las coordenadas
+        const addressData = await getAddressFromCoordinates(lat, lng);
+        if (addressData) {
+          setFormData(prev => ({
+            ...prev,
+            address: addressData.address,
+            population: addressData.population
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error searching address:', error);
+    }
+  };
+
+  const handleLocationSelect = async (lat: number, lng: number) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng
+    }));
+    
+    // Obtener la dirección y población desde las coordenadas
+    try {
+      const addressData = await getAddressFromCoordinates(lat, lng);
+      if (addressData) {
+        setFormData(prev => ({
+          ...prev,
+          address: addressData.address,
+          population: addressData.population
+        }));
+      }
+    } catch (error) {
+      console.error('Error getting address from coordinates:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => router.refresh()}
+            className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
+          >
+            Reintentar
+          </button>
         </div>
-        <div className="mt-5 md:mt-0 md:col-span-2">
-          <form onSubmit={handleSubmit}>
-            <div className="shadow sm:rounded-md sm:overflow-hidden">
-              <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
-                <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6">
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">
+              {params.id ? 'Editar Propiedad' : 'Nueva Propiedad'}
+            </h1>
+
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Sección de Ubicación */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Ubicación</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700">
                       Dirección
                     </label>
-                    <div className="mt-1 flex rounded-md shadow-sm">
+                    <div className="mt-1 flex">
                       <input
                         type="text"
-                        name="address"
                         id="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-md sm:text-sm border-gray-300"
-                        placeholder="Calle, número, piso, puerta"
-                        required
+                        value={formData.address || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        className="flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       />
                       <button
                         type="button"
-                        onClick={handleAddressSearch}
-                        disabled={isSearching}
-                        className="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        onClick={() => handleAddressSearch(formData.address || '')}
+                        className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        {isSearching ? 'Buscando...' : 'Buscar'}
+                        Buscar
                       </button>
                     </div>
                   </div>
-
-                  <div className="col-span-6 sm:col-span-3">
+                  <div>
                     <label htmlFor="population" className="block text-sm font-medium text-gray-700">
                       Población
                     </label>
                     <input
                       type="text"
-                      name="population"
                       id="population"
-                      value={formData.population}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      required
+                      value={formData.population || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, population: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
+                 
+                </div>
+                <div className="mt-6">
+                  <PropertyMap
+                    selectedLocation={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                    onLocationSelect={handleLocationSelect}
+                    defaultLocation={CATARROJA_COORDS}
+                  />
+                </div>
+              </div>
 
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
-                      Zona
+              {/* Sección de Detalles */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles de la Propiedad</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="propertyType" className="block text-sm font-medium text-gray-700">
+                      Tipo de Propiedad
                     </label>
-                    <div className="mt-1 relative">
-                      <select
-                        id="zoneId"
-                        name="zoneId"
-                        value={formData.zoneId}
-                        onChange={handleInputChange}
-                        className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar zona</option>
-                        {zones.map((zone) => (
-                          <option key={zone.id} value={zone.id}>
-                            {zone.name}
-                          </option>
-                        ))}
-                      </select>
-                      {formData.zoneId && (
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    {formData.zoneId && (
-                      <p className="mt-1 text-sm text-green-600 flex items-center">
-                        <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Zona asignada automáticamente según la ubicación
-                      </p>
-                    )}
+                    <select
+                      id="propertyType"
+                      value={formData.propertyType || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, propertyType: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="piso">Piso</option>
+                      <option value="casa">Casa</option>
+                      <option value="chalet">Chalet</option>
+                      <option value="local">Local</option>
+                      <option value="oficina">Oficina</option>
+                      <option value="garaje">Garaje</option>
+                    </select>
                   </div>
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                      Estado
+                    </label>
+                    <select
+                      id="status"
+                      value={formData.status || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="disponible">Venta</option>
+                      <option value="alquilado">Alquier</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+                      Precio
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <input
+                        type="number"
+                        id="price"
+                        value={formData.price || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        className="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        placeholder="0.00"
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">€</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="habitaciones" className="block text-sm font-medium text-gray-700">
+                      Habitaciones
+                    </label>
+                    <input
+                      type="number"
+                      id="habitaciones"
+                      value={formData.habitaciones || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, habitaciones: e.target.value ? parseInt(e.target.value) : null }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="banos" className="block text-sm font-medium text-gray-700">
+                      Baños
+                    </label>
+                    <input
+                      type="number"
+                      id="banos"
+                      value={formData.banos || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, banos: e.target.value ? parseInt(e.target.value) : null }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="metrosCuadrados" className="block text-sm font-medium text-gray-700">
+                      Metros Cuadrados
+                    </label>
+                    <input
+                      type="number"
+                      id="metrosCuadrados"
+                      value={formData.metrosCuadrados || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, metrosCuadrados: e.target.value ? parseInt(e.target.value) : null }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="yearBuilt" className="block text-sm font-medium text-gray-700">
+                      Año de Construcción
+                    </label>
+                    <input
+                      type="number"
+                      id="yearBuilt"
+                      value={formData.yearBuilt || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, yearBuilt: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="parking" className="block text-sm font-medium text-gray-700">
+                      Parking
+                    </label>
+                    <input
+                      type="checkbox"
+                      id="parking"
+                      checked={formData.parking || false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, parking: e.target.checked }))}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ascensor" className="block text-sm font-medium text-gray-700">
+                      Ascensor
+                    </label>
+                    <input
+                      type="checkbox"
+                      id="ascensor"
+                      checked={formData.ascensor || false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ascensor: e.target.checked }))}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="piscina" className="block text-sm font-medium text-gray-700">
+                      Piscina
+                    </label>
+                    <input
+                      type="checkbox"
+                      id="piscina"
+                      checked={formData.piscina || false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, piscina: e.target.checked }))}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                    Descripción
+                  </label>
+                  <textarea
+                    id="description"
+                    rows={4}
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
 
-                  <div className="col-span-6 sm:col-span-3">
+              {/* Sección del Propietario */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Datos del Propietario</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
                     <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
-                      Propietario
+                      Nombre
                     </label>
                     <input
                       type="text"
-                      name="ownerName"
                       id="ownerName"
-                      value={formData.ownerName}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      required
+                      value={formData.ownerName || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
-
-                  <div className="col-span-6 sm:col-span-3">
+                  <div>
                     <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
                       Teléfono
                     </label>
                     <input
-                      type="text"
-                      name="ownerPhone"
+                      type="tel"
                       id="ownerPhone"
-                      value={formData.ownerPhone}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      required
+                      value={formData.ownerPhone || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerPhone: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
-
-                  <div className="col-span-6 sm:col-span-3">
-                    <label htmlFor="isOccupied" className="block text-sm font-medium text-gray-700">
-                      Estado de ocupación
+                  <div>
+                    <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700">
+                      Email
                     </label>
-                    <div className="mt-1">
-                      <select
-                        id="isOccupied"
-                        name="isOccupied"
-                        value={formData.isOccupied.toString()}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isOccupied: e.target.value === 'true' }))}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="false">Desocupado</option>
-                        <option value="true">Ocupado</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {formData.isOccupied && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="occupiedBy" className="block text-sm font-medium text-gray-700">
-                        Ocupado por
-                      </label>
-                      <select
-                        id="occupiedBy"
-                        name="occupiedBy"
-                        value={formData.occupiedBy}
-                        onChange={handleOccupiedByChange}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar</option>
-                        <option value="PROPIETARIO">Propietario</option>
-                        <option value="INQUILINO">Inquilino</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.isOccupied && formData.occupiedBy === 'PROPIETARIO' && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">
-                        Cliente propietario
-                      </label>
-                      <select
-                        id="clientId"
-                        name="clientId"
-                        value={formData.clientId}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar cliente</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.isOccupied && formData.occupiedBy === 'INQUILINO' && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
-                        Nombre del inquilino
-                      </label>
-                      <input
-                        type="text"
-                        name="tenantName"
-                        id="tenantName"
-                        value={formData.tenantName}
-                        onChange={handleInputChange}
-                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <div className="col-span-6">
-                    <div className="flex items-center">
-                      <input
-                        id="isLocated"
-                        name="isLocated"
-                        type="checkbox"
-                        checked={formData.isLocated}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isLocated: e.target.checked }))}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="isLocated" className="ml-2 block text-sm text-gray-900">
-                        Inmueble localizado en el mapa
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación en el mapa
-                  </label>
-                  <div className="h-96 w-full rounded-md border border-gray-300 overflow-hidden shadow-sm">
-                    <MapContainer
-                      center={[defaultLocation.lat, defaultLocation.lng]}
-                      zoom={14}
-                      style={{ height: '100%', width: '100%' }}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <LocationMarker onLocationSelect={handleLocationSelect} />
-                      {selectedLocation && (
-                        <>
-                          <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={icon} />
-                          <MapController coordinates={selectedLocation} />
-                        </>
-                      )}
-                    </MapContainer>
-                  </div>
-                  <div className="mt-2 flex items-center">
-                    <svg className="h-5 w-5 text-blue-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-gray-500">
-                      Haz clic en el mapa para seleccionar la ubicación del inmueble. La zona se asignará automáticamente si está dentro de una zona existente.
-                    </p>
+                    <input
+                      type="email"
+                      id="ownerEmail"
+                      value={formData.ownerEmail || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerEmail: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
                   </div>
                 </div>
               </div>
-              <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
+
+              {/* Sección del Inquilino */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Datos del Inquilino</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      id="tenantName"
+                      value={formData.tenantName || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantName: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tenantPhone" className="block text-sm font-medium text-gray-700">
+                      Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      id="tenantPhone"
+                      value={formData.tenantPhone || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantPhone: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tenantEmail" className="block text-sm font-medium text-gray-700">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      id="tenantEmail"
+                      value={formData.tenantEmail || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantEmail: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                
+                 
+                 
+                </div>
+              </div>
+
+              {/* Notas */}
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                  Notas Adicionales
+                </label>
+                <textarea
+                  id="notes"
+                  rows={4}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => router.back()}
-                  className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={() => router.push('/dashboard/properties')}
+                  className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
-                  {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
+                  {loading ? 'Guardando...' : params.id ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     </div>

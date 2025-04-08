@@ -17,17 +17,31 @@ export const verifyToken = (token: string) => {
       throw new Error('Token no proporcionado');
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; exp: number };
-    console.log('Token decodificado:', { userId: decoded.userId, role: decoded.role });
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; exp: number };
+      console.log('Token decodificado:', { userId: decoded.userId, role: decoded.role });
 
-    // Verificar si el token ha expirado
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (decoded.exp && decoded.exp < currentTime) {
-      console.error('Token expirado');
-      throw new Error('Token expirado');
+      // Verificar si el token ha expirado
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < currentTime) {
+        console.error('Token expirado');
+        throw new Error('Token expirado');
+      }
+
+      return decoded;
+    } catch (jwtError) {
+      // Manejar específicamente errores de JWT
+      if (jwtError instanceof jwt.TokenExpiredError) {
+        console.error('Token expirado (JWT):', jwtError.message);
+        throw new Error('Token expirado');
+      } else if (jwtError instanceof jwt.JsonWebTokenError) {
+        console.error('Token inválido (JWT):', jwtError.message);
+        throw new Error('Token inválido');
+      } else {
+        console.error('Error al verificar token (JWT):', jwtError);
+        throw jwtError;
+      }
     }
-
-    return decoded;
   } catch (error) {
     console.error('Error al verificar token:', error);
     throw error;

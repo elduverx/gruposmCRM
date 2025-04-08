@@ -34,14 +34,5 @@
     "role": "USER",
     "createdAt": "2025-04-06T13:24:17.047Z",
     "updatedAt": "2025-04-06T13:24:17.047Z"
-  },
-  {
-    "id": "1743976342606",
-    "name": "Admin 2",
-    "email": "admin2@gruposm.com",
-    "password": "$2a$10$uYZ7/NsWXiRHxVrzjsaZaecCn/XFm9qJmt5alJqmObFmkdAXm6NRC",
-    "role": "ADMIN",
-    "createdAt": "2025-04-06T21:52:22.608Z",
-    "updatedAt": "2025-04-06T21:52:22.608Z"
   }
 ]

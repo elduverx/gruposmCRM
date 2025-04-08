@@ -110,6 +110,23 @@ export async function deleteZone(id: string): Promise<void> {
 
 export async function assignPropertyToZone(propertyId: string, zoneId: string | null): Promise<void> {
   try {
+    if (zoneId === null) {
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { zoneId: null },
+      });
+      revalidatePath('/dashboard/zones');
+      return;
+    }
+
+    const zone = await prisma.zone.findUnique({
+      where: { id: zoneId },
+    });
+
+    if (!zone) {
+      throw new Error('La zona especificada no existe');
+    }
+
     await prisma.property.update({
       where: { id: propertyId },
       data: { zoneId },

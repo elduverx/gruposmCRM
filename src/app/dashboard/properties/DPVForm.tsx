@@ -1,19 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-
-interface DPV {
-  id: string;
-  links: string[];
-  realEstate: string | null;
-  phone: string | null;
-  currentPrice: number | null;
-  estimatedValue: number | null;
-  propertyId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import Button from '@/components/ui/button';
+import { DPV } from '@/types/property';
 
 interface DPVFormProps {
   initialData: DPV | null;

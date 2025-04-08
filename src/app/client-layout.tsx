@@ -58,6 +58,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                         ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
+                    onClick={(e) => {
+                      // Prevenir el comportamiento predeterminado solo si es necesario
+                      if (pathname === item.href) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
                     <item.icon
                       className={`mr-3 h-6 w-6 flex-shrink-0 ${

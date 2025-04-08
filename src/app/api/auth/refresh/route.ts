@@ -13,7 +13,17 @@ export async function POST(request: Request) {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
+    
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch (error) {
+      console.error('Error al verificar token en refresh:', error);
+      return NextResponse.json(
+        { message: 'Token inválido o expirado' },
+        { status: 401 }
+      );
+    }
 
     if (!decoded) {
       return NextResponse.json(

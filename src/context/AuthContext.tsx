@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (token: string) => {
     try {
+      console.log('Fetching user data with token:', token.substring(0, 10) + '...');
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -46,8 +47,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('User data fetched successfully:', userData);
         setUser(userData);
         return true;
+      } else if (response.status === 401) {
+        console.log('Token expired, attempting to refresh...');
+        // Token might be expired, try to refresh it
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          console.log('Token refreshed successfully');
+          // If refresh was successful, try fetching user data again with the new token
+          const newToken = localStorage.getItem('token');
+          if (newToken) {
+            const retryResponse = await fetch('/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${newToken}`
+              }
+            });
+            
+            if (retryResponse.ok) {
+              const userData = await retryResponse.json();
+              console.log('User data fetched successfully after token refresh');
+              setUser(userData);
+              return true;
+            }
+          }
+        } else {
+          console.log('Token refresh failed');
+        }
       }
       return false;
     } catch (error) {
@@ -57,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = () => {
+    console.log('Logging out user');
     localStorage.removeItem('token');
     setUser(null);
     if (window.refreshInterval) {
@@ -67,15 +95,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('Initializing authentication');
       const token = localStorage.getItem('token');
       if (token) {
+        console.log('Token found in localStorage, fetching user data');
         const success = await fetchUserData(token);
         if (!success) {
+          console.log('Failed to fetch user data, logging out');
           handleLogout();
         } else if (window.location.pathname === '/') {
+          console.log('Redirecting to dashboard');
           router.push('/dashboard');
         }
+      } else {
+        console.log('No token found in localStorage');
       }
+      console.log('Setting loading to false');
       setLoading(false);
     };
 
@@ -90,21 +125,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Clear any existing interval
+      if (window.refreshInterval) {
+        clearInterval(window.refreshInterval);
+      }
+
+      // Set up a new interval to refresh the token every 5 minutes
       const interval = setInterval(async () => {
+        console.log('Refreshing token on interval');
         const success = await fetchUserData(token);
         if (!success) {
+          console.log('Token refresh failed on interval, logging out');
           handleLogout();
         }
       }, 5 * 60 * 1000);
       
       window.refreshInterval = interval;
       return () => {
+        console.log('Clearing refresh interval');
         clearInterval(interval);
       };
     }
   }, [user]);
 
   const login = (token: string, userData: User) => {
+    console.log('Logging in user:', userData.email);
     localStorage.setItem('token', token);
     setUser(userData);
     setLoading(false);
@@ -113,8 +158,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshToken = async (): Promise<boolean> => {
     try {
+      console.log('Attempting to refresh token');
       const token = localStorage.getItem('token');
-      if (!token) return false;
+      if (!token) {
+        console.log('No token found for refresh');
+        return false;
+      }
 
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -125,9 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Token refreshed successfully');
         localStorage.setItem('token', data.token);
         return true;
       }
+      console.log('Token refresh failed with status:', response.status);
       return false;
     } catch (error) {
       console.error('Error refreshing token:', error);

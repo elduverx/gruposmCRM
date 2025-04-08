@@ -3,157 +3,174 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  HomeIcon, 
-  BuildingOfficeIcon, 
-  UserGroupIcon, 
-  ClipboardDocumentListIcon, 
-  NewspaperIcon, 
-  UsersIcon, 
-  CalendarIcon, 
-  CheckCircleIcon, 
-  ChartBarIcon,
-  BellIcon,
-  UserCircleIcon,
-  MapIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ArrowRightOnRectangleIcon
-} from "@heroicons/react/24/outline";
 import { useAuth } from '@/hooks/useAuth';
+import {
+  HomeIcon,
+  MapIcon,
+  UserGroupIcon,
+  BuildingOfficeIcon,
+  UserCircleIcon,
+  ArrowRightOnRectangleIcon,
+  ClipboardDocumentListIcon,
+  UsersIcon,
+  NewspaperIcon,
+  Bars3Icon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
 
-// Opciones de navegación para usuarios normales
-const userNavigation = [
+// Navegación común para todos los usuarios
+const commonNavigation = [
   { name: 'Inicio', href: '/dashboard', icon: HomeIcon },
-  { name: 'Inmuebles', href: '/dashboard/properties', icon: BuildingOfficeIcon },
+  { name: 'Propiedades', href: '/dashboard/properties', icon: BuildingOfficeIcon },
   { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
 ];
 
-// Opciones adicionales para administradores
+// Navegación adicional solo para administradores
 const adminNavigation = [
+  { name: 'Usuarios', href: '/dashboard/users', icon: UserGroupIcon },
   { name: 'Zonas', href: '/dashboard/zones', icon: MapIcon },
-  { name: 'Usuarios', href: '/dashboard/users', icon: UsersIcon },
 ];
 
+const AppName = "Grupo SM";
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Determinar si el usuario es administrador
   const isAdmin = user?.role === 'ADMIN';
-  
-  // Combinar las opciones de navegación según el rol
-  const navigation = isAdmin 
-    ? [...userNavigation, ...adminNavigation] 
-    : userNavigation;
+
+  // Combinar navegación basada en el rol
+  const mobileNavigation = [...commonNavigation];
+  if (isAdmin) {
+    mobileNavigation.push({ name: 'Usuarios', href: '/dashboard/users', icon: UserGroupIcon });
+  }
+
+  const renderNavLinks = (items: typeof commonNavigation, isMobile: boolean = false) => {
+    return items.map((item) => {
+      const isActive = pathname === item.href;
+      
+      if (isMobile) {
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            className={`flex flex-col items-center justify-center px-2 py-2 text-xs font-medium ${
+              isActive
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <item.icon
+              className={`h-6 w-6 ${
+                isActive ? 'text-blue-600' : 'text-gray-400'
+              }`}
+            />
+            <span className="mt-1">{item.name}</span>
+          </Link>
+        );
+      }
+
+      return (
+        <Link
+          key={item.name}
+          href={item.href}
+          className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium ${
+            isActive
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          <item.icon
+            className={`mr-3 h-5 w-5 flex-shrink-0 ${
+              isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
+            }`}
+          />
+          {item.name}
+        </Link>
+      );
+    });
+  };
+
+  const renderUserProfile = () => (
+    <div className="border-t border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-center">
+        <div className="flex-shrink-0">
+          <UserCircleIcon className="h-8 w-8 text-gray-400" />
+        </div>
+        <div className="ml-3 min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-gray-900">{user?.name}</p>
+          <p className="truncate text-xs text-gray-500">{user?.email}</p>
+        </div>
+        <button
+          onClick={logout}
+          className="ml-auto flex items-center rounded-md p-2 text-gray-400 hover:bg-white hover:text-gray-500"
+        >
+          <ArrowRightOnRectangleIcon className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar para móvil - Parte inferior */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
-        <div className="flex justify-around items-center h-16">
-          {userNavigation.slice(0, 5).map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex flex-col items-center justify-center w-full h-full ${
-                  isActive
-                    ? 'text-primary-600'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="h-6 w-6" />
-                <span className="text-xs mt-1">{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      {/* Overlay para móvil */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity lg:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* Sidebar para desktop - Parte izquierda */}
-      <div 
-        className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:border-r lg:border-gray-200 lg:bg-white transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'lg:w-20' : 'lg:w-64'
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform overflow-y-auto bg-white transition duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        onMouseEnter={() => setIsCollapsed(false)}
-        onMouseLeave={() => setIsCollapsed(true)}
       >
-        <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <h1 className={`text-xl font-bold text-primary-600 transition-opacity duration-300 ${
-              isCollapsed ? 'opacity-0' : 'opacity-100'
-            }`}>
-              Grupo SM
-            </h1>
+        <div className="flex h-full flex-col">
+          <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
+            <Link href="/dashboard" className="flex items-center">
+              <span className="text-xl font-bold text-gray-900">{AppName}</span>
+            </Link>
+            <button
+              className="lg:hidden -mr-1 rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
-          <nav className="mt-5 flex-1 px-2 space-y-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-lg ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-600'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon
-                    className={`h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
-                  />
-                  <span className={`ml-3 transition-opacity duration-300 ${
-                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
-                  }`}>
-                    {item.name}
-                  </span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 space-y-1 px-3 py-4">
+            {renderNavLinks(commonNavigation)}
+            {isAdmin && (
+              <>
+                <div className="my-4 h-px bg-gray-200" />
+                {renderNavLinks(adminNavigation)}
+              </>
+            )}
           </nav>
-        </div>
-        <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-          <div className="flex items-center w-full">
-            <div className="flex-shrink-0">
-              <UserCircleIcon className="h-8 w-8 text-gray-400" />
-            </div>
-            <div className={`ml-3 flex-1 transition-opacity duration-300 ${
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
-            }`}>
-              <p className="text-sm font-medium text-gray-700">{user?.name}</p>
-              <p className="text-xs text-gray-500">{isAdmin ? 'Administrador' : 'Usuario'}</p>
-              <button
-                onClick={logout}
-                className="mt-1 w-full flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
-              >
-                <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
+          {renderUserProfile()}
         </div>
       </div>
 
       {/* Contenido principal */}
-      <div className={`lg:flex lg:flex-col lg:flex-1 transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
-      }`}>
-        {/* Contenido */}
+      <div className="flex min-h-screen flex-col lg:pl-24">
+        {/* Header unificado */}
+       
+
         <main className="flex-1 pb-16 lg:pb-0">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {children}
-            </div>
+          <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+            {children}
           </div>
         </main>
+
+        {/* Navegación móvil inferior */}
+        <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white lg:hidden">
+          <div className="mx-auto grid h-16 w-full grid-cols-5 items-center px-2">
+            {renderNavLinks(mobileNavigation, true)}
+          </div>
+        </nav>
       </div>
     </div>
   );

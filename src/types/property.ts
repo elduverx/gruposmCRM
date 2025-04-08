@@ -80,8 +80,8 @@ export interface Activity {
   type: string;
   status: string;
   date: string;
-  client?: string;
-  notes?: string;
+  client: string | null;
+  notes: string | null;
   propertyId: string;
   createdAt: string;
   updatedAt: string;
@@ -97,31 +97,37 @@ export interface Property {
   ownerName: string;
   ownerPhone: string;
   captureDate: string;
-  responsibleId?: string;
+  responsibleId: string | null;
   hasSimpleNote: boolean;
   isOccupied: boolean;
-  clientId?: string;
-  zoneId?: string;
+  clientId: string | null;
+  zoneId: string | null;
   createdAt: string;
   updatedAt: string;
-  latitude?: number;
-  longitude?: number;
-  occupiedBy?: string;
+  latitude: number | null;
+  longitude: number | null;
+  occupiedBy: string | null;
   isLocated: boolean;
-  responsible?: string;
-  activities?: Activity[];
-  zone?: {
+  responsible: string | null;
+  activities: Activity[];
+  zone: {
     id: string;
     name: string;
-  };
-  assignments?: Assignment[];
-  dpv?: DPV;
-  clients?: Client[];
-  responsibleUser?: {
+  } | null;
+  assignments: Assignment[];
+  dpv: DPV | null;
+  clients: Client[];
+  responsibleUser: {
     id: string;
     name: string | null;
     email: string;
-  };
+  } | null;
+  habitaciones: number | null;
+  banos: number | null;
+  metrosCuadrados: number | null;
+  parking: boolean;
+  ascensor: boolean;
+  piscina: boolean;
 }
 
 export interface PropertyCreateInput {
@@ -132,7 +138,7 @@ export interface PropertyCreateInput {
   type?: PropertyType;
   ownerName: string;
   ownerPhone: string;
-  captureDate?: Date;
+  captureDate?: Date | null;
   responsibleId?: string | null;
   hasSimpleNote?: boolean;
   isOccupied?: boolean;
@@ -143,9 +149,15 @@ export interface PropertyCreateInput {
   occupiedBy?: string | null;
   isLocated?: boolean;
   responsible?: string | null;
+  habitaciones?: number | null;
+  banos?: number | null;
+  metrosCuadrados?: number | null;
+  parking?: boolean;
+  ascensor?: boolean;
+  piscina?: boolean;
 }
 
-export interface PropertyUpdateInput extends Partial<PropertyCreateInput> {}
+export type PropertyUpdateInput = Partial<PropertyCreateInput>;
 
 export interface DPV {
   id: string;
