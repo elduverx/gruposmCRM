@@ -32,6 +32,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     { name: "Inmuebles", href: "/dashboard/properties", icon: BuildingOfficeIcon },
     { name: "Clientes", href: "/dashboard/clients", icon: UserGroupIcon },
     { name: "Noticias", href: "/dashboard/news", icon: NewspaperIcon },
+    { name: "Pedidos", href: "/dashboard/orders", icon: ClipboardDocumentListIcon },
     { name: "Encargos", href: "/dashboard/assignments", icon: ClipboardDocumentListIcon },
     { name: "Mapa de Zonas", href: "/dashboard/zones", icon: MapIcon },
     { name: "Usuarios", href: "/dashboard/users", icon: UsersIcon },

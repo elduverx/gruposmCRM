@@ -25,6 +25,7 @@ const commonNavigation = [
   { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
+  { name: 'Pedidos', href: '/dashboard/orders', icon: ClipboardDocumentListIcon },
 ];
 
 // Navegación adicional solo para administradores

@@ -6,6 +6,11 @@ export const PropertyStatus = {
   EMPEZADA: 'EMPEZADA'
 } as const;
 
+export const OperationType = {
+  SALE: 'SALE',
+  RENT: 'RENT'
+} as const;
+
 export const PropertyAction = {
   IR_A_DIRECCION: 'IR_A_DIRECCION',
   REPETIR: 'REPETIR',
@@ -91,7 +96,7 @@ export interface Property {
   id: string;
   address: string;
   population: string;
-  status: PropertyStatus;
+  status: typeof OperationType[keyof typeof OperationType];
   action: PropertyAction;
   type: PropertyType;
   ownerName: string;
@@ -133,7 +138,7 @@ export interface Property {
 export interface PropertyCreateInput {
   address: string;
   population: string;
-  status?: PropertyStatus;
+  status?: typeof OperationType[keyof typeof OperationType];
   action?: PropertyAction;
   type?: PropertyType;
   ownerName: string;

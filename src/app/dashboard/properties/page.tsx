@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon, MapIcon } from '@heroicons/react/24/outline';
 import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from './actions';
-import { Property, Activity, DPV, PropertyStatus, PropertyAction, PropertyType } from '@/types/property';
+import { Property, Activity, DPV, PropertyStatus, PropertyAction, PropertyType, OperationType } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { getZones, updateZone, Zone } from '../zones/actions';
 import { Dialog } from '@headlessui/react';
@@ -13,6 +13,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import ActivityForm from '@/components/ActivityForm';
 import { toast } from 'react-hot-toast';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -32,6 +33,7 @@ export default function PropertiesPage() {
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [selectedPropertyForActivity, setSelectedPropertyForActivity] = useState<Property | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -290,6 +292,17 @@ export default function PropertiesPage() {
     }
   };
 
+  const filteredProperties = properties.filter(property => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      property.address?.toLowerCase().includes(searchLower) ||
+      property.population?.toLowerCase().includes(searchLower) ||
+      property.ownerName?.toLowerCase().includes(searchLower) ||
+      property.ownerPhone?.toLowerCase().includes(searchLower) ||
+      property.responsible?.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-96">Cargando...</div>;
   }
@@ -308,6 +321,20 @@ export default function PropertiesPage() {
             >
               Añadir inmueble
             </Link>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="relative rounded-md shadow-sm max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full rounded-md border-gray-300 pl-4 pr-12 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="Buscar por dirección, población, propietario..."
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
           </div>
         </div>
         <div className="mt-8 flex flex-col">
@@ -332,7 +359,7 @@ export default function PropertiesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {properties.map((property) => {
+                    {filteredProperties.map((property) => {
                       const propertyActivities = activitiesMap[property.id] || [];
                       const lastActivity = propertyActivities.length > 0 ? propertyActivities[0] : null;
                       const propertyZone = property.zoneId ? zones.find(zone => zone.id === property.zoneId) : null;
@@ -524,9 +551,9 @@ export default function PropertiesPage() {
                         onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                       >
-                        {Object.values(PropertyStatus).map((status) => (
+                        {Object.values(OperationType).map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {status === 'SALE' ? 'Venta' : 'Alquiler'}
                           </option>
                         ))}
                       </select>

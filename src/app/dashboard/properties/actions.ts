@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import { PropertyType, PropertyStatus, PropertyAction, Prisma } from '@prisma/client';
+import { PropertyType, PropertyStatus, PropertyAction, Prisma, OperationType } from '@prisma/client';
 import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment, PropertyUpdateInput } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
@@ -102,16 +102,17 @@ export async function getProperty(id: string): Promise<Property | null> {
 
 export async function createProperty(data: PropertyCreateInput): Promise<Property> {
   try {
+    // Ensure status is a valid OperationType enum value
+    const validStatus = data.status || OperationType.SALE;
+    
     const property = await prisma.property.create({
       data: {
         address: data.address,
         population: data.population,
-        status: 'SIN_EMPEZAR' as PropertyStatus,
-        action: 'IR_A_DIRECCION' as PropertyAction,
-        type: 'CASA' as PropertyType,
+        status: validStatus,
+        action: data.action || PropertyAction.IR_A_DIRECCION,
         ownerName: data.ownerName,
         ownerPhone: data.ownerPhone,
-        captureDate: data.captureDate || new Date(),
         responsibleId: data.responsibleId,
         hasSimpleNote: data.hasSimpleNote || false,
         isOccupied: data.isOccupied || false,
@@ -120,64 +121,22 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
         latitude: data.latitude,
         longitude: data.longitude,
         occupiedBy: data.occupiedBy,
+        type: data.type || PropertyType.PISO,
         isLocated: data.isLocated || false,
         responsible: data.responsible,
-        habitaciones: data.habitaciones || null,
-        banos: data.banos || null,
-        metrosCuadrados: data.metrosCuadrados || null,
+        habitaciones: data.habitaciones,
+        banos: data.banos,
+        metrosCuadrados: data.metrosCuadrados,
         parking: data.parking || false,
         ascensor: data.ascensor || false,
-        piscina: data.piscina || false
+        piscina: data.piscina || false,
       },
-      include: {
-        zone: true,
-        activities: true,
-        responsibleUser: true
-      }
     });
 
-    return {
-      ...property,
-      captureDate: property.captureDate.toISOString(),
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-      responsibleId: property.responsibleId ?? undefined,
-      clientId: property.clientId ?? undefined,
-      zoneId: property.zoneId ?? undefined,
-      latitude: property.latitude ?? undefined,
-      longitude: property.longitude ?? undefined,
-      occupiedBy: property.occupiedBy ?? undefined,
-      responsible: property.responsible ?? undefined,
-      habitaciones: property.habitaciones ?? undefined,
-      banos: property.banos ?? undefined,
-      metrosCuadrados: property.metrosCuadrados ?? undefined,
-      parking: property.parking ?? undefined,
-      ascensor: property.ascensor ?? undefined,
-      piscina: property.piscina ?? undefined,
-      zone: property.zone ? {
-        id: property.zone.id,
-        name: property.zone.name
-      } : undefined,
-      activities: property.activities.map(activity => ({
-        id: activity.id,
-        type: activity.type,
-        status: activity.status,
-        date: activity.date.toISOString(),
-        client: activity.client ?? undefined,
-        notes: activity.notes ?? undefined,
-        propertyId: activity.propertyId,
-        createdAt: activity.createdAt.toISOString(),
-        updatedAt: activity.updatedAt.toISOString()
-      })),
-      responsibleUser: property.responsibleUser ? {
-        id: property.responsibleUser.id,
-        name: property.responsibleUser.name,
-        email: property.responsibleUser.email
-      } : undefined
-    };
+    return property;
   } catch (error) {
     console.error('Error creating property:', error);
-    throw error;
+    throw new Error('Error al crear la propiedad');
   }
 }
 

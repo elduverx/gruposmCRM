@@ -7,6 +7,16 @@ import { createProperty, updateProperty, getProperty } from '../actions';
 import { Property } from '@/types/property';
 import dynamic from 'next/dynamic';
 import { getAddressFromCoordinates } from '@/utils/geocoding';
+import { getZones } from '@/app/dashboard/zones/actions';
+import { findZoneForCoordinates } from '@/utils/zoneUtils';
+import { Zone } from '@/app/dashboard/zones/actions';
+import { PropertyType } from '@prisma/client';
+
+// Definir OperationType para uso en el cliente
+const OperationType = {
+  SALE: 'SALE',
+  RENT: 'RENT'
+};
 
 // Importar el mapa dinámicamente para evitar errores de SSR
 const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
@@ -24,10 +34,11 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [formData, setFormData] = useState<Partial<Property>>({
     address: '',
     population: 'Catarroja',
-    propertyType: '',
+    type: '',
     status: '',
     price: '',
     description: '',
@@ -49,6 +60,20 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     tenantEmail: '',
     notes: ''
   });
+
+  // Cargar las zonas al iniciar el componente
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        const zonesData = await getZones();
+        setZones(zonesData);
+      } catch (error) {
+        console.error('Error loading zones:', error);
+      }
+    };
+
+    loadZones();
+  }, []);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -115,6 +140,9 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
             population: addressData.population
           }));
         }
+
+        // Asignar la zona automáticamente
+        assignZoneToCoordinates(lat, lng);
       }
     } catch (error) {
       console.error('Error searching address:', error);
@@ -140,6 +168,27 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
       }
     } catch (error) {
       console.error('Error getting address from coordinates:', error);
+    }
+
+    // Asignar la zona automáticamente
+    assignZoneToCoordinates(lat, lng);
+  };
+
+  // Función para asignar la zona automáticamente basada en las coordenadas
+  const assignZoneToCoordinates = (lat: number, lng: number) => {
+    if (zones.length === 0) return;
+
+    const point = { lat, lng };
+    const zone = findZoneForCoordinates(point, zones);
+    
+    if (zone) {
+      setFormData(prev => ({
+        ...prev,
+        zoneId: zone.id
+      }));
+      console.log(`Propiedad asignada a la zona: ${zone.name}`);
+    } else {
+      console.log('No se encontró una zona para las coordenadas proporcionadas');
     }
   };
 
@@ -232,22 +281,27 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles de la Propiedad</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label htmlFor="propertyType" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">
                       Tipo de Propiedad
                     </label>
                     <select
-                      id="propertyType"
-                      value={formData.propertyType || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, propertyType: e.target.value }))}
+                      id="type"
+                      value={formData.type || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>
-                      <option value="piso">Piso</option>
-                      <option value="casa">Casa</option>
-                      <option value="chalet">Chalet</option>
-                      <option value="local">Local</option>
-                      <option value="oficina">Oficina</option>
-                      <option value="garaje">Garaje</option>
+                      <option value={PropertyType.PISO}>Piso</option>
+                      <option value={PropertyType.CASA}>Casa</option>
+                      <option value={PropertyType.CHALET}>Chalet</option>
+                      <option value={PropertyType.APARTAMENTO}>Apartamento</option>
+                      <option value={PropertyType.ATICO}>Ático</option>
+                      <option value={PropertyType.DUPLEX}>Dúplex</option>
+                      <option value={PropertyType.TERRENO}>Terreno</option>
+                      <option value={PropertyType.LOCAL_COMERCIAL}>Local Comercial</option>
+                      <option value={PropertyType.OFICINA}>Oficina</option>
+                      <option value={PropertyType.GARAJE}>Garaje</option>
+                      <option value={PropertyType.TRASTERO}>Trastero</option>
                     </select>
                   </div>
                   <div>
@@ -261,8 +315,8 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>
-                      <option value="disponible">Venta</option>
-                      <option value="alquilado">Alquier</option>
+                      <option value={OperationType.SALE}>Venta</option>
+                      <option value={OperationType.RENT}>Alquiler</option>
                     </select>
                   </div>
                   <div>

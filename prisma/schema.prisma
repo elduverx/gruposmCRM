@@ -22,7 +22,7 @@ model Property {
   id              String         @id @default(cuid())
   address         String
   population      String
-  status          PropertyStatus @default(SIN_EMPEZAR)
+  status          OperationType  @default(SALE)
   action          PropertyAction @default(IR_A_DIRECCION)
   ownerName       String
   ownerPhone      String
@@ -42,7 +42,7 @@ model Property {
   responsible     String?
   habitaciones    Int?
   banos           Int?
-  metrosCuadrados Float?
+  metrosCuadrados Int?
   parking         Boolean        @default(false)
   ascensor        Boolean        @default(false)
   piscina         Boolean        @default(false)
@@ -145,35 +145,38 @@ model DPV {
 }
 
 model PropertyNews {
-  id            String   @id @default(cuid())
-  type          String
-  action        String
-  valuation     String
-  priority      String
-  responsible   String
-  value         Float?
-  propertyId    String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  precioCliente Float?
-  precioSM      Float?
-  property      Property @relation(fields: [propertyId], references: [id])
+  id              String   @id @default(cuid())
+  type            String
+  action          String
+  valuation       String
+  priority        String
+  responsible     String
+  value           Float
+  propertyId      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  precioCliente   Float?
+  precioSM        Float?
+  commissionType  String   @default("percentage")
+  commissionValue Float    @default(3)
+  property        Property @relation(fields: [propertyId], references: [id])
 
-  @@index([propertyId], map: "PropertyNews_propertyId_fkey")
+  @@index([propertyId])
 }
 
 model ClientRequest {
-  id           String   @id
-  clientId     String   @unique
+  id           String    @id
+  clientId     String    @unique
+  type         String    @default("SALE")
   bedrooms     Int
   bathrooms    Int
   minPrice     Float
   maxPrice     Float
   propertyType String
   features     String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
   updatedAt    DateTime
-  Client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  Client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -204,4 +207,9 @@ enum PropertyAction {
   IR_A_DIRECCION
   REPETIR
   LOCALIZAR_VERIFICADO
+}
+
+enum OperationType {
+  SALE
+  RENT
 }

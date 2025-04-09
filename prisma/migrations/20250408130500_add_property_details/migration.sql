@@ -1,8 +1,0 @@
--- AlterTable
-ALTER TABLE `Property` 
-ADD COLUMN `habitaciones` INT NULL,
-ADD COLUMN `banos` INT NULL,
-ADD COLUMN `metrosCuadrados` DOUBLE NULL,
-ADD COLUMN `parking` BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN `ascensor` BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN `piscina` BOOLEAN NOT NULL DEFAULT false; 

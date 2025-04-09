@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient, PropertyType, PropertyStatus, PropertyAction } from '@prisma/client';
+import { OperationType } from '@/types/property';
 
 const prisma = new PrismaClient();
 
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!Object.values(PropertyStatus).includes(data.status)) {
+    if (!Object.values(OperationType).includes(data.status)) {
       return NextResponse.json(
         { error: 'Estado de inmueble inválido' },
         { status: 400 }
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       data: {
         address: data.address,
         population: data.population,
-        status: data.status as PropertyStatus,
+        status: data.status,
         action: data.action as PropertyAction,
         type: data.type as PropertyType,
         ownerName: data.ownerName,
