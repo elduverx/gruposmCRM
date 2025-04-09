@@ -34,5 +34,14 @@
     "role": "USER",
     "createdAt": "2025-04-06T13:24:17.047Z",
     "updatedAt": "2025-04-06T13:24:17.047Z"
+  },
+  {
+    "id": "1744195145957",
+    "name": "test",
+    "email": "te@gg",
+    "password": "$2a$10$ILSAGSHD/8ACtzMzYzNJoOvnDS7HbOkFaga1/OLB9JQN0kpV61r6G",
+    "role": "ADMIN",
+    "createdAt": "2025-04-09T10:39:05.957Z",
+    "updatedAt": "2025-04-09T10:39:05.957Z"
   }
 ]

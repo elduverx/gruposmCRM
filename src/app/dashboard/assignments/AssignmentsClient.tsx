@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Assignment } from '@/types/property';
 import { ClipboardDocumentListIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
@@ -10,6 +10,7 @@ import { deleteAssignment } from '../properties/actions';
 import { formatNumber } from '@/lib/utils';
 import { Property } from '@/types/property';
 import { getProperties } from '../properties/actions';
+import SearchBar from '@/components/common/SearchBar';
 
 interface AssignmentsClientProps {
   initialAssignments: Assignment[];
@@ -17,12 +18,26 @@ interface AssignmentsClientProps {
 
 export default function AssignmentsClient({ initialAssignments }: AssignmentsClientProps) {
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
+  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>(initialAssignments);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [properties, setProperties] = useState<Property[]>([]);
   const [isPropertySelectorOpen, setIsPropertySelectorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const loadProperties = async () => {
+      try {
+        const propertiesData = await getProperties();
+        setProperties(propertiesData);
+      } catch (error) {
+        console.error('Error loading properties:', error);
+      }
+    };
+    loadProperties();
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este encargo?')) {
@@ -66,106 +81,124 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
     setIsAssignmentFormOpen(true);
   };
 
+  // Filtrar encargos cuando cambia el término de búsqueda
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    if (term.trim() === '') {
+      setFilteredAssignments(assignments);
+    } else {
+      const filtered = assignments.filter(assignment => {
+        const property = properties.find(p => p.id === assignment.propertyId);
+        return (
+          property?.address.toLowerCase().includes(term.toLowerCase()) ||
+          property?.population.toLowerCase().includes(term.toLowerCase()) ||
+          assignment.type.toLowerCase().includes(term.toLowerCase()) ||
+          assignment.origin?.toLowerCase().includes(term.toLowerCase())
+        );
+      });
+      setFilteredAssignments(filtered);
+    }
+  };
+
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Encargos</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Lista de todos los encargos y tareas pendientes.
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            onClick={handleNewAssignment}
-            disabled={isLoading}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50"
-          >
-            <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
-            {isLoading ? 'Cargando...' : 'Nuevo Encargo'}
-          </button>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Encargos</h1>
+        <button
+          onClick={handleNewAssignment}
+          className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors flex items-center"
+        >
+          <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
+          Nuevo Encargo
+        </button>
       </div>
-      
-      {assignments.length === 0 ? (
-        <div className="text-center mt-16">
-          <ClipboardDocumentListIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No hay encargos</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Comienza agregando un nuevo encargo al sistema.
-          </p>
+
+      <div className="mb-6">
+        <SearchBar 
+          placeholder="Buscar encargos por título, dirección, estado o notas..." 
+          onSearch={handleSearch}
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+            <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Cargando...</span>
+          </div>
+          <p className="mt-2 text-gray-600">Cargando encargos...</p>
+        </div>
+      ) : filteredAssignments.length === 0 ? (
+        <div className="text-center py-8 bg-white rounded-lg shadow">
+          <p className="text-gray-500">No se encontraron encargos.</p>
         </div>
       ) : (
-        <div className="mt-8 flex flex-col">
-          <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                        Propiedad
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Cliente
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Tipo
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Precio
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Fecha límite
-                      </th>
-                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span className="sr-only">Acciones</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {assignments.map((assignment) => (
-                      <tr key={assignment.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                          <Link href={`/dashboard/properties/${assignment.propertyId}`} className="hover:text-indigo-600">
-                            {assignment.property?.address || 'Sin dirección'}
-                          </Link>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {assignment.client?.name || 'Sin cliente'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {formatNumber(assignment.price)} €
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(assignment.exclusiveUntil).toLocaleDateString('es-ES')}
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex justify-end space-x-2">
-                            <button
-                              onClick={() => handleEdit(assignment)}
-                              className="text-indigo-600 hover:text-indigo-900"
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(assignment.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Propiedad
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha de inicio
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha de fin
+                </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredAssignments.map((assignment) => {
+                const property = properties.find(p => p.id === assignment.propertyId);
+                return (
+                  <tr key={assignment.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <Link href={`/dashboard/properties/${assignment.propertyId}`} className="text-primary-600 hover:text-primary-900">
+                        {property?.address || 'Propiedad no encontrada'}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        assignment.type === 'SALE' ? 'bg-blue-100 text-blue-800' :
+                        assignment.type === 'RENT' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {assignment.type === 'SALE' ? 'Venta' :
+                         assignment.type === 'RENT' ? 'Alquiler' :
+                         assignment.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {assignment.createdAt ? new Date(assignment.createdAt).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {assignment.exclusiveUntil ? new Date(assignment.exclusiveUntil).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(assignment)}
+                        className="text-primary-600 hover:text-primary-900 mr-3"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(assignment.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

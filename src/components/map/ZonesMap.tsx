@@ -6,8 +6,9 @@ import { Zone } from '@/app/dashboard/zones/actions';
 import dynamic from 'next/dynamic';
 
 // Importar MapWithDraw dinámicamente para evitar errores de SSR
-const MapWithDraw = dynamic(() => import('@/components/map/MapWithDraw'), {
-  ssr: false
+const MapWithDraw = dynamic(() => import('./MapWithDraw'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse" />
 });
 
 interface ZonesMapProps {
@@ -48,6 +49,15 @@ export default function ZonesMap({
   handlePolygonDeleted
 }: ZonesMapProps) {
   const [markerRefs, setMarkerRefs] = useState<{ [key: string]: any }>({});
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return <div className="h-full w-full bg-gray-100 animate-pulse" />;
+  }
 
   return (
     <div className="h-full w-full">

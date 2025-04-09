@@ -6,17 +6,35 @@ import { getClients, createClient, updateClient, deleteClient } from './actions'
 import ClientForm from '@/components/ClientForm';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
+import SearchBar from '@/components/common/SearchBar';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchClients();
   }, []);
+
+  useEffect(() => {
+    // Filtrar clientes cuando cambia el término de búsqueda
+    if (searchTerm.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const filtered = clients.filter(client => 
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.address?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredClients(filtered);
+    }
+  }, [searchTerm, clients]);
 
   const fetchClients = async () => {
     setIsLoading(true);
@@ -24,6 +42,7 @@ export default function ClientsPage() {
       const data = await getClients();
       if (data) {
         setClients(data);
+        setFilteredClients(data);
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -67,72 +86,94 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Clientes</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
         <button
           onClick={() => {
             setSelectedClient(null);
             setIsFormOpen(true);
           }}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors flex items-center"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
           Nuevo Cliente
         </button>
       </div>
 
+      <div className="mb-6">
+        <SearchBar 
+          placeholder="Buscar clientes por nombre, email, teléfono o dirección..." 
+          onSearch={setSearchTerm}
+        />
+      </div>
+
       {isLoading ? (
-        <div className="text-center py-8">Cargando...</div>
-      ) : clients.length > 0 ? (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {clients.map((client) => (
-              <li key={client.id} className="px-6 py-4 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                      {client.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Email: {client.email}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Teléfono: {client.phone || 'N/A'}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Dirección: {client.address || 'N/A'}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Inmuebles relacionados: {client.properties.length}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Estado del pedido: {client.hasRequest ? 'Tiene pedido' : 'Sin pedido'}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
+        <div className="text-center py-8">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+            <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Cargando...</span>
+          </div>
+          <p className="mt-2 text-gray-600">Cargando clientes...</p>
+        </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="text-center py-8 bg-white rounded-lg shadow">
+          <p className="text-gray-500">No se encontraron clientes.</p>
+        </div>
+      ) : (
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nombre
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Teléfono
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dirección
+                </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredClients.map((client) => (
+                <tr key={client.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {client.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {client.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {client.phone || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {client.address || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(client)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-primary-600 hover:text-primary-900 mr-3"
                     >
                       <PencilIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(client.id)}
-                      disabled={isDeleting}
-                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                      className="text-red-600 hover:text-red-900"
                     >
                       <TrashIcon className="h-5 w-5" />
                     </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="text-center py-8 text-gray-500">
-          No hay clientes registrados
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
