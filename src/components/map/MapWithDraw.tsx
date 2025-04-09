@@ -212,11 +212,11 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
                   )}
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
-                      property.status === 'SIN_EMPEZAR' 
+                      property.status === 'SALE'
                         ? 'bg-yellow-100 text-yellow-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {property.status === 'SIN_EMPEZAR' ? 'Sin empezar' : 'Empezada'}
+                      {property.status === 'SALE' ? 'Venta' : 'Alquiler'}
                     </span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
                       property.action === 'IR_A_DIRECCION' 

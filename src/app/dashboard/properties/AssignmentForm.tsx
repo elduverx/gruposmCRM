@@ -95,6 +95,11 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         return;
       }
 
+      if (!propertyId) {
+        alert('Por favor selecciona una propiedad');
+        return;
+      }
+
       const data = {
         ...formData,
         price: parseFloat(formData.price.toString()),

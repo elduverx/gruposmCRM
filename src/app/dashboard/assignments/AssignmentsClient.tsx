@@ -8,6 +8,8 @@ import { AssignmentForm } from '../properties/AssignmentForm';
 import Link from 'next/link';
 import { deleteAssignment } from '../properties/actions';
 import { formatNumber } from '@/lib/utils';
+import { Property } from '@/types/property';
+import { getProperties } from '../properties/actions';
 
 interface AssignmentsClientProps {
   initialAssignments: Assignment[];
@@ -17,6 +19,10 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isPropertySelectorOpen, setIsPropertySelectorOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este encargo?')) {
@@ -29,14 +35,35 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
 
   const handleEdit = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
+    setSelectedPropertyId(assignment.propertyId);
     setIsAssignmentFormOpen(true);
   };
 
   const handleFormSuccess = () => {
     setIsAssignmentFormOpen(false);
     setSelectedAssignment(null);
+    setSelectedPropertyId('');
     // Recargar la página para obtener los datos actualizados
     window.location.reload();
+  };
+
+  const handleNewAssignment = async () => {
+    setIsLoading(true);
+    try {
+      const propertiesData = await getProperties();
+      setProperties(propertiesData);
+      setIsPropertySelectorOpen(true);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePropertySelect = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    setIsPropertySelectorOpen(false);
+    setIsAssignmentFormOpen(true);
   };
 
   return (
@@ -50,14 +77,12 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
-            type="button"
-            onClick={() => {
-              setSelectedAssignment(null);
-              setIsAssignmentFormOpen(true);
-            }}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
+            onClick={handleNewAssignment}
+            disabled={isLoading}
+            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50"
           >
-            Agregar Encargo
+            <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
+            {isLoading ? 'Cargando...' : 'Nuevo Encargo'}
           </button>
         </div>
       </div>
@@ -150,6 +175,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
         onClose={() => {
           setIsAssignmentFormOpen(false);
           setSelectedAssignment(null);
+          setSelectedPropertyId('');
         }}
         className="relative z-50"
       >
@@ -176,10 +202,56 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
             
             <div className="p-6">
               <AssignmentForm 
-                propertyId={selectedAssignment?.propertyId || ''}
+                propertyId={selectedPropertyId || selectedAssignment?.propertyId || ''}
                 initialData={selectedAssignment}
                 onSuccess={handleFormSuccess}
               />
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Modal de Selección de Propiedad */}
+      <Dialog
+        open={isPropertySelectorOpen}
+        onClose={() => setIsPropertySelectorOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <Dialog.Title className="text-lg font-medium">
+                Seleccionar Propiedad
+              </Dialog.Title>
+              <button
+                onClick={() => setIsPropertySelectorOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              {properties.length === 0 ? (
+                <p className="text-center text-gray-500">No hay propiedades disponibles</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {properties.map((property) => (
+                    <button
+                      key={property.id}
+                      onClick={() => handlePropertySelect(property.id)}
+                      className="text-left p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <h3 className="font-medium">{property.address}</h3>
+                      <p className="text-sm text-gray-500">{property.population}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </Dialog.Panel>
         </div>
