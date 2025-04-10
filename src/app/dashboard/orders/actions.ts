@@ -118,6 +118,7 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
         updatedAt: new Date(),
         type: data.operationType
       } as unknown as {
+        id: string;
         clientId: string;
         type: string;
         bedrooms: number;

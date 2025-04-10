@@ -19,7 +19,15 @@ export async function getZones(): Promise<Zone[]> {
       orderBy: { createdAt: 'desc' },
     });
     
-    return zones.map(zone => ({
+    return zones.map((zone: { 
+      id: string; 
+      name: string; 
+      description?: string | null; 
+      color: string; 
+      coordinates: any; 
+      createdAt: Date; 
+      updatedAt: Date; 
+    }) => ({
       ...zone,
       coordinates: JSON.parse(zone.coordinates as string),
     }));
@@ -161,7 +169,7 @@ export async function getZoneNewsAndAssignments(zoneId: string) {
       select: { id: true }
     });
 
-    const propertyIds = properties.map(p => p.id);
+    const propertyIds = properties.map((p: { id: string }) => p.id);
 
     // Obtener las noticias de las propiedades
     const news = await prisma.propertyNews.findMany({
@@ -211,12 +219,54 @@ export async function getZoneNewsAndAssignments(zoneId: string) {
     });
 
     return {
-      news: news.map(item => ({
+      news: news.map((item: { 
+        id: string; 
+        createdAt: Date; 
+        updatedAt: Date; 
+        type: string;
+        action: string;
+        valuation: string;
+        priority: string;
+        responsible: string | null;
+        value: number | null;
+        propertyId: string;
+        property: {
+          id: string;
+          address: string;
+          population: string;
+          zoneId: string | null;
+        };
+      }) => ({
         ...item,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString()
       })),
-      assignments: assignments.map(item => ({
+      assignments: assignments.map((item: { 
+        id: string; 
+        createdAt: Date; 
+        updatedAt: Date; 
+        exclusiveUntil: Date;
+        type: string;
+        price: number;
+        origin: string;
+        clientId: string;
+        propertyId: string;
+        sellerFeeType: string;
+        sellerFeeValue: number;
+        buyerFeeType: string;
+        buyerFeeValue: number;
+        client: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+        };
+        property: {
+          id: string;
+          address: string;
+          population: string;
+        };
+      }) => ({
         ...item,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
