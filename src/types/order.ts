@@ -1,5 +1,5 @@
 import { Client } from './client';
-import { PropertyType } from '@prisma/client';
+import { PropertyType } from '@/types/property';
 
 export interface Order {
   id: string;

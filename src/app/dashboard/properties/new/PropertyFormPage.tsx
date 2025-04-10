@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/geocoding';
 import { createProperty, updateProperty, getProperty } from '../actions';
-import { PropertyType } from '@prisma/client';
+import { PropertyType } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
 import { getClients } from '../../clients/actions';
 import { Client } from '@/types/client';

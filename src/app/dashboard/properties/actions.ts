@@ -1,8 +1,8 @@
 // @ts-nocheck
 'use server';
 
-import { PropertyType, PropertyStatus, PropertyAction, Prisma, OperationType } from '@prisma/client';
-import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment, PropertyUpdateInput } from '@/types/property';
+import { Prisma } from '@prisma/client';
+import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment, PropertyUpdateInput, PropertyType, PropertyStatus, PropertyAction, OperationType } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty, PropertyNewsCreateInput } from '@/types/prisma';

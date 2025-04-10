@@ -10,7 +10,7 @@ import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { getZones } from '@/app/dashboard/zones/actions';
 import { findZoneForCoordinates } from '@/utils/zoneUtils';
 import { Zone } from '@/app/dashboard/zones/actions';
-import { PropertyType } from '@prisma/client';
+import { PropertyType } from '@/types/property';
 
 // Definir OperationType para uso en el cliente
 const OperationType = {
