@@ -84,76 +84,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = () => {
-    console.log('Logging out user');
     localStorage.removeItem('token');
     setUser(null);
+    setLoading(false);
+    
+    // Limpiar el intervalo de refresco si existe
     if (window.refreshInterval) {
       clearInterval(window.refreshInterval);
     }
+    
+    // Redirigir al login
     router.push('/login');
-  };
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      console.log('Initializing authentication');
-      const token = localStorage.getItem('token');
-      if (token) {
-        console.log('Token found in localStorage, fetching user data');
-        const success = await fetchUserData(token);
-        if (!success) {
-          console.log('Failed to fetch user data, logging out');
-          handleLogout();
-        } else if (window.location.pathname === '/') {
-          console.log('Redirecting to dashboard');
-          router.push('/dashboard');
-        }
-      } else {
-        console.log('No token found in localStorage');
-      }
-      console.log('Setting loading to false');
-      setLoading(false);
-    };
-
-    initializeAuth();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        handleLogout();
-        return;
-      }
-
-      // Clear any existing interval
-      if (window.refreshInterval) {
-        clearInterval(window.refreshInterval);
-      }
-
-      // Set up a new interval to refresh the token every 5 minutes
-      const interval = setInterval(async () => {
-        console.log('Refreshing token on interval');
-        const success = await fetchUserData(token);
-        if (!success) {
-          console.log('Token refresh failed on interval, logging out');
-          handleLogout();
-        }
-      }, 5 * 60 * 1000);
-      
-      window.refreshInterval = interval;
-      return () => {
-        console.log('Clearing refresh interval');
-        clearInterval(interval);
-      };
-    }
-  }, [user]);
-
-  const login = (token: string, userData: User) => {
-    console.log('Logging in user:', userData.email);
-    localStorage.setItem('token', token);
-    setUser(userData);
-    setLoading(false);
-    router.push('/dashboard');
   };
 
   const refreshToken = async (): Promise<boolean> => {
@@ -178,12 +119,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('token', data.token);
         return true;
       }
-      console.log('Token refresh failed with status:', response.status);
+
+      console.log('Token refresh failed');
       return false;
     } catch (error) {
       console.error('Error refreshing token:', error);
       return false;
     }
+  };
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          await fetchUserData(token);
+        } catch (error) {
+          console.error('Error al inicializar la autenticación:', error);
+          handleLogout();
+        }
+      }
+    };
+
+    initializeAuth();
+  }, [fetchUserData, handleLogout]);
+
+  useEffect(() => {
+    if (user) {
+      // Refrescar el token cada 14 minutos
+      const interval = setInterval(() => {
+        refreshToken();
+      }, 14 * 60 * 1000);
+      
+      window.refreshInterval = interval;
+      
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [user, refreshToken]);
+
+  const login = (token: string, userData: User) => {
+    console.log('Logging in user:', userData.email);
+    localStorage.setItem('token', token);
+    setUser(userData);
+    setLoading(false);
+    router.push('/dashboard');
   };
 
   const value = {

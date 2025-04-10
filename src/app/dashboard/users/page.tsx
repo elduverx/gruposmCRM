@@ -18,43 +18,16 @@ export default function UsersPage() {
   const router = useRouter();
   const { user, loading: authLoading, isAuthenticated, isAdmin, refreshToken } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState({
-    total: 0,
-    admins: 0,
-    regular: 0
-  });
-
-  useEffect(() => {
-    // Verificar autenticación inmediatamente
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        console.log('Usuario no autenticado, redirigiendo a login');
-        router.replace('/login');
-        return;
-      }
-      
-      // Eliminar la verificación de permisos de administrador
-      // if (!isAdmin) {
-      //   console.log('Usuario no es administrador, redirigiendo a dashboard');
-      //   router.replace('/dashboard');
-      //   return;
-      // }
-      
-      // Si el usuario está autenticado, cargar los usuarios
-      console.log('Usuario autenticado, cargando usuarios');
-      fetchUsers();
-    }
-  }, [authLoading, isAuthenticated, router]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
 
   const fetchUsers = async () => {
     try {
       setError(null);
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('No token found');
-        router.replace('/login');
+        setError('No se encontró el token de autenticación');
         return;
       }
 
@@ -64,56 +37,51 @@ export default function UsersPage() {
         }
       });
 
-      if (response.status === 401) {
-        console.log('Unauthorized access, attempting to refresh token');
-        const refreshed = await refreshToken();
-        if (refreshed) {
-          // Reintentar la solicitud con el nuevo token
-          const newToken = localStorage.getItem('token');
-          const retryResponse = await fetch('/api/users', {
-            headers: {
-              'Authorization': `Bearer ${newToken}`
-            }
-          });
-          
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            console.log('Users fetched after token refresh:', data);
-            setUsers(data);
-            updateStats(data);
-            return;
-          }
-        }
-        console.log('Token refresh failed, redirecting to login');
-        router.replace('/login');
-        return;
-      }
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error al obtener usuarios:', errorData);
-        setError(errorData.message || 'Error al obtener usuarios');
-        return;
+        throw new Error(errorData.message || 'Error al cargar los usuarios');
       }
 
       const data = await response.json();
-      console.log('Users fetched:', data);
       setUsers(data);
       updateStats(data);
-    } catch (error) {
-      console.error('Error:', error);
-      setError('Error al conectar con el servidor');
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido al cargar usuarios');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log('Usuario no autenticado, redirigiendo a login');
+      router.replace('/login');
+      return;
+    }
+    
+    // Eliminar la verificación de permisos de administrador
+    // if (!isAdmin) {
+    //   console.log('Usuario no es administrador, redirigiendo a dashboard');
+    //   router.replace('/dashboard');
+    //   return;
+    // }
+    
+    // Si el usuario está autenticado, cargar los usuarios
+    console.log('Usuario autenticado, cargando usuarios');
+    fetchUsers();
+  }, [authLoading, isAuthenticated, router, fetchUsers]);
 
   const updateStats = (data: User[]) => {
     const admins = data.filter((user: User) => user.role === 'ADMIN').length;
     setStats({
       total: data.length,
-      admins,
-      regular: data.length - admins
+      active: data.length - admins,
+      inactive: admins
     });
   };
 
@@ -123,7 +91,7 @@ export default function UsersPage() {
     updateStats(newUsers);
   };
 
-  if (loading || authLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -163,12 +131,12 @@ export default function UsersPage() {
           <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Administradores</h3>
-          <p className="text-3xl font-bold text-green-600">{stats.admins}</p>
+          <h3 className="text-lg font-semibold text-gray-700">Usuarios Activos</h3>
+          <p className="text-3xl font-bold text-green-600">{stats.active}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Usuarios Regulares</h3>
-          <p className="text-3xl font-bold text-purple-600">{stats.regular}</p>
+          <h3 className="text-lg font-semibold text-gray-700">Usuarios Inactivos</h3>
+          <p className="text-3xl font-bold text-purple-600">{stats.inactive}</p>
         </div>
       </div>
       <UserList users={users} onUsersChange={handleUsersChange} isAdmin={isAdmin} />
