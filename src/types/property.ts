@@ -193,5 +193,6 @@ export interface PropertyNews {
     id: string;
     address: string;
     population: string;
+    zoneId: string;
   };
 } 

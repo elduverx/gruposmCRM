@@ -8,15 +8,16 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { getProperties } from '../properties/actions';
-import { getZones, createZone, Zone, updateZone, deleteZone } from './actions';
+import { getZones, createZone, Zone, updateZone, deleteZone, getPropertiesInZone, getZoneNewsAndAssignments } from './actions';
 import { updateProperty } from '../properties/actions';
 import { Property } from '@/types/property';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/common/SearchBar';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 
 // Importar el mapa dinámicamente para evitar errores de SSR
 const ZonesMap = dynamic(() => import('@/components/map/ZonesMap'), {
@@ -148,6 +149,7 @@ export default function ZonesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [markerRefs, setMarkerRefs] = useState<{ [key: string]: any }>({});
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const [searchSuggestions, setSearchSuggestions] = useState<Array<{id: string, type: 'zone' | 'property' | 'address', name: string, description?: string, lat?: number, lng?: number}>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -158,6 +160,12 @@ export default function ZonesPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<any>(null);
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [zoneNews, setZoneNews] = useState<PropertyNews[]>([]);
+  const [zoneAssignments, setZoneAssignments] = useState<any[]>([]);
+  const [isLoadingNews, setIsLoadingNews] = useState(false);
+  const [zoneLocalizedProperties, setZoneLocalizedProperties] = useState<Property[]>([]);
+  const [zoneSearchTerm, setZoneSearchTerm] = useState('');
 
   // Filtrar propiedades y zonas basadas en el término de búsqueda
   const filteredProperties = useMemo(() => 
@@ -177,33 +185,82 @@ export default function ZonesPage() {
     [zones, searchTerm]
   );
 
+  // Filtrar propiedades, noticias y encargos basados en el término de búsqueda de la zona
+  const filteredZoneLocalizedProperties = useMemo(() => {
+    if (!zoneSearchTerm) return zoneLocalizedProperties;
+    
+    return zoneLocalizedProperties.filter(property => 
+      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneLocalizedProperties, zoneSearchTerm]);
+
+  const filteredZoneNews = useMemo(() => {
+    if (!zoneSearchTerm) return zoneNews;
+    
+    return zoneNews.filter(news => 
+      news.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.type.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.action.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneNews, zoneSearchTerm]);
+
+  const filteredZoneAssignments = useMemo(() => {
+    if (!zoneSearchTerm) return zoneAssignments;
+    
+    return zoneAssignments.filter(assignment => 
+      assignment.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      assignment.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      (assignment.client && assignment.client.name.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      assignment.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneAssignments, zoneSearchTerm]);
+
+  // Efecto para cargar datos cuando el componente se monta o cuando el usuario regresa a la página
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const [propertiesData, zonesData] = await Promise.all([
           getProperties(),
           getZones()
         ]);
-        
-        if (!propertiesData || propertiesData.length === 0) {
-          setError('No se encontraron inmuebles');
-          return;
-        }
-
-        const validProperties = filterValidProperties(propertiesData);
-        setProperties(validProperties);
+        setProperties(propertiesData);
         setZones(zonesData);
+        
+        // Cargar noticias de todas las zonas
+        const allNews = await Promise.all(
+          zonesData.map(zone => getZoneNewsAndAssignments(zone.id))
+        );
+        const flattenedNews = allNews.flatMap(result => result.news);
+        setZoneNews(flattenedNews);
+        
+        // Si hay una zona seleccionada, actualizar sus datos
+        if (selectedZoneId) {
+          const selectedZone = zonesData.find(zone => zone.id === selectedZoneId);
+          if (selectedZone) {
+            const { news, assignments } = await getZoneNewsAndAssignments(selectedZoneId);
+            setZoneNews(news);
+            setZoneAssignments(assignments);
+            
+            // Actualizar las propiedades localizadas
+            const localizedProps = getLocalizedPropertiesInSelectedZone();
+            setZoneLocalizedProperties(localizedProps);
+          }
+        }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error fetching data:', error);
         setError('Error al cargar los datos');
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, []);
+    fetchData();
+  }, [pathname]); // Se ejecuta cuando cambia la ruta
 
   const handleZoneCreated = (coordinates: { lat: number; lng: number }[]) => {
     setZoneCoordinates(coordinates);
@@ -291,6 +348,63 @@ export default function ZonesPage() {
   const handleZoneClick = (zone: Zone) => {
     setSelectedZoneId(zone.id);
     setEditingZone(zone);
+    
+    // Cargar las noticias de la zona seleccionada
+    setIsLoadingNews(true);
+    getZoneNewsAndAssignments(zone.id)
+      .then(({ news, assignments }) => {
+        setZoneNews(news);
+        setZoneAssignments(assignments);
+        
+        // Actualizar las propiedades localizadas
+        const localizedProps = getLocalizedPropertiesInSelectedZone();
+        console.log('Propiedades localizadas:', localizedProps.length, localizedProps);
+        
+        // Depuración: Verificar todas las propiedades en la zona
+        const allPropsInZone = getPropertiesInSelectedZone();
+        console.log('Todas las propiedades en la zona:', allPropsInZone.length);
+        
+        // Depuración: Verificar propiedades con zoneId igual a selectedZoneId
+        const propsWithZoneId = properties.filter(p => p.zoneId === zone.id);
+        console.log('Propiedades con zoneId igual a selectedZoneId:', propsWithZoneId.length);
+        console.log('Propiedades con zoneId y localizadas:', 
+          propsWithZoneId.filter(p => p.isLocated === true || p.isLocated === "true").length
+        );
+        
+        console.log('Propiedades con isLocated=true:', allPropsInZone.filter(p => p.isLocated === true).length);
+        console.log('Propiedades con isLocated="true":', allPropsInZone.filter(p => p.isLocated === "true").length);
+        console.log('Propiedades con isLocated=false:', allPropsInZone.filter(p => p.isLocated === false).length);
+        console.log('Propiedades con isLocated undefined:', allPropsInZone.filter(p => p.isLocated === undefined).length);
+        
+        // Depuración: Verificar el estado de las propiedades
+        console.log('Propiedades con status=SALE:', allPropsInZone.filter(p => p.status === 'SALE').length);
+        console.log('Propiedades con status=RENT:', allPropsInZone.filter(p => p.status === 'RENT').length);
+        console.log('Propiedades con status undefined:', allPropsInZone.filter(p => p.status === undefined).length);
+        
+        // Depuración: Verificar propiedades que cumplen ambas condiciones
+        console.log('Propiedades localizadas y activas:', 
+          allPropsInZone.filter(p => 
+            (p.isLocated === true || p.isLocated === "true") && 
+            (p.status === 'SALE' || p.status === 'RENT')
+          ).length
+        );
+        
+        // Asegurarse de que las propiedades localizadas tengan todos los datos necesarios
+        const localizedPropsWithDetails = localizedProps.map(prop => {
+          // Buscar la propiedad completa en el array de propiedades
+          const fullProperty = properties.find(p => p.id === prop.id);
+          return fullProperty || prop;
+        });
+        
+        setZoneLocalizedProperties(localizedPropsWithDetails);
+      })
+      .catch(error => {
+        console.error('Error loading zone news and assignments:', error);
+        toast.error('Error al cargar las noticias y encargos de la zona');
+      })
+      .finally(() => {
+        setIsLoadingNews(false);
+      });
   };
 
   const handlePolygonEdited = async (zone: Zone, newCoordinates: { lat: number; lng: number }[]) => {
@@ -316,7 +430,64 @@ export default function ZonesPage() {
     const selectedZone = zones.find(zone => zone.id === selectedZoneId);
     if (!selectedZone) return filteredProperties;
     
-    return filteredProperties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
+    // Filtrar propiedades que están dentro de la zona seleccionada
+    const propertiesInZone = filteredProperties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
+    
+    // También incluir propiedades que tienen zoneId igual a selectedZoneId
+    const propertiesWithZoneId = filteredProperties.filter(property => property.zoneId === selectedZoneId);
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProperties = [...propertiesInZone];
+    propertiesWithZoneId.forEach(property => {
+      if (!combinedProperties.some(p => p.id === property.id)) {
+        combinedProperties.push(property);
+      }
+    });
+    
+    return combinedProperties;
+  };
+
+  // Obtener las propiedades con noticias en la zona seleccionada
+  const getPropertiesWithNewsInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Obtener las noticias de la zona seleccionada
+    const zoneNewsItems = zoneNews.filter(news => news.property.zoneId === selectedZoneId);
+    
+    // Obtener IDs únicos de propiedades con noticias
+    const propertyIdsWithNews = [...new Set(zoneNewsItems.map(news => news.propertyId))];
+    
+    // Obtener las propiedades completas
+    return properties.filter(property => propertyIdsWithNews.includes(property.id));
+  };
+
+  // Obtener las propiedades localizadas en la zona seleccionada
+  const getLocalizedPropertiesInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Filtrar propiedades que están en la zona seleccionada y están localizadas
+    const propertiesInZone = getPropertiesInSelectedZone();
+    
+    // Filtrar propiedades que están localizadas
+    const localizedProps = propertiesInZone.filter(property => {
+      return property.isLocated === true || property.isLocated === "true";
+    });
+    
+    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
+    const propsWithZoneId = properties.filter(property => 
+      property.zoneId === selectedZoneId && 
+      (property.isLocated === true || property.isLocated === "true")
+    );
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProps = [...localizedProps];
+    propsWithZoneId.forEach(property => {
+      if (!combinedProps.some(p => p.id === property.id)) {
+        combinedProps.push(property);
+      }
+    });
+    
+    return combinedProps;
   };
 
   // Cerrar sugerencias al hacer clic fuera
@@ -482,6 +653,11 @@ export default function ZonesPage() {
     }
   };
 
+  // Función para navegar a la página de detalles de una propiedad
+  const navigateToProperty = (propertyId: string) => {
+    router.push(`/dashboard/properties/${propertyId}`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -642,6 +818,11 @@ export default function ZonesPage() {
                           )}
                         </div>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {zoneNews.filter(news => news.property.zoneId === zone.id).length} noticias
+                        </span>
+                      </div>
                       <div className="flex space-x-3">
                         <button
                           onClick={(e) => {
@@ -733,6 +914,183 @@ export default function ZonesPage() {
               }}
               initialData={editingZone || undefined}
             />
+          </div>
+        </div>
+      )}
+
+      {selectedZoneId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">
+                {zones.find(z => z.id === selectedZoneId)?.name}
+              </h2>
+              <button
+                onClick={() => setSelectedZoneId(null)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <span className="sr-only">Cerrar</span>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Barra de búsqueda para filtrar contenido dentro de la zona */}
+            <div className="mb-6">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={zoneSearchTerm}
+                  onChange={(e) => setZoneSearchTerm(e.target.value)}
+                  placeholder="Buscar propiedades, noticias o encargos en esta zona..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+                {zoneSearchTerm && (
+                  <button
+                    onClick={() => setZoneSearchTerm('')}
+                    className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {isLoadingNews ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium text-blue-800">Propiedades</h3>
+                    <p className="text-3xl font-bold text-blue-600">{getPropertiesInSelectedZone().length}</p>
+                    <p className="text-sm text-blue-600">Total en esta zona</p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium text-purple-800">Propiedades con noticias</h3>
+                    <p className="text-3xl font-bold text-purple-600">{filteredZoneNews.length}</p>
+                    <p className="text-sm text-purple-600">Inmuebles con noticias activas</p>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium text-orange-800">Encargos</h3>
+                    <p className="text-3xl font-bold text-orange-600">{filteredZoneAssignments.length}</p>
+                    <p className="text-sm text-orange-600">Total encargos en esta zona</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Columna izquierda: Propiedades con noticias */}
+                  <div className="bg-white border rounded-lg shadow-sm p-4">
+                    <h3 className="text-lg font-medium mb-4 text-purple-800">Propiedades con noticias</h3>
+                    {filteredZoneNews.length === 0 ? (
+                      <p className="text-gray-500">No hay propiedades con noticias en esta zona</p>
+                    ) : (
+                      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                        {filteredZoneNews.map(news => {
+                          const property = news.property;
+                          return (
+                            <div 
+                              key={news.id} 
+                              className="p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors"
+                              onClick={() => navigateToProperty(property.id)}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">{property.address}</h4>
+                                  <p className="text-sm text-gray-600">{property.population}</p>
+                                </div>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                  {news.type} - {news.action}
+                                </span>
+                              </div>
+                              <div className="mt-2">
+                                <div className="text-sm">
+                                  <span className="font-medium">Prioridad: </span>
+                                  <span className={`${
+                                    news.priority === 'HIGH' ? 'text-red-600' : 'text-green-600'
+                                  }`}>
+                                    {news.priority === 'HIGH' ? 'Alta' : 'Baja'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(news.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="mt-3 text-right">
+                                <span className="text-sm text-blue-600 hover:text-blue-800">
+                                  Ver detalles →
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Columna central: Encargos */}
+                  <div className="bg-white border rounded-lg shadow-sm p-4">
+                    <h3 className="text-lg font-medium mb-4 text-orange-800">Encargos en esta zona</h3>
+                    {filteredZoneAssignments.length === 0 ? (
+                      <p className="text-gray-500">No hay encargos en esta zona</p>
+                    ) : (
+                      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                        {filteredZoneAssignments.map(assignment => (
+                          <div 
+                            key={assignment.id} 
+                            className="p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => navigateToProperty(assignment.propertyId)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{assignment.property.address}</h4>
+                                <p className="text-sm text-gray-600">{assignment.property.population}</p>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                assignment.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
+                                assignment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {assignment.status === 'ACTIVE' ? 'Activo' : 
+                                 assignment.status === 'PENDING' ? 'Pendiente' : 
+                                 'Completado'}
+                              </span>
+                            </div>
+                            <div className="mt-2">
+                              <div className="text-sm">
+                                <span className="font-medium">Cliente: </span>
+                                <span>{assignment.client.name}</span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="font-medium">Tipo: </span>
+                                <span>{assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}</span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="font-medium">Precio: </span>
+                                <span>{assignment.price ? `${assignment.price}€` : 'No especificado'}</span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Creado: {new Date(assignment.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="mt-3 text-right">
+                              <span className="text-sm text-blue-600 hover:text-blue-800">
+                                Ver detalles →
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -151,4 +151,80 @@ export async function getPropertiesInZone(zoneId: string) {
     console.error('Error fetching properties in zone:', error);
     throw new Error('Error al cargar los inmuebles de la zona');
   }
+}
+
+export async function getZoneNewsAndAssignments(zoneId: string) {
+  try {
+    // Obtener las propiedades de la zona
+    const properties = await prisma.property.findMany({
+      where: { zoneId },
+      select: { id: true }
+    });
+
+    const propertyIds = properties.map(p => p.id);
+
+    // Obtener las noticias de las propiedades
+    const news = await prisma.propertyNews.findMany({
+      where: {
+        propertyId: {
+          in: propertyIds
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true,
+            zoneId: true
+          }
+        }
+      }
+    });
+
+    // Obtener los encargos de las propiedades
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        propertyId: {
+          in: propertyIds
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        },
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true
+          }
+        }
+      }
+    });
+
+    return {
+      news: news.map(item => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString()
+      })),
+      assignments: assignments.map(item => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        exclusiveUntil: item.exclusiveUntil.toISOString()
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching zone news and assignments:', error);
+    throw new Error('Error al cargar las noticias y encargos de la zona');
+  }
 } 
