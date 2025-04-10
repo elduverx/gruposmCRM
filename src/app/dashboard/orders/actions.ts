@@ -117,7 +117,17 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
         features: JSON.stringify(data.features),
         updatedAt: new Date(),
         type: data.operationType
-      } as unknown as Prisma.ClientRequestCreateInput,
+      } as unknown as {
+        clientId: string;
+        type: string;
+        bedrooms: number;
+        bathrooms: number;
+        minPrice: number;
+        maxPrice: number;
+        propertyType: string;
+        features: string;
+        updatedAt: Date;
+      },
       include: {
         Client: {
           select: {
