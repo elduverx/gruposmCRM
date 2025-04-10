@@ -31,6 +31,7 @@ interface MapWithDrawProps {
   onMarkerRefsUpdate: (refs: { [key: string]: L.Marker | null }) => void;
   setSelectedPropertyId: (id: string | null) => void;
   handleZoneClick: (zone: Zone) => void;
+  selectedLocation?: {lat: number, lng: number, name: string} | null;
 }
 
 const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
@@ -48,12 +49,14 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
   onDeleteZone,
   onMarkerRefsUpdate,
   setSelectedPropertyId,
-  handleZoneClick
+  handleZoneClick,
+  selectedLocation
 }, ref) => {
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const [icon, setIcon] = React.useState<L.Icon | undefined>(undefined);
   const router = useRouter();
+  const mapRef = useRef<L.Map | null>(null);
 
   // Cargar el icono solo en el cliente
   useEffect(() => {
@@ -91,12 +94,51 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
     }
   }, [selectedPropertyId]);
 
+  // Efecto para actualizar el centro del mapa cuando cambia
+  useEffect(() => {
+    if (mapRef.current && center) {
+      try {
+        mapRef.current.setView(center, zoom);
+      } catch (error) {
+        console.error('Error al actualizar el centro del mapa:', error);
+      }
+    }
+  }, [center, zoom]);
+
+  // Efecto para mostrar el popup de la ubicación seleccionada
+  useEffect(() => {
+    if (selectedLocation && markerRefs.current['selected-location']) {
+      setTimeout(() => {
+        try {
+          const marker = markerRefs.current['selected-location'];
+          if (marker && marker.openPopup) {
+            marker.openPopup();
+          }
+        } catch (error) {
+          console.error('Error al abrir el popup de la ubicación seleccionada:', error);
+        }
+      }, 300);
+    }
+  }, [selectedLocation]);
+
+  // Función para manejar la referencia del mapa
+  const handleMapRef = (map: L.Map | null) => {
+    if (map) {
+      mapRef.current = map;
+      // @ts-ignore - Ignorar el error de tipado para la referencia
+      if (ref) {
+        // @ts-ignore
+        ref.current = map;
+      }
+    }
+  };
+
   return (
     <MapContainer
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
-      ref={ref as React.RefObject<L.Map>}
+      ref={handleMapRef}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -253,6 +295,36 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
           </Marker>
         ) : null
       ))}
+
+      {/* Marcador para la ubicación seleccionada */}
+      {selectedLocation && (
+        <Marker
+          position={[selectedLocation.lat, selectedLocation.lng]}
+          icon={icon}
+          eventHandlers={{
+            click: () => {
+              // Abrir el popup al hacer clic en el marcador
+              const marker = markerRefs.current['selected-location'];
+              if (marker && marker.openPopup) {
+                marker.openPopup();
+              }
+            }
+          }}
+          ref={(ref) => {
+            if (ref) {
+              markerRefs.current['selected-location'] = ref;
+              onMarkerRefsUpdate(markerRefs.current);
+            }
+          }}
+        >
+          <Popup>
+            <div className="p-2">
+              <h3 className="font-semibold">Ubicación seleccionada</h3>
+              <p className="text-sm text-gray-600">{selectedLocation.name}</p>
+            </div>
+          </Popup>
+        </Marker>
+      )}
     </MapContainer>
   );
 });

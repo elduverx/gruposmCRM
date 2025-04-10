@@ -26,8 +26,10 @@ interface ZonesMapProps {
   onDeleteZone: (zone: Zone) => void;
   setSelectedPropertyId: (id: string | null) => void;
   handleZoneClick: (zone: Zone) => void;
-  handlePolygonEdited: (e: any) => void;
-  handlePolygonDeleted: (e: any) => void;
+  handlePolygonEdited?: (e: any) => void;
+  handlePolygonDeleted?: (e: any) => void;
+  onMarkerRefsUpdate?: (refs: { [key: string]: any }) => void;
+  selectedLocation?: {lat: number, lng: number, name: string} | null;
 }
 
 export default function ZonesMap({
@@ -46,14 +48,21 @@ export default function ZonesMap({
   setSelectedPropertyId,
   handleZoneClick,
   handlePolygonEdited,
-  handlePolygonDeleted
+  handlePolygonDeleted,
+  onMarkerRefsUpdate,
+  selectedLocation
 }: ZonesMapProps) {
   const [markerRefs, setMarkerRefs] = useState<{ [key: string]: any }>({});
   const [isClient, setIsClient] = useState(false);
+  const [mapKey, setMapKey] = useState(0);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    setMapKey(prev => prev + 1);
+  }, [center, zoom]);
 
   if (!isClient) {
     return <div className="h-full w-full bg-gray-100 animate-pulse" />;
@@ -62,6 +71,7 @@ export default function ZonesMap({
   return (
     <div className="h-full w-full">
       <MapWithDraw
+        key={mapKey}
         center={center}
         zoom={zoom}
         properties={properties}
@@ -77,6 +87,7 @@ export default function ZonesMap({
         onMarkerRefsUpdate={setMarkerRefs}
         setSelectedPropertyId={setSelectedPropertyId}
         handleZoneClick={handleZoneClick}
+        selectedLocation={selectedLocation}
       />
     </div>
   );
