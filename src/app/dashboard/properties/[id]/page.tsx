@@ -34,8 +34,16 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   
   // Convertir el tipo de priority de string a 'HIGH' | 'LOW' y las fechas a Date
   const typedNews = news.map(item => ({
-    ...item,
+    id: item.id,
+    propertyId: item.propertyId,
+    type: item.type,
+    action: item.action,
+    valuation: item.valuation,
     priority: item.priority as 'HIGH' | 'LOW',
+    responsible: item.responsible,
+    value: item.value,
+    precioSM: item.precioSM,
+    precioCliente: item.precioCliente,
     createdAt: new Date(item.createdAt),
     updatedAt: new Date(item.updatedAt),
     property: {
