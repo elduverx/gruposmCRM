@@ -34,7 +34,7 @@ const adminNavigation = [
   { name: 'Zonas', href: '/dashboard/zones', icon: MapIcon },
 ];
 
-const AppName = "CRM REAL ESTATE";
+const AppName = "GrupoSM CRM";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
