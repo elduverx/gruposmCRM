@@ -1,35 +1,49 @@
 import { Prisma } from '@prisma/client';
 
-export type PropertyNewsWithProperty = Omit<Prisma.PropertyNewsGetPayload<{
-  include: {
-    property: {
-      select: {
-        address: true;
-        population: true;
-      };
-    };
-  };
-}>, 'createdAt' | 'updatedAt'> & {
+export type PropertyNewsWithProperty = {
+  id: string;
+  type: string;
+  action: string;
+  valuation: string;
+  priority: string;
+  responsible: string;
+  value: number;
+  propertyId: string;
   createdAt: string;
   updatedAt: string;
-  valuation: string;
-  precioSM: number | null;
   precioCliente: number | null;
+  precioSM: number | null;
+  commissionType: string;
+  commissionValue: number;
+  property: {
+    address: string;
+    population: string;
+  };
 };
 
-export type PropertyNewsCreateInput = Omit<Prisma.PropertyNewsCreateInput, 'property'> & {
+export type PropertyNewsCreateInput = {
+  type: string;
+  action: string;
+  valuation: string;
+  priority: string;
+  responsible: string;
+  value: number;
   propertyId: string;
   precioSM?: number | null;
   precioCliente?: number | null;
+  commissionType?: string;
+  commissionValue?: number;
 };
 
-export type PropertyNewsUpdateInput = Omit<Prisma.PropertyNewsUpdateInput, 'property'> & {
+export type PropertyNewsUpdateInput = {
   type?: string;
   action?: string;
-  valuation?: boolean;
+  valuation?: string;
   priority?: string;
   responsible?: string;
   value?: number | null;
   precioSM?: number | null;
   precioCliente?: number | null;
+  commissionType?: string;
+  commissionValue?: number;
 }; 
