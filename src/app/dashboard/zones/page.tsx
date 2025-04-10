@@ -167,6 +167,73 @@ export default function ZonesPage() {
   const [zoneLocalizedProperties, setZoneLocalizedProperties] = useState<Property[]>([]);
   const [zoneSearchTerm, setZoneSearchTerm] = useState('');
 
+  // Obtener las propiedades dentro de la zona seleccionada
+  const getPropertiesInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
+    if (!selectedZone) return [];
+    
+    // Filtrar propiedades que están dentro de la zona seleccionada
+    const propertiesInZone = properties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
+    
+    // También incluir propiedades que tienen zoneId igual a selectedZoneId
+    const propertiesWithZoneId = properties.filter(property => property.zoneId === selectedZoneId);
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProperties = [...propertiesInZone];
+    propertiesWithZoneId.forEach(property => {
+      if (!combinedProperties.some(p => p.id === property.id)) {
+        combinedProperties.push(property);
+      }
+    });
+    
+    return combinedProperties;
+  };
+
+  // Obtener las propiedades con noticias en la zona seleccionada
+  const getPropertiesWithNewsInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Obtener las noticias de la zona seleccionada
+    const zoneNewsItems = zoneNews.filter(news => news.property.zoneId === selectedZoneId);
+    
+    // Obtener IDs únicos de propiedades con noticias
+    const propertyIdsWithNews = [...new Set(zoneNewsItems.map(news => news.propertyId))];
+    
+    // Obtener las propiedades completas
+    return properties.filter(property => propertyIdsWithNews.includes(property.id));
+  };
+
+  // Obtener las propiedades localizadas en la zona seleccionada
+  const getLocalizedPropertiesInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Filtrar propiedades que están en la zona seleccionada y están localizadas
+    const propertiesInZone = getPropertiesInSelectedZone();
+    
+    // Filtrar propiedades que están localizadas
+    const localizedProps = propertiesInZone.filter(property => {
+      return property.isLocated === true || property.isLocated === "true";
+    });
+    
+    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
+    const propsWithZoneId = properties.filter(property => 
+      property.zoneId === selectedZoneId && 
+      (property.isLocated === true || property.isLocated === "true")
+    );
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProps = [...localizedProps];
+    propsWithZoneId.forEach(property => {
+      if (!combinedProps.some(p => p.id === property.id)) {
+        combinedProps.push(property);
+      }
+    });
+    
+    return combinedProps;
+  };
+
   // Filtrar propiedades y zonas basadas en el término de búsqueda
   const filteredProperties = useMemo(() => 
     properties.filter(property => 
@@ -218,6 +285,21 @@ export default function ZonesPage() {
       assignment.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
     );
   }, [zoneAssignments, zoneSearchTerm]);
+
+  // Filtrar propiedades en la zona seleccionada basadas en el término de búsqueda
+  const filteredPropertiesInZone = useMemo(() => {
+    const propertiesInZone = getPropertiesInSelectedZone();
+    if (!zoneSearchTerm) return propertiesInZone;
+    
+    return propertiesInZone.filter(property => 
+      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      (property.ownerName && property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      (property.type && property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      (property.habitaciones && property.habitaciones.toString().includes(zoneSearchTerm)) ||
+      (property.metrosCuadrados && property.metrosCuadrados.toString().includes(zoneSearchTerm))
+    );
+  }, [selectedZoneId, zoneSearchTerm, properties]);
 
   // Efecto para cargar datos cuando el componente se monta o cuando el usuario regresa a la página
   useEffect(() => {
@@ -421,73 +503,6 @@ export default function ZonesPage() {
 
   const handlePolygonDeleted = async (zone: Zone) => {
     await handleDeleteZone(zone);
-  };
-
-  // Obtener las propiedades dentro de la zona seleccionada
-  const getPropertiesInSelectedZone = () => {
-    if (!selectedZoneId) return filteredProperties;
-    
-    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
-    if (!selectedZone) return filteredProperties;
-    
-    // Filtrar propiedades que están dentro de la zona seleccionada
-    const propertiesInZone = filteredProperties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
-    
-    // También incluir propiedades que tienen zoneId igual a selectedZoneId
-    const propertiesWithZoneId = filteredProperties.filter(property => property.zoneId === selectedZoneId);
-    
-    // Combinar ambos conjuntos de propiedades, eliminando duplicados
-    const combinedProperties = [...propertiesInZone];
-    propertiesWithZoneId.forEach(property => {
-      if (!combinedProperties.some(p => p.id === property.id)) {
-        combinedProperties.push(property);
-      }
-    });
-    
-    return combinedProperties;
-  };
-
-  // Obtener las propiedades con noticias en la zona seleccionada
-  const getPropertiesWithNewsInSelectedZone = () => {
-    if (!selectedZoneId) return [];
-    
-    // Obtener las noticias de la zona seleccionada
-    const zoneNewsItems = zoneNews.filter(news => news.property.zoneId === selectedZoneId);
-    
-    // Obtener IDs únicos de propiedades con noticias
-    const propertyIdsWithNews = [...new Set(zoneNewsItems.map(news => news.propertyId))];
-    
-    // Obtener las propiedades completas
-    return properties.filter(property => propertyIdsWithNews.includes(property.id));
-  };
-
-  // Obtener las propiedades localizadas en la zona seleccionada
-  const getLocalizedPropertiesInSelectedZone = () => {
-    if (!selectedZoneId) return [];
-    
-    // Filtrar propiedades que están en la zona seleccionada y están localizadas
-    const propertiesInZone = getPropertiesInSelectedZone();
-    
-    // Filtrar propiedades que están localizadas
-    const localizedProps = propertiesInZone.filter(property => {
-      return property.isLocated === true || property.isLocated === "true";
-    });
-    
-    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
-    const propsWithZoneId = properties.filter(property => 
-      property.zoneId === selectedZoneId && 
-      (property.isLocated === true || property.isLocated === "true")
-    );
-    
-    // Combinar ambos conjuntos de propiedades, eliminando duplicados
-    const combinedProps = [...localizedProps];
-    propsWithZoneId.forEach(property => {
-      if (!combinedProps.some(p => p.id === property.id)) {
-        combinedProps.push(property);
-      }
-    });
-    
-    return combinedProps;
   };
 
   // Cerrar sugerencias al hacer clic fuera
@@ -1077,6 +1092,87 @@ export default function ZonesPage() {
                               <p className="text-xs text-gray-500 mt-1">
                                 Creado: {new Date(assignment.createdAt).toLocaleDateString()}
                               </p>
+                            </div>
+                            <div className="mt-3 text-right">
+                              <span className="text-sm text-blue-600 hover:text-blue-800">
+                                Ver detalles →
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Nueva sección: Lista de inmuebles en la zona */}
+                <div className="mt-6">
+                  <div className="bg-white border rounded-lg shadow-sm p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium text-blue-800">Inmuebles en esta zona</h3>
+                     
+                    </div>
+                    {filteredPropertiesInZone.length === 0 ? (
+                      <p className="text-gray-500">
+                        {zoneSearchTerm 
+                          ? "No hay inmuebles que coincidan con la búsqueda en esta zona" 
+                          : "No hay inmuebles en esta zona"}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {filteredPropertiesInZone.map(property => (
+                          <div 
+                            key={property.id} 
+                            className={`p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors ${
+                              property.isLocated === true || property.isLocated === "true" ? 'border-green-300' : ''
+                            }`}
+                            onClick={() => navigateToProperty(property.id)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{property.address}</h4>
+                                <p className="text-sm text-gray-600">{property.population}</p>
+                              </div>
+                              <div className="flex flex-col items-end space-y-1">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
+                                  property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {property.status === 'SALE' ? 'Venta' : 
+                                   property.status === 'RENT' ? 'Alquiler' : 
+                                   'No especificado'}
+                                </span>
+                                {(property.isLocated === true || property.isLocated === "true") && (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                    Localizado
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <div className="text-sm">
+                                <span className="font-medium">Tipo: </span>
+                                <span>{property.type}</span>
+                              </div>
+                              {property.ownerName && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Propietario: </span>
+                                  <span>{property.ownerName}</span>
+                                </div>
+                              )}
+                              {property.habitaciones && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Habitaciones: </span>
+                                  <span>{property.habitaciones}</span>
+                                </div>
+                              )}
+                              {property.metrosCuadrados && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Metros: </span>
+                                  <span>{property.metrosCuadrados}m²</span>
+                                </div>
+                              )}
                             </div>
                             <div className="mt-3 text-right">
                               <span className="text-sm text-blue-600 hover:text-blue-800">
