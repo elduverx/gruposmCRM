@@ -39,8 +39,10 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     createdAt: new Date(item.createdAt),
     updatedAt: new Date(item.updatedAt),
     property: {
-      ...item.property,
-      id: item.propertyId
+      id: item.propertyId,
+      address: item.property.address,
+      population: item.property.population,
+      zoneId: property.zoneId || ''
     }
   }));
   

@@ -21,7 +21,7 @@ import {
 // Navegación común para todos los usuarios
 const commonNavigation = [
   { name: 'Inicio', href: '/dashboard', icon: HomeIcon },
-  { name: 'Propiedades', href: '/dashboard/properties', icon: BuildingOfficeIcon },
+  { name: 'Inmuebles', href: '/dashboard/properties', icon: BuildingOfficeIcon },
   { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
@@ -34,7 +34,7 @@ const adminNavigation = [
   { name: 'Zonas', href: '/dashboard/zones', icon: MapIcon },
 ];
 
-const AppName = "Grupo SM";
+const AppName = "CRM REAL ESTATE";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);

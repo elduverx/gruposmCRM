@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createProperty, updateProperty, getProperty } from '../actions';
 import { Property } from '@/types/property';
 import dynamic from 'next/dynamic';
@@ -32,6 +32,7 @@ const CATARROJA_COORDS = {
 
 export default function PropertyFormPage({ params }: { params: { id?: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -75,6 +76,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     loadZones();
   }, []);
 
+  // Cargar datos de la propiedad si estamos editando
   useEffect(() => {
     const fetchProperty = async () => {
       if (params.id) {
@@ -93,6 +95,58 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
 
     fetchProperty();
   }, [params.id]);
+
+  // Cargar datos de la ubicación seleccionada desde la URL o localStorage
+  useEffect(() => {
+    const loadSelectedLocation = () => {
+      // Primero intentar obtener datos de la URL
+      const address = searchParams.get('address');
+      const lat = searchParams.get('lat');
+      const lng = searchParams.get('lng');
+      
+      if (address && lat && lng) {
+        console.log('Cargando datos desde URL:', { address, lat, lng });
+        setFormData(prev => ({
+          ...prev,
+          address: address,
+          latitude: parseFloat(lat),
+          longitude: parseFloat(lng)
+        }));
+        
+        // Asignar la zona automáticamente
+        assignZoneToCoordinates(parseFloat(lat), parseFloat(lng));
+        return;
+      }
+      
+      // Si no hay datos en la URL, intentar obtenerlos del localStorage
+      try {
+        const storedLocation = localStorage.getItem('selectedLocation');
+        if (storedLocation) {
+          const locationData = JSON.parse(storedLocation);
+          console.log('Cargando datos desde localStorage:', locationData);
+          
+          if (locationData.address && locationData.lat && locationData.lng) {
+            setFormData(prev => ({
+              ...prev,
+              address: locationData.address,
+              latitude: locationData.lat,
+              longitude: locationData.lng
+            }));
+            
+            // Asignar la zona automáticamente
+            assignZoneToCoordinates(locationData.lat, locationData.lng);
+            
+            // Limpiar el localStorage después de usarlo
+            localStorage.removeItem('selectedLocation');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading from localStorage:', error);
+      }
+    };
+    
+    loadSelectedLocation();
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

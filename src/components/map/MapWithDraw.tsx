@@ -125,7 +125,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
   const handleMapRef = (map: L.Map | null) => {
     if (map) {
       mapRef.current = map;
-      // @ts-ignore - Ignorar el error de tipado para la referencia
+      // @ts-ignore
       if (ref) {
         // @ts-ignore
         ref.current = map;
@@ -138,6 +138,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
+      // @ts-ignore - Ignorar el error de tipado para la referencia
       ref={handleMapRef}
     >
       <TileLayer

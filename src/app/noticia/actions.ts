@@ -12,6 +12,7 @@ export async function getAllNews(): Promise<PropertyNews[]> {
           id: true,
           address: true,
           population: true,
+          zoneId: true,
         },
       },
     },
@@ -24,7 +25,11 @@ export async function getAllNews(): Promise<PropertyNews[]> {
     ...item,
     valuation: item.valuation,
     createdAt: item.createdAt,
-    updatedAt: item.updatedAt
+    updatedAt: item.updatedAt,
+    property: {
+      ...item.property,
+      zoneId: item.property.zoneId || ''
+    }
   })) as PropertyNews[];
 }
 

@@ -626,6 +626,23 @@ export default function ZonesPage() {
     setSearchTerm('');
   };
 
+  // Función para navegar a la página de creación de inmuebles con la ubicación seleccionada
+  const navigateToNewProperty = () => {
+    if (selectedLocation) {
+      // Guardar la ubicación seleccionada en localStorage para que esté disponible en la página de creación
+      localStorage.setItem('selectedLocation', JSON.stringify({
+        ...selectedLocation,
+        // Asegurarse de que la dirección se guarde correctamente
+        address: selectedLocation.name,
+        // Añadir un timestamp para evitar problemas de caché
+        timestamp: new Date().getTime()
+      }));
+      
+      // Navegar a la página de creación de inmuebles con un parámetro de consulta
+      router.push(`/dashboard/properties/new?from=zones&address=${encodeURIComponent(selectedLocation.name)}&lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`);
+    }
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -718,7 +735,30 @@ export default function ZonesPage() {
             </button>
           </div>
         </div>
-        <div className="mt-4">
+        <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
+          <ZonesMap
+            ref={mapRef}
+            center={mapCenter}
+            zoom={mapZoom}
+            properties={filteredProperties}
+            zones={filteredZones}
+            newZoneColor={newZoneColor}
+            zoneCoordinates={zoneCoordinates}
+            onZoneCreated={handleZoneCreated}
+            onPropertyClick={onPropertyClick}
+            onZoneClick={handleZoneClick}
+            selectedPropertyId={selectedPropertyId}
+            onEditZone={handleEditZone}
+            onDeleteZone={handleDeleteZone}
+            setSelectedPropertyId={setSelectedPropertyId}
+            handleZoneClick={handleZoneClick}
+            onMarkerRefsUpdate={setMarkerRefs}
+            selectedLocation={selectedLocation}
+          />
+        </div>
+
+        {/* Barra de búsqueda movida debajo del mapa */}
+        <div className="mx-4 mt-4">
           <form onSubmit={handleSearchSubmit} className="relative rounded-md shadow-sm max-w-md" ref={searchRef}>
             <input
               type="text"
@@ -765,31 +805,36 @@ export default function ZonesPage() {
               </div>
             )}
           </form>
+          
+          {/* Botón para crear inmueble desde la ubicación seleccionada */}
+          {selectedLocation && (
+            <div className="mt-3 flex items-center justify-between bg-blue-50 p-3 rounded-md border border-blue-200">
+              <div className="flex items-center">
+                <div className="bg-blue-100 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Ubicación seleccionada</p>
+                  <p className="text-xs text-blue-600 truncate max-w-xs">{selectedLocation.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={navigateToNewProperty}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Crear inmueble
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
-          <ZonesMap
-            ref={mapRef}
-            center={mapCenter}
-            zoom={mapZoom}
-            properties={filteredProperties}
-            zones={filteredZones}
-            newZoneColor={newZoneColor}
-            zoneCoordinates={zoneCoordinates}
-            onZoneCreated={handleZoneCreated}
-            onPropertyClick={onPropertyClick}
-            onZoneClick={handleZoneClick}
-            selectedPropertyId={selectedPropertyId}
-            onEditZone={handleEditZone}
-            onDeleteZone={handleDeleteZone}
-            setSelectedPropertyId={setSelectedPropertyId}
-            handleZoneClick={handleZoneClick}
-            onMarkerRefsUpdate={setMarkerRefs}
-            selectedLocation={selectedLocation}
-          />
-        </div>
-
-        <div className="flex-1 mx-4 mt-4 mb-4 bg-white rounded-2xl shadow-xl p-6 overflow-hidden relative z-0">
+        {/* Sección de zonas en formato horizontal */}
+        <div className="mx-4 mt-4 mb-4 bg-white rounded-2xl shadow-xl p-6 overflow-hidden relative z-0">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Zonas</h1>
             <div className="text-sm text-gray-500">
@@ -797,119 +842,152 @@ export default function ZonesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(40vh-8rem)] overflow-y-auto pr-2">
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">
-                  {filteredZones.length}
-                </span>
-                Lista de Zonas
-              </h2>
-              {filteredZones.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? 'No se encontraron zonas que coincidan con la búsqueda.' : 'No hay zonas creadas. Dibuja un polígono en el mapa para crear una.'}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredZones.map((zone) => (
-                    <div 
-                      key={zone.id} 
-                      className={`flex items-center justify-between p-5 rounded-xl transition-colors duration-200 border shadow-sm cursor-pointer ${
-                        selectedZoneId === zone.id 
-                          ? 'bg-blue-50 border-blue-300' 
-                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                      }`}
-                      onClick={() => handleZoneClick(zone)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div 
-                          className="w-6 h-6 rounded-full shadow-sm" 
-                          style={{ backgroundColor: zone.color }}
-                        />
-                        <div>
-                          <h3 className="font-medium text-lg">{zone.name}</h3>
-                          {zone.description && (
-                            <p className="text-sm text-gray-600 mt-1">{zone.description}</p>
-                          )}
-                        </div>
+          {/* Zonas en formato horizontal */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">
+                {filteredZones.length}
+              </span>
+              Lista de Zonas
+            </h2>
+            {filteredZones.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm ? 'No se encontraron zonas que coincidan con la búsqueda.' : 'No hay zonas creadas. Dibuja un polígono en el mapa para crear una.'}
+              </div>
+            ) : (
+              <div className="flex overflow-x-auto pb-4 space-x-4">
+                {filteredZones.map((zone) => (
+                  <div 
+                    key={zone.id} 
+                    className={`flex-shrink-0 w-64 p-5 rounded-xl transition-colors duration-200 border shadow-sm cursor-pointer ${
+                      selectedZoneId === zone.id 
+                        ? 'bg-blue-50 border-blue-300' 
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                    onClick={() => handleZoneClick(zone)}
+                  >
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div 
+                        className="w-6 h-6 rounded-full shadow-sm" 
+                        style={{ backgroundColor: zone.color }}
+                      />
+                      <div>
+                        <h3 className="font-medium text-lg">{zone.name}</h3>
+                        {zone.description && (
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">{zone.description}</p>
+                        )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {zoneNews.filter(news => news.property.zoneId === zone.id).length} noticias
-                        </span>
-                      </div>
-                      <div className="flex space-x-3">
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {zoneNews.filter(news => news.property.zoneId === zone.id).length} noticias
+                      </span>
+                      <div className="flex space-x-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditZone(zone);
                           }}
-                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 font-medium"
+                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
                         >
-                          Editar
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteZone(zone);
                           }}
-                          className="text-red-600 hover:text-red-800 transition-colors duration-200 font-medium"
+                          className="text-red-600 hover:text-red-800 transition-colors duration-200"
                         >
-                          Eliminar
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
-                  {selectedZoneId ? getPropertiesInSelectedZone().length : filteredProperties.length}
-                </span>
-                {selectedZoneId 
-                  ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
-                  : 'Todas las Propiedades'}
-                {selectedZoneId && (
-                  <button
-                    onClick={() => setSelectedZoneId(null)}
-                    className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+          {/* Propiedades en formato de tarjetas */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
+                {selectedZoneId ? getPropertiesInSelectedZone().length : filteredProperties.length}
+              </span>
+              {selectedZoneId 
+                ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
+                : 'Todas las Propiedades'}
+              {selectedZoneId && (
+                <button
+                  onClick={() => setSelectedZoneId(null)}
+                  className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Ver todas
+                </button>
+              )}
+            </h2>
+            {selectedZoneId && getPropertiesInSelectedZone().length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No hay propiedades dentro de esta zona.
+              </div>
+            ) : filteredProperties.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm ? 'No se encontraron propiedades que coincidan con la búsqueda.' : 'No hay propiedades asignadas a zonas.'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {(selectedZoneId ? getPropertiesInSelectedZone() : filteredProperties).map((property) => (
+                  <div 
+                    key={property.id} 
+                    className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
                   >
-                    Ver todas
-                  </button>
-                )}
-              </h2>
-              {selectedZoneId && getPropertiesInSelectedZone().length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No hay propiedades dentro de esta zona.
-                </div>
-              ) : filteredProperties.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? 'No se encontraron propiedades que coincidan con la búsqueda.' : 'No hay propiedades asignadas a zonas.'}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {(selectedZoneId ? getPropertiesInSelectedZone() : filteredProperties).map((property) => (
-                    <div key={property.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm">
-                      <div>
-                        <h3 className="font-medium text-lg">{property.address}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{property.population}</p>
+                    <div className="p-4">
+                      <h3 className="font-medium text-lg line-clamp-1">{property.address}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{property.population}</p>
+                      
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {property.status && (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
+                            property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {property.status === 'SALE' ? 'Venta' : 
+                             property.status === 'RENT' ? 'Alquiler' : 
+                             'No especificado'}
+                          </span>
+                        )}
+                        {(property.isLocated === true || property.isLocated === "true") && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                            Localizado
+                          </span>
+                        )}
                       </div>
-                      <div className="flex space-x-3">
+                      
+                      <div className="mt-3 flex justify-between items-center">
                         <button
                           onClick={() => onPropertyClick(property)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 font-medium"
+                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
                         >
-                          Ver
+                          Ver en mapa
+                        </button>
+                        <button
+                          onClick={() => navigateToProperty(property.id)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
+                        >
+                          Ver detalles
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
