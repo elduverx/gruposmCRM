@@ -21,7 +21,24 @@ export async function getAllNews(): Promise<PropertyNews[]> {
     },
   });
 
-  return news.map(item => ({
+  return news.map((item: {
+    id: string;
+    type: string;
+    action: string;
+    valuation: string;
+    priority: string;
+    responsible: string;
+    value: number;
+    propertyId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    property: {
+      id: string;
+      address: string;
+      population: string;
+      zoneId: string | null;
+    };
+  }) => ({
     ...item,
     valuation: item.valuation,
     createdAt: item.createdAt,
