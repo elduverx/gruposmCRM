@@ -34,24 +34,8 @@ interface MapWithDrawProps {
   selectedLocation?: {lat: number, lng: number, name: string} | null;
 }
 
-const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
-  center,
-  zoom,
-  properties,
-  zones,
-  newZoneColor,
-  zoneCoordinates,
-  onZoneCreated,
-  onPropertyClick,
-  onZoneClick,
-  selectedPropertyId,
-  onEditZone,
-  onDeleteZone,
-  onMarkerRefsUpdate,
-  setSelectedPropertyId,
-  handleZoneClick,
-  selectedLocation
-}, ref) => {
+// @ts-ignore
+const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const [icon, setIcon] = React.useState<L.Icon | undefined>(undefined);
@@ -75,42 +59,42 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
 
   // Efecto para notificar al componente padre cuando los marcadores cambian
   useEffect(() => {
-    onMarkerRefsUpdate(markerRefs.current);
-  }, [properties, onMarkerRefsUpdate]);
+    props.onMarkerRefsUpdate(markerRefs.current);
+  }, [props.properties, props.onMarkerRefsUpdate]);
 
   // Efecto para abrir el popup cuando se selecciona una propiedad
   useEffect(() => {
-    if (selectedPropertyId && markerRefs.current[selectedPropertyId]) {
+    if (props.selectedPropertyId && markerRefs.current[props.selectedPropertyId as string]) {
       setTimeout(() => {
         try {
-          const marker = markerRefs.current[selectedPropertyId];
+          const marker = markerRefs.current[props.selectedPropertyId as string];
           if (marker && marker.openPopup) {
             marker.openPopup();
           }
         } catch (error) {
-          console.error(`Error al abrir el popup para la propiedad ${selectedPropertyId}:`, error);
+          console.error(`Error al abrir el popup para la propiedad ${props.selectedPropertyId}:`, error);
         }
       }, 300);
     }
-  }, [selectedPropertyId]);
+  }, [props.selectedPropertyId]);
 
   // Efecto para actualizar el centro del mapa cuando cambia
   useEffect(() => {
-    if (mapRef.current && center) {
+    if (mapRef.current && props.center) {
       try {
-        mapRef.current.setView(center, zoom);
+        mapRef.current.setView(props.center, props.zoom);
       } catch (error) {
         console.error('Error al actualizar el centro del mapa:', error);
       }
     }
-  }, [center, zoom]);
+  }, [props.center, props.zoom]);
 
   // Efecto para mostrar el popup de la ubicación seleccionada
   useEffect(() => {
-    if (selectedLocation && markerRefs.current['selected-location']) {
+    if (props.selectedLocation && markerRefs.current['selected-location']) {
       setTimeout(() => {
         try {
-          const marker = markerRefs.current['selected-location'];
+          const marker = markerRefs.current['selected-location' as string];
           if (marker && marker.openPopup) {
             marker.openPopup();
           }
@@ -119,7 +103,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
         }
       }, 300);
     }
-  }, [selectedLocation]);
+  }, [props.selectedLocation]);
 
   // Función para manejar la referencia del mapa
   const handleMapRef = (map: L.Map | null) => {
@@ -135,8 +119,8 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
 
   return (
     <MapContainer
-      center={center}
-      zoom={zoom}
+      center={props.center}
+      zoom={props.zoom}
       style={{ height: '100%', width: '100%' }}
       // @ts-ignore - Ignorar el error de tipado para la referencia
       ref={handleMapRef}
@@ -157,11 +141,11 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
               lng: latLng.lng
             });
           });
-          onZoneCreated(coordinates);
+          props.onZoneCreated(coordinates);
         }}
       />
 
-      {zones.map((zone) => (
+      {props.zones.map((zone) => (
         <Polygon
           key={zone.id}
           positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
@@ -172,10 +156,10 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
           }}
           eventHandlers={{
             click: () => {
-              handleZoneClick(zone);
+              props.handleZoneClick(zone);
             },
             dblclick: () => {
-              onEditZone(zone);
+              props.onEditZone(zone);
             }
           }}
         >
@@ -189,7 +173,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEditZone(zone);
+                    props.onEditZone(zone);
                   }}
                   className="text-sm text-indigo-600 hover:text-indigo-800"
                 >
@@ -198,7 +182,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteZone(zone);
+                    props.onDeleteZone(zone);
                   }}
                   className="text-sm text-red-600 hover:text-red-800"
                 >
@@ -210,19 +194,19 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
         </Polygon>
       ))}
       
-      {zoneCoordinates.length > 0 && (
+      {props.zoneCoordinates.length > 0 && (
         <Polygon
-          positions={zoneCoordinates.map(coord => [coord.lat, coord.lng])}
+          positions={props.zoneCoordinates.map(coord => [coord.lat, coord.lng])}
           pathOptions={{ 
-            color: newZoneColor, 
-            fillColor: newZoneColor, 
+            color: props.newZoneColor, 
+            fillColor: props.newZoneColor, 
             fillOpacity: 0.2,
             weight: 2
           }}
         />
       )}
       
-      {properties.map((property) => (
+      {props.properties.map((property) => (
         property.latitude && property.longitude ? (
           <Marker
             key={property.id}
@@ -230,13 +214,13 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
             icon={icon}
             ref={(ref) => {
               if (ref) {
-                markerRefs.current[property.id] = ref;
-                onMarkerRefsUpdate(markerRefs.current);
+                markerRefs.current[property.id as string] = ref;
+                props.onMarkerRefsUpdate(markerRefs.current);
               }
             }}
             eventHandlers={{
               click: () => {
-                setSelectedPropertyId(property.id);
+                props.setSelectedPropertyId(property.id);
               }
             }}
           >
@@ -298,14 +282,14 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
       ))}
 
       {/* Marcador para la ubicación seleccionada */}
-      {selectedLocation && (
+      {props.selectedLocation && (
         <Marker
-          position={[selectedLocation.lat, selectedLocation.lng]}
+          position={[props.selectedLocation.lat, props.selectedLocation.lng]}
           icon={icon}
           eventHandlers={{
             click: () => {
               // Abrir el popup al hacer clic en el marcador
-              const marker = markerRefs.current['selected-location'];
+              const marker = markerRefs.current['selected-location' as string];
               if (marker && marker.openPopup) {
                 marker.openPopup();
               }
@@ -313,15 +297,15 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>(({
           }}
           ref={(ref) => {
             if (ref) {
-              markerRefs.current['selected-location'] = ref;
-              onMarkerRefsUpdate(markerRefs.current);
+              markerRefs.current['selected-location' as string] = ref;
+              props.onMarkerRefsUpdate(markerRefs.current);
             }
           }}
         >
           <Popup>
             <div className="p-2">
               <h3 className="font-semibold">Ubicación seleccionada</h3>
-              <p className="text-sm text-gray-600">{selectedLocation.name}</p>
+              <p className="text-sm text-gray-600">{props.selectedLocation.name}</p>
             </div>
           </Popup>
         </Marker>

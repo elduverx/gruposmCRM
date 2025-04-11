@@ -154,10 +154,16 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     setError(null);
 
     try {
+      // Asegurarse de que el zoneId esté incluido en los datos
+      const propertyData = {
+        ...formData,
+        zoneId: formData.zoneId || null
+      };
+
       if (params.id) {
-        await updateProperty(params.id, formData);
+        await updateProperty(params.id, propertyData);
       } else {
-        await createProperty(formData);
+        await createProperty(propertyData);
       }
       router.push('/dashboard/properties');
     } catch (error) {
@@ -230,19 +236,22 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
 
   // Función para asignar la zona automáticamente basada en las coordenadas
   const assignZoneToCoordinates = (lat: number, lng: number) => {
-    if (zones.length === 0) return;
+    if (zones.length === 0) {
+      console.log('No hay zonas disponibles para asignar');
+      return;
+    }
 
     const point = { lat, lng };
     const zone = findZoneForCoordinates(point, zones);
     
     if (zone) {
+      console.log(`Asignando propiedad a la zona: ${zone.name} (ID: ${zone.id})`);
       setFormData(prev => ({
         ...prev,
         zoneId: zone.id
       }));
-      console.log(`Propiedad asignada a la zona: ${zone.name}`);
     } else {
-      console.log('No se encontró una zona para las coordenadas proporcionadas');
+      console.log('No se encontró una zona para las coordenadas proporcionadas:', point);
     }
   };
 

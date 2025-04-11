@@ -38,7 +38,7 @@ export async function getAddressFromCoordinates(lat: number, lng: number) {
     const city = data.address.city || data.address.town || data.address.village;
 
     // Construir la dirección completa
-    const addressParts = [];
+    const addressParts: string[] = [];
     if (street) {
       addressParts.push(street);
       if (number) {

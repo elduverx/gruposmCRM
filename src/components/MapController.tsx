@@ -15,14 +15,15 @@ export default function MapController({ center, zoom, onMapClick }: MapControlle
 
   useEffect(() => {
     if (!mapRef.current) {
-      mapRef.current = L.map('map').setView(center, zoom);
+      const map = L.map('map').setView(center, zoom);
+      mapRef.current = map;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
-      }).addTo(mapRef.current);
+      }).addTo(map);
 
       if (onMapClick) {
-        mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+        map.on('click', (e: L.LeafletMouseEvent) => {
           onMapClick(e.latlng.lat, e.latlng.lng);
         });
       }
