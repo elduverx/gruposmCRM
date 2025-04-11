@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createPropertyNews, getPropertyNews, createAssignment, getAssignmentsByPropertyId } from '../actions';
-import { PlusIcon, XMarkIcon, NewspaperIcon, ClipboardDocumentListIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { CheckIcon } from '@heroicons/react/24/solid';
+import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createAssignment, getAssignmentsByPropertyId, getPropertyNews } from '../actions';
+import { PlusIcon, CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
@@ -428,7 +427,7 @@ export default function PropertyDetailClient({
                 className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
                 title="Crear noticia"
               >
-                <NewspaperIcon className="h-5 w-5" />
+                <PlusIcon className="h-5 w-5" />
               </button>
             </div>
             
@@ -489,7 +488,7 @@ export default function PropertyDetailClient({
                   className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
                   title="Crear encargo"
                 >
-                  <ClipboardDocumentListIcon className="h-5 w-5" />
+                  <PlusIcon className="h-5 w-5" />
                 </button>
               </div>
               
@@ -535,13 +534,13 @@ export default function PropertyDetailClient({
                             onClick={() => handleEditAssignment(assignment)}
                             className="text-indigo-600 hover:text-indigo-900"
                           >
-                            <PencilIcon className="h-5 w-5" />
+                            <PlusIcon className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => handleDeleteAssignment(assignment.id)}
                             className="text-red-600 hover:text-red-900"
                           >
-                            <TrashIcon className="h-5 w-5" />
+                            <PlusIcon className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
@@ -573,7 +572,7 @@ export default function PropertyDetailClient({
                 onClick={() => setIsActivityFormOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <PlusIcon className="h-6 w-6" />
               </button>
             </div>
             
@@ -604,7 +603,7 @@ export default function PropertyDetailClient({
                 onClick={() => setIsDPVFormOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <PlusIcon className="h-6 w-6" />
               </button>
             </div>
             
@@ -642,7 +641,7 @@ export default function PropertyDetailClient({
                 onClick={() => setIsNewsFormOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <PlusIcon className="h-6 w-6" />
               </button>
             </div>
             
@@ -673,7 +672,7 @@ export default function PropertyDetailClient({
                 onClick={() => setIsAssignmentFormOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <PlusIcon className="h-6 w-6" />
               </button>
             </div>
             

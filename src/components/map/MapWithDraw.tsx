@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from 'react-leaflet';
 import { Property } from '@/types/property';
 import { Zone } from '@/app/dashboard/zones/actions';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import DrawControl from './DrawControl';
 
 // Importar DrawControl dinámicamente para evitar errores de SSR
-const DrawControl = dynamic(() => import('@/components/map/DrawControl'), {
+const DrawControlDynamic = dynamic(() => import('@/components/map/DrawControl'), {
   ssr: false
 });
 

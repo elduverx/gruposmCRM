@@ -1,17 +1,16 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PencilIcon, TrashIcon, MapIcon } from '@heroicons/react/24/outline';
-import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, getDPVByPropertyId, createActivity } from './actions';
-import { Property, Activity, DPV, PropertyStatus, PropertyAction, PropertyType, OperationType } from '@/types/property';
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, createActivity } from './actions';
+import { Property, Activity } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import { getZones, updateZone, Zone } from '../zones/actions';
+import { getZones } from '../zones/actions';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-import ActivityForm from '@/components/ActivityForm';
 import { toast } from 'react-hot-toast';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 

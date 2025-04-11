@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DPV } from '@/types/property';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 

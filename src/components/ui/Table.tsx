@@ -3,13 +3,12 @@ import { cn } from '@/lib/utils';
 
 interface TableProps {
   children: ReactNode;
-  className?: string;
 }
 
-export default function Table({ children, className }: TableProps) {
+export default function Table({ children }: TableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className={cn('min-w-full divide-y divide-gray-200', className)}>
+      <table className={cn('min-w-full divide-y divide-gray-200')}>
         {children}
       </table>
     </div>
@@ -18,10 +17,9 @@ export default function Table({ children, className }: TableProps) {
 
 interface TableHeaderProps {
   children: ReactNode;
-  className?: string;
 }
 
-export function TableHeader({ children, className }: TableHeaderProps) {
+export function TableHeader({ children }: TableHeaderProps) {
   return (
     <thead className="bg-gray-50">
       <tr>{children}</tr>

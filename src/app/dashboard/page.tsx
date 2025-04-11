@@ -6,14 +6,10 @@ import {
   UserGroupIcon, 
   ClipboardDocumentListIcon, 
   NewspaperIcon, 
-  UsersIcon, 
   CalendarIcon, 
-  CheckCircleIcon, 
-  ChartBarIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  PlusIcon,
-  ChevronRightIcon
+  PlusIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
