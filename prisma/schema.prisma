@@ -3,7 +3,6 @@ generator client {
   previewFeatures = []
   enableTracing = false
   logLevel = "error"
-  output = "./node_modules/@prisma/client"
 }
 
 datasource db {

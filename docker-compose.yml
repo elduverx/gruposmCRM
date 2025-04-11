@@ -1,0 +1,38 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-b82a1ab5}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-databasesm}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-b82a1ab5}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://root:${MYSQL_ROOT_PASSWORD:-b82a1ab5}@db:3306/${MYSQL_DATABASE:-databasesm}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-here}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data: 

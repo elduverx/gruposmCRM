@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   /* config options here */
   reactStrictMode: true,
@@ -17,6 +19,36 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   output: 'standalone',
+  // Disable static page generation for routes that need database access
+  experimental: {
+    workerThreads: false,
+    cpus: 1
+  },
+  // Configure dynamic routes and disable static generation for database-dependent routes
+  async rewrites() {
+    return [
+      {
+        source: '/dashboard/:path*',
+        destination: '/dashboard/:path*',
+      },
+      {
+        source: '/noticia',
+        destination: '/noticia',
+      }
+    ]
+  },
+  // Disable static page generation for database-dependent routes
+  async generateStaticParams() {
+    return []
+  },
+  // Configure module resolution
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.join(__dirname, 'src'),
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig; 

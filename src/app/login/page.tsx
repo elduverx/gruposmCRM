@@ -15,11 +15,10 @@ export default function LoginPage() {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log('User is already authenticated, redirecting to dashboard');
+    if (!authLoading && isAuthenticated) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +26,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log('Attempting to login with email:', email);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -39,12 +37,10 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Login failed:', data.message);
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
-      console.log('Login successful, setting token and user data');
-      login(data.token, data.user);
+      await login(data.token, data.user);
     } catch (error) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'Error al iniciar sesión');
@@ -59,6 +55,10 @@ export default function LoginPage() {
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  if (isAuthenticated) {
+    return null;
   }
 
   return (

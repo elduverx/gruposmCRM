@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -36,54 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.role === 'ADMIN';
 
-  const fetchUserData = async (token: string) => {
-    try {
-      console.log('Fetching user data with token:', token.substring(0, 10) + '...');
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('User data fetched successfully:', userData);
-        setUser(userData);
-        return true;
-      } else if (response.status === 401) {
-        console.log('Token expired, attempting to refresh...');
-        // Token might be expired, try to refresh it
-        const refreshSuccess = await refreshToken();
-        if (refreshSuccess) {
-          console.log('Token refreshed successfully');
-          // If refresh was successful, try fetching user data again with the new token
-          const newToken = localStorage.getItem('token');
-          if (newToken) {
-            const retryResponse = await fetch('/api/auth/me', {
-              headers: {
-                'Authorization': `Bearer ${newToken}`
-              }
-            });
-            
-            if (retryResponse.ok) {
-              const userData = await retryResponse.json();
-              console.log('User data fetched successfully after token refresh');
-              setUser(userData);
-              return true;
-            }
-          }
-        } else {
-          console.log('Token refresh failed');
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      return false;
-    }
-  };
-
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setUser(null);
     setLoading(false);
@@ -93,18 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearInterval(window.refreshInterval);
     }
     
-    // Redirigir al login
     router.push('/login');
-  };
+  }, [router]);
 
-  const refreshToken = async (): Promise<boolean> => {
+  const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
-      console.log('Attempting to refresh token');
       const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('No token found for refresh');
-        return false;
-      }
+      if (!token) return false;
 
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -115,29 +63,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Token refreshed successfully');
         localStorage.setItem('token', data.token);
         return true;
       }
 
-      console.log('Token refresh failed');
       return false;
     } catch (error) {
       console.error('Error refreshing token:', error);
       return false;
     }
-  };
+  }, []);
+
+  const fetchUserData = useCallback(async (token: string) => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        return true;
+      } 
+      
+      if (response.status === 401) {
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          const newToken = localStorage.getItem('token');
+          if (newToken) {
+            const retryResponse = await fetch('/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${newToken}`
+              }
+            });
+            
+            if (retryResponse.ok) {
+              const userData = await retryResponse.json();
+              setUser(userData);
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return false;
+    }
+  }, [refreshToken]);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await fetchUserData(token);
-        } catch (error) {
-          console.error('Error al inicializar la autenticación:', error);
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const success = await fetchUserData(token);
+        if (!success) {
           handleLogout();
         }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        handleLogout();
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -145,27 +139,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserData, handleLogout]);
 
   useEffect(() => {
-    if (user) {
-      // Refrescar el token cada 14 minutos
-      const interval = setInterval(() => {
-        refreshToken();
-      }, 14 * 60 * 1000);
-      
-      window.refreshInterval = interval;
-      
-      return () => {
-        clearInterval(interval);
-      };
-    }
+    if (!user) return;
+
+    const interval = setInterval(refreshToken, 14 * 60 * 1000);
+    window.refreshInterval = interval;
+    
+    return () => clearInterval(interval);
   }, [user, refreshToken]);
 
-  const login = (token: string, userData: User) => {
-    console.log('Logging in user:', userData.email);
+  const login = useCallback((token: string, userData: User) => {
     localStorage.setItem('token', token);
     setUser(userData);
     setLoading(false);
     router.push('/dashboard');
-  };
+  }, [router]);
 
   const value = {
     user,

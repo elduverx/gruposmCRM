@@ -12,33 +12,34 @@ const adminRoutes = ['/dashboard/settings'];
 const publicRoutes = ['/login', '/register', '/forgot-password'];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!loading) {
-        // Si es una ruta pública, permitir el acceso
-        if (pathname && publicRoutes.includes(pathname)) {
-          return;
-        }
+    // Si está cargando, no hacer nada todavía
+    if (loading) return;
 
-        // Si no hay usuario, redirigir a login
-        if (!user) {
-          router.push('/login');
-          return;
-        }
-
-        // Verificar acceso a rutas de administrador
-        if (pathname && adminRoutes.includes(pathname) && user.role !== 'admin') {
-          router.push('/dashboard');
-          return;
-        }
+    // Si es una ruta pública, permitir el acceso sin importar el estado de autenticación
+    if (pathname && publicRoutes.includes(pathname)) {
+      // Si el usuario está autenticado y trata de acceder a una ruta pública, redirigir al dashboard
+      if (user && pathname === '/login') {
+        router.push('/dashboard');
       }
-    };
+      return;
+    }
 
-    checkAuth();
+    // Para rutas protegidas, verificar autenticación
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    // Verificar acceso a rutas de administrador
+    if (pathname && adminRoutes.includes(pathname) && user.role !== 'admin') {
+      router.push('/dashboard');
+      return;
+    }
   }, [user, loading, router, pathname]);
 
   // Mostrar spinner de carga
@@ -55,7 +56,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return <>{children}</>;
   }
 
-  // Si no hay usuario y no es una ruta pública, no mostrar nada
+  // Si no hay usuario y no es una ruta pública, no mostrar nada mientras se redirige
   if (!user) {
     return null;
   }
