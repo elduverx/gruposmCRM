@@ -7,7 +7,6 @@ import { Dialog } from '@headlessui/react';
 import { AssignmentForm } from '../properties/AssignmentForm';
 import Link from 'next/link';
 import { deleteAssignment } from '../properties/actions';
-import { formatNumber } from '@/lib/utils';
 import { Property } from '@/types/property';
 import { getProperties } from '../properties/actions';
 import SearchBar from '@/components/common/SearchBar';
