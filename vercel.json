@@ -6,9 +6,15 @@
       "use": "@vercel/next"
     }
   ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ],
   "env": {
-    "NEXTAUTH_URL": "https://tu-dominio.vercel.app",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "NEXTAUTH_URL": "https://your-domain.com",
+    "NEXTAUTH_SECRET": "your-secret-here",
     "JWT_SECRET": "@jwt_secret",
     "DATABASE_URL": "@database_url"
   },
