@@ -46,7 +46,7 @@ export async function GET(
     }
 
     // Devolver los datos del usuario (sin la contraseña)
-    const { password, ...userWithoutPassword } = user;
+    const { password: _password, ...userWithoutPassword } = user;
     
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
@@ -122,7 +122,7 @@ export async function PUT(
     }
 
     // Devolver los datos del usuario actualizado (sin la contraseña)
-    const { password: _, ...userWithoutPassword } = updatedUser;
+    const { password: _password, ...userWithoutPassword } = updatedUser;
     
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
@@ -162,10 +162,9 @@ export async function DELETE(
     // No permitir eliminar el último administrador
     if (user.role === 'ADMIN') {
       const allUsers = getUsers();
-      const adminCount = allUsers.filter((u: { role: string }) => u.role === 'ADMIN').length;
+      const adminCount = allUsers.filter((u) => u.role === 'ADMIN').length;
       
       if (adminCount <= 1) {
-        console.log('Intento de eliminar el último administrador');
         return NextResponse.json(
           { message: 'No se puede eliminar el último administrador' },
           { status: 400 }
@@ -176,14 +175,12 @@ export async function DELETE(
     // Eliminar el usuario
     const success = deleteUser(params.id);
     if (!success) {
-      console.log('Error al eliminar usuario:', params.id);
       return NextResponse.json(
         { message: 'Error al eliminar el usuario' },
         { status: 500 }
       );
     }
 
-    console.log('Usuario eliminado correctamente:', params.id);
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
     console.error('Error al eliminar usuario:', error);

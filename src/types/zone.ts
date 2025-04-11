@@ -1,4 +1,4 @@
-import { GeoJSON } from 'geojson';
+
 
 export interface Zone {
   id: string;
