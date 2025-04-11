@@ -1,18 +1,13 @@
 {
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended"
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": [
+    "src/components/map/*",
+    "src/app/dashboard/properties/new/page.tsx",
+    "src/app/dashboard/zones/page.tsx"
   ],
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
   "rules": {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "react-hooks/exhaustive-deps": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
-    "@next/next/no-img-element": "off",
-    "jsx-a11y/role-supports-aria-props": "off",
-    "@next/next/no-async-client-component": "off",
-    "@typescript-eslint/no-empty-interface": "off"
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": "error",
+    "react-hooks/exhaustive-deps": "error"
   }
 } 

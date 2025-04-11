@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient, PropertyType, PropertyStatus, PropertyAction } from '@prisma/client';
+import { PrismaClient, PropertyType, PropertyAction } from '@prisma/client';
 import { OperationType } from '@/types/property';
 
 const prisma = new PrismaClient();

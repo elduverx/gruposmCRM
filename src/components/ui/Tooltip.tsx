@@ -17,7 +17,7 @@ export default function Tooltip({
   delay = 200,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const positionStyles = {
