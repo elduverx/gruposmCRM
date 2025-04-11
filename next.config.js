@@ -16,6 +16,7 @@ const nextConfig = {
     // No fallar el build si hay errores de TypeScript
     ignoreBuildErrors: true,
   },
+  output: 'standalone',
 };
 
 module.exports = nextConfig; 

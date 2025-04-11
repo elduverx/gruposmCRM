@@ -1,0 +1,33 @@
+# Dependencias
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Next.js
+.next
+out
+
+# Archivos de desarrollo
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Archivos del sistema
+.DS_Store
+*.pem
+
+# Archivos de prueba
+__tests__
+*.test.js
+*.spec.js
+
+# Otros
+.vscode
+.idea
+*.log 
