@@ -156,7 +156,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* Contenido principal */}
-      <div className="flex min-h-screen flex-col lg:pl-64">
+      <div className="flex min-h-screen flex-col lg:pl-24">
         {/* Header unificado */}
        
 

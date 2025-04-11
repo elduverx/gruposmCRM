@@ -64,9 +64,9 @@
     "typescript": "^5.3.3"
   },
   "resolutions": {
-    "@react-leaflet/core": "2.1.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "@react-leaflet/core": "3.0.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "@floating-ui/react": "^0.26.28"
   },
   "engines": {
