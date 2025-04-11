@@ -37,12 +37,8 @@ const nextConfig = {
       }
     ]
   },
-  // Disable static page generation for database-dependent routes
-  async generateStaticParams() {
-    return []
-  },
   // Configure module resolution
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.join(__dirname, 'src'),
