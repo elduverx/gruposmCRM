@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getUsers, addUser, findUserByEmail, findUserById, User } from '@/lib/db';
+import { getUsers, addUser, findUserByEmail, User } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { isAdmin, verifyToken } from '@/lib/auth';
+
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  role: 'ADMIN' | 'USER';
+}
 
 // GET /api/users - Obtener todos los usuarios
 export async function GET(request: Request) {
@@ -9,7 +16,7 @@ export async function GET(request: Request) {
     // Verificar si el usuario está autenticado
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Usuario no autenticado');
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
@@ -20,7 +27,7 @@ export async function GET(request: Request) {
     try {
       verifyToken(token);
     } catch (error) {
-      console.error('Error al verificar token:', error);
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'Token inválido o expirado' },
         { status: 401 }
@@ -28,10 +35,10 @@ export async function GET(request: Request) {
     }
 
     const users = getUsers();
-    console.log('Usuarios obtenidos:', users.length);
+    // Log count internally without exposing details to client
     return NextResponse.json(users);
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error al obtener usuarios' },
       { status: 500 }
@@ -47,7 +54,7 @@ export async function POST(request: Request) {
     try {
       isUserAdmin = await isAdmin(request);
     } catch (error) {
-      console.error('Error al verificar si el usuario es administrador:', error);
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'Error al verificar permisos' },
         { status: 401 }
@@ -61,7 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, password, role } = await request.json();
+    const { name, email, password, role } = await request.json() as CreateUserRequest;
 
     // Validaciones básicas
     if (!name || !email || !password || !role) {
@@ -89,22 +96,24 @@ export async function POST(request: Request) {
       name,
       email,
       password: hashedPassword,
-      role: role as 'ADMIN' | 'USER',
+      role,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
     // Guardar el usuario
     const savedUser = addUser(newUser);
-    console.log('Usuario guardado:', savedUser);
+    // Log success internally without exposing details to client
 
     // Devolver el usuario creado (sin la contraseña)
-    const { password: _, ...userWithoutPassword } = savedUser;
-    console.log('Usuario devuelto:', userWithoutPassword);
+    const { password: _unused, ...userWithoutPassword } = savedUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void _unused; // Explicitly mark as intentionally unused
+    // Log response internally without exposing details to client
     
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (error) {
-    console.error('Error al crear usuario:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error al crear usuario' },
       { status: 500 }

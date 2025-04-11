@@ -14,9 +14,11 @@ export async function GET() {
     const count = await prisma.assignment.count();
     return NextResponse.json({ count });
   } catch (error) {
-    console.error('Error getting assignments count:', error);
     return NextResponse.json(
-      { error: 'Error al obtener el conteo de encargos' },
+      { 
+        error: 'Error al obtener el conteo de encargos',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

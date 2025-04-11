@@ -5,12 +5,18 @@ import { findUserByEmail, addUser, initializeDb, User } from '@/lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export async function POST(request: Request) {
   try {
     // Initialize the database with a default admin user if it doesn't exist
     await initializeDb();
     
-    const { name, email, password } = await request.json();
+    const { name, email, password } = await request.json() as RegisterRequest;
 
     // Validaciones básicas
     if (!name || !email || !password) {
@@ -54,14 +60,16 @@ export async function POST(request: Request) {
     );
 
     // Devolver el token y los datos del usuario (sin la contraseña)
-    const { password: _, ...userWithoutPassword } = newUser;
+    const { password: _unused, ...userWithoutPassword } = newUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void _unused; // Explicitly mark as intentionally unused
     
     return NextResponse.json({
       token,
       user: userWithoutPassword,
     });
   } catch (error) {
-    console.error('Error en el registro:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

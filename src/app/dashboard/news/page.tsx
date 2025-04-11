@@ -36,13 +36,15 @@ export default function NewsPage() {
     try {
       const response = await fetch('/api/news');
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as PropertyNews[];
         setNews(data);
         setFilteredNews(data);
       } else {
+        // eslint-disable-next-line no-console
         console.error('Error fetching news:', response.statusText);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching news:', error);
     } finally {
       setIsLoading(false);
@@ -60,9 +62,11 @@ export default function NewsPage() {
           setNews(news.filter(item => item.id !== id));
           setFilteredNews(filteredNews.filter(item => item.id !== id));
         } else {
+          // eslint-disable-next-line no-console
           console.error('Error deleting news:', response.statusText);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error deleting news:', error);
       }
     }

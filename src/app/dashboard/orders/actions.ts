@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Order, OrderCreateInput } from '@/types/order';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Prisma } from '@prisma/client';
 
 type ClientRequestWithClient = {
@@ -24,6 +25,33 @@ type ClientRequestWithClient = {
   };
 };
 
+// Definir el tipo para las características de la propiedad
+type PropertyFeatures = string[];
+
+type ClientRequestCreateInput = {
+  id: string;
+  clientId: string;
+  type: string;
+  bedrooms: number;
+  bathrooms: number;
+  minPrice: number;
+  maxPrice: number;
+  propertyType: string;
+  features: string;
+  updatedAt: Date;
+};
+
+type ClientRequestUpdateInput = {
+  updatedAt: Date;
+  features?: string;
+  type?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  propertyType?: string;
+};
+
 function mapOrderResponse(order: ClientRequestWithClient): Order {
   return {
     id: order.id,
@@ -35,7 +63,7 @@ function mapOrderResponse(order: ClientRequestWithClient): Order {
     minPrice: order.minPrice,
     maxPrice: order.maxPrice,
     propertyType: order.propertyType,
-    features: JSON.parse(order.features),
+    features: JSON.parse(order.features) as PropertyFeatures,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     client: {
@@ -65,6 +93,7 @@ export async function getOrders(): Promise<Order[]> {
 
     return orders.map(mapOrderResponse);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching orders:', error);
     throw new Error('Error al obtener los pedidos');
   }
@@ -91,6 +120,7 @@ export async function getOrder(id: string): Promise<Order | null> {
 
     return mapOrderResponse(order);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error getting order:', error);
     throw new Error('Error al cargar el pedido');
   }
@@ -98,37 +128,26 @@ export async function getOrder(id: string): Promise<Order | null> {
 
 export async function createOrder(data: OrderCreateInput): Promise<{ order: Order | null; error: string | null }> {
   try {
-    // Primero, actualizamos el cliente para marcar que tiene un pedido
     await prisma.client.update({
       where: { id: data.clientId },
       data: { hasRequest: true }
     });
 
-    // Luego, creamos el pedido
+    const createData: ClientRequestCreateInput = {
+      id: `order_${Date.now()}`,
+      clientId: data.clientId,
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      minPrice: data.minPrice,
+      maxPrice: data.maxPrice,
+      propertyType: data.propertyType,
+      features: JSON.stringify(data.features),
+      updatedAt: new Date(),
+      type: data.operationType
+    };
+
     const order = await prisma.clientRequest.create({
-      data: {
-        id: `order_${Date.now()}`,
-        clientId: data.clientId,
-        bedrooms: data.bedrooms,
-        bathrooms: data.bathrooms,
-        minPrice: data.minPrice,
-        maxPrice: data.maxPrice,
-        propertyType: data.propertyType,
-        features: JSON.stringify(data.features),
-        updatedAt: new Date(),
-        type: data.operationType
-      } as unknown as {
-        id: string;
-        clientId: string;
-        type: string;
-        bedrooms: number;
-        bathrooms: number;
-        minPrice: number;
-        maxPrice: number;
-        propertyType: string;
-        features: string;
-        updatedAt: Date;
-      },
+      data: createData,
       include: {
         Client: {
           select: {
@@ -138,7 +157,7 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
           }
         }
       }
-    }) as unknown as ClientRequestWithClient;
+    }) as ClientRequestWithClient;
 
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard/clients');
@@ -148,6 +167,7 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
       error: null
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating order:', error);
     return { order: null, error: 'Error al crear el pedido' };
   }
@@ -155,7 +175,7 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
 
 export async function updateOrder(id: string, data: Partial<OrderCreateInput>): Promise<{ order: Order | null; error: string | null }> {
   try {
-    const updateData: any = {
+    const updateData: ClientRequestUpdateInput = {
       updatedAt: new Date()
     };
     
@@ -199,7 +219,7 @@ export async function updateOrder(id: string, data: Partial<OrderCreateInput>): 
           }
         }
       }
-    }) as unknown as ClientRequestWithClient;
+    }) as ClientRequestWithClient;
 
     revalidatePath('/dashboard/orders');
 
@@ -208,6 +228,7 @@ export async function updateOrder(id: string, data: Partial<OrderCreateInput>): 
       error: null
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating order:', error);
     return { order: null, error: 'Error al actualizar el pedido' };
   }
@@ -241,6 +262,7 @@ export async function deleteOrder(id: string): Promise<{ error: string | null }>
 
     return { error: null };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error deleting order:', error);
     return { error: 'Error al eliminar el pedido' };
   }

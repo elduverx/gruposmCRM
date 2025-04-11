@@ -65,6 +65,7 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
         const clientsData = await getClients();
         setClients(clientsData);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching clients:', error);
       } finally {
         setIsLoadingClients(false);

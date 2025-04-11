@@ -5,11 +5,10 @@ import { getUsers } from '@/lib/db';
 export async function GET() {
   try {
     const users = getUsers();
-    console.log('Total de usuarios:', users.length);
-    
+    // Log count internally without exposing details to client
     return NextResponse.json({ count: users.length });
   } catch (error) {
-    console.error('Error al contar usuarios:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

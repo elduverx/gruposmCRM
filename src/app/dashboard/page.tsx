@@ -16,8 +16,6 @@ import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
-type Value = Date | Date[] | null;
-
 interface InicioStats {
   properties: number;
   clients: number;
@@ -44,61 +42,10 @@ interface Objective {
   unit: string;
 }
 
-// Añadir estilos personalizados para el calendario
-const calendarStyles = {
-  // Estilos para el contenedor del calendario
-  calendar: {
-    width: '100%',
-    border: 'none',
-    borderRadius: '0.5rem',
-    boxShadow: 'none',
-    backgroundColor: 'transparent',
-  },
-  // Estilos para los días
-  day: {
-    padding: '0.5rem',
-    margin: '0.25rem',
-    borderRadius: '0.25rem',
-    transition: 'all 0.2s ease',
-  },
-  // Estilos para el día seleccionado
-  selectedDay: {
-    backgroundColor: '#4f46e5',
-    color: 'white',
-  },
-  // Estilos para el día actual
-  today: {
-    backgroundColor: '#e0e7ff',
-    color: '#4f46e5',
-    fontWeight: 'bold',
-  },
-  // Estilos para los días con eventos
-  eventDay: {
-    backgroundColor: '#f3f4f6',
-    color: '#4f46e5',
-    fontWeight: 'bold',
-  },
-  // Estilos para los encabezados de los días de la semana
-  weekday: {
-    color: '#6b7280',
-    fontWeight: 'bold',
-  },
-  // Estilos para el encabezado del mes
-  monthHeader: {
-    color: '#111827',
-    fontWeight: 'bold',
-    fontSize: '1.125rem',
-  },
-  // Estilos para los botones de navegación
-  navigationButton: {
-    color: '#4f46e5',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: '0.25rem',
-    padding: '0.5rem',
-    transition: 'all 0.2s ease',
-  },
-};
+// Definir interfaces para las respuestas de la API
+interface CountResponse {
+  count: number;
+}
 
 export default function InicioPage() {
   const router = useRouter();
@@ -133,11 +80,12 @@ export default function InicioPage() {
           fetch('/api/news/count')
         ]);
 
+        // Usar tipos específicos para las respuestas
         const [properties, clients, assignments, news] = await Promise.all([
-          propertiesRes.json(),
-          clientsRes.json(),
-          assignmentsRes.json(),
-          newsRes.json()
+          propertiesRes.json() as Promise<CountResponse>,
+          clientsRes.json() as Promise<CountResponse>,
+          assignmentsRes.json() as Promise<CountResponse>,
+          newsRes.json() as Promise<CountResponse>
         ]);
 
         const newStats: InicioStats = {
@@ -154,7 +102,7 @@ export default function InicioPage() {
               'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             }
           });
-          const users = await usersRes.json();
+          const users = await usersRes.json() as CountResponse;
           newStats.users = users.count;
         }
 
@@ -181,6 +129,7 @@ export default function InicioPage() {
 
         setStats(newStats);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error al obtener datos:', error);
       } finally {
         setLoading(false);
@@ -194,7 +143,7 @@ export default function InicioPage() {
     return (
       <div className="animate-pulse space-y-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card">
               <div className="flex items-center">
                 <div className="p-3 rounded-lg bg-gray-100"></div>
@@ -214,7 +163,7 @@ export default function InicioPage() {
           <div className="card">
             <div className="h-4 bg-gray-200 rounded w-48 mb-4"></div>
             <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
+              {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-16 bg-gray-100 rounded"></div>
               ))}
             </div>

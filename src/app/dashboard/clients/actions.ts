@@ -17,6 +17,7 @@ export async function getClients(): Promise<Client[]> {
     // Convertir los resultados a Client[]
     return clients as unknown as Client[];
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching clients:', error);
     throw error;
   }
@@ -41,6 +42,7 @@ export async function createClient(data: ClientFormData): Promise<Client> {
     
     return client as unknown as Client;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating client:', error);
     throw error;
   }
@@ -66,6 +68,7 @@ export async function updateClient(id: string, data: ClientFormData): Promise<Cl
     
     return client as unknown as Client;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating client:', error);
     throw error;
   }
@@ -77,6 +80,7 @@ export async function deleteClient(id: string): Promise<void> {
       where: { id }
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error deleting client:', error);
     throw error;
   }

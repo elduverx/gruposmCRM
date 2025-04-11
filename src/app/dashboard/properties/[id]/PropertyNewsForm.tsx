@@ -23,7 +23,6 @@ interface NewsFormData {
 
 export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: PropertyNewsFormProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
     type: 'DPV',
     action: 'Venta',
@@ -70,6 +69,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
       toast.success('Noticia creada correctamente');
       onSuccess(formData);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error creating news:', error);
       if (error instanceof Error && error.message === 'Ya existe una noticia para esta propiedad') {
         toast.error('Ya existe una noticia para esta propiedad');

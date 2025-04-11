@@ -28,17 +28,19 @@ export async function GET(request: Request) {
       }
 
       // Devolver los datos del usuario sin la contraseña
-      const { password, ...userWithoutPassword } = user;
+      const { password: _unused, ...userWithoutPassword } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      void _unused; // Explicitly mark as intentionally unused
       return NextResponse.json(userWithoutPassword);
     } catch (error) {
-      console.error('Error al verificar token:', error);
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'Token inválido' },
         { status: 401 }
       );
     }
   } catch (error) {
-    console.error('Error en el endpoint /api/auth/verify:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

@@ -6,7 +6,6 @@ import { createAssignment, updateAssignment } from './actions';
 import { Client } from '@/types/client';
 import { getClients } from '../clients/actions';
 import { Assignment } from '@/types/property';
-import { Switch } from '@headlessui/react';
 
 interface AssignmentFormProps {
   propertyId: string;
@@ -39,6 +38,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         const clientsData = await getClients();
         setClients(clientsData);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching clients:', error);
       }
     };
@@ -121,6 +121,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         }
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error:', error);
     } finally {
       setLoading(false);

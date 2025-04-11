@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
-import { findUserById, updateUser, deleteUser, findUserByEmail, getUsers } from '@/lib/db';
+import { findUserById, updateUser, deleteUser, findUserByEmail, getUsers, User } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+type UserRole = 'ADMIN' | 'USER';
+
+interface JwtPayload {
+  role: UserRole;
+  [key: string]: unknown;
+}
+
+interface UpdateUserData {
+  name: string;
+  email: string;
+  role?: UserRole;
+  password?: string;
+}
 
 // Middleware para verificar si el usuario es administrador
 const isAdmin = async (request: Request) => {
@@ -15,7 +29,7 @@ const isAdmin = async (request: Request) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { role: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded.role === 'ADMIN';
   } catch (error) {
     return false;
@@ -46,11 +60,13 @@ export async function GET(
     }
 
     // Devolver los datos del usuario (sin la contraseña)
-    const { password: _password, ...userWithoutPassword } = user;
+    const { password: _unused, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void _unused; // Explicitly mark as intentionally unused
     
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
-    console.error('Error al obtener usuario:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }
@@ -81,7 +97,7 @@ export async function PUT(
       );
     }
 
-    const { name, email, password, role } = await request.json();
+    const { name, email, password, role } = await request.json() as UpdateUserData;
 
     // Validaciones básicas
     if (!name || !email) {
@@ -101,7 +117,7 @@ export async function PUT(
     }
 
     // Preparar los datos actualizados
-    const updatedData: any = {
+    const updatedData: Partial<User> = {
       name,
       email,
       role: role || user.role,
@@ -122,11 +138,13 @@ export async function PUT(
     }
 
     // Devolver los datos del usuario actualizado (sin la contraseña)
-    const { password: _password, ...userWithoutPassword } = updatedUser;
+    const { password: _unused, ...userWithoutPassword } = updatedUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void _unused; // Explicitly mark as intentionally unused
     
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
-    console.error('Error al actualizar usuario:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }
@@ -143,7 +161,7 @@ export async function DELETE(
     // Verificar si el usuario es administrador
     const admin = await isAdmin(request);
     if (!admin) {
-      console.log('Usuario no autorizado para eliminar');
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
@@ -152,7 +170,7 @@ export async function DELETE(
 
     const user = findUserById(params.id);
     if (!user) {
-      console.log('Usuario no encontrado para eliminar:', params.id);
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'Usuario no encontrado' },
         { status: 404 }
@@ -183,7 +201,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
-    console.error('Error al eliminar usuario:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

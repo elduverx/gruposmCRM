@@ -3,12 +3,24 @@ import bcrypt from 'bcryptjs';
 import { findUserByEmail, initializeDb } from '@/lib/db';
 import { generateToken } from '@/lib/auth';
 
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
 export async function POST(request: Request) {
   try {
     // Initialize the database with a default admin user if it doesn't exist
     await initializeDb();
     
-    const { email, password } = await request.json();
+    const { email, password } = await request.json() as LoginRequest;
 
     // Validaciones básicas
     if (!email || !password) {
@@ -36,20 +48,19 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('Usuario autenticado:', user.id, 'con rol:', user.role);
-
     // Generar token JWT
     const token = generateToken(user.id, user.role);
 
     // Devolver el token y los datos del usuario (sin la contraseña)
-    const { password: _, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _unused, ...userWithoutPassword } = user as User;
     
     return NextResponse.json({
       token,
       user: userWithoutPassword,
     });
   } catch (error) {
-    console.error('Error en el login:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

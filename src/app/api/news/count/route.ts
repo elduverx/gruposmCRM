@@ -14,9 +14,13 @@ export async function GET() {
     const count = await prisma.news.count();
     return NextResponse.json({ count });
   } catch (error) {
-    console.error('Error getting news count:', error);
+    // En producción, no exponemos detalles del error
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Error al obtener el conteo de noticias'
+      : `Error al obtener el conteo de noticias: ${error instanceof Error ? error.message : 'Error desconocido'}`;
+    
     return NextResponse.json(
-      { error: 'Error al obtener el conteo de noticias' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

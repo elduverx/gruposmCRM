@@ -24,7 +24,6 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
   const [properties, setProperties] = useState<Property[]>([]);
   const [isPropertySelectorOpen, setIsPropertySelectorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -32,6 +31,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
         const propertiesData = await getProperties();
         setProperties(propertiesData);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error loading properties:', error);
       }
     };
@@ -68,6 +68,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
       setProperties(propertiesData);
       setIsPropertySelectorOpen(true);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching properties:', error);
     } finally {
       setIsLoading(false);
@@ -82,7 +83,6 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
 
   // Filtrar encargos cuando cambia el término de búsqueda
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
     if (term.trim() === '') {
       setFilteredAssignments(assignments);
     } else {

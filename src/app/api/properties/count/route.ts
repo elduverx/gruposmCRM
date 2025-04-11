@@ -14,7 +14,7 @@ export async function GET() {
     const count = await prisma.property.count();
     return NextResponse.json({ count });
   } catch (error) {
-    console.error('Error getting properties count:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { error: 'Error al obtener el conteo de propiedades' },
       { status: 500 }

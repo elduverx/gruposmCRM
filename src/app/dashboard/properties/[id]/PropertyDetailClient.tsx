@@ -21,17 +21,6 @@ interface PropertyDetailClientProps {
   initialAssignments: Assignment[];
 }
 
-interface NewsFormData {
-  type: string;
-  action: string;
-  valuation: string;
-  priority: 'HIGH' | 'LOW';
-  responsible: string;
-  value: number;
-  precioSM: number | null;
-  precioCliente: number | null;
-}
-
 export default function PropertyDetailClient({ 
   propertyId, 
   initialProperty, 
@@ -59,6 +48,7 @@ export default function PropertyDetailClient({
         const newsData = await getPropertyNews(propertyId);
         setNews(newsData as unknown as PropertyNews[]);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error loading news:', error);
         toast.error('Error al cargar las noticias');
       }
@@ -72,6 +62,8 @@ export default function PropertyDetailClient({
     
     setIsUpdating(true);
     try {
+      // eslint-disable-next-line no-console
+      console.log('Toggling located status');
       const updatedProperty = await updateProperty(property.id, {
         isLocated: !property.isLocated
       });
@@ -80,11 +72,12 @@ export default function PropertyDetailClient({
           ...prev!,
           isLocated: !prev!.isLocated
         }));
-        toast.success('Estado de localización actualizado correctamente');
+        toast.success(`Propiedad marcada como ${property.isLocated ? 'no localizada' : 'localizada'}`);
       }
     } catch (error) {
-      console.error('Error updating property:', error);
-      toast.error('Error al actualizar el estado de localización');
+      // eslint-disable-next-line no-console
+      console.error('Error toggling located status:', error);
+      toast.error('Error al cambiar el estado de localización');
     } finally {
       setIsUpdating(false);
     }
@@ -110,6 +103,7 @@ export default function PropertyDetailClient({
       }
       setIsActivityFormOpen(false);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error creating activity:', error);
       toast.error('Error al crear la actividad');
     }
@@ -132,17 +126,19 @@ export default function PropertyDetailClient({
       }
       setIsDPVFormOpen(false);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error updating DPV:', error);
       toast.error('Error al actualizar el DPV');
     }
   };
 
-  const handleNewsSubmit = (data: NewsFormData): void => {
+  const handleNewsSubmit = (): void => {
     setIsNewsFormOpen(false);
     // Recargar la página para mostrar los cambios
     window.location.reload();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleAssignmentSubmit = async (data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       const result = await createAssignment({
@@ -151,28 +147,32 @@ export default function PropertyDetailClient({
       });
       
       if (result) {
-        setAssignments(prev => [result, ...prev]);
+        setAssignments(prev => [...prev, result]);
         toast.success('Encargo creado correctamente');
       }
       setIsAssignmentFormOpen(false);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error creating assignment:', error);
       toast.error('Error al crear el encargo');
     }
   };
 
   const handleEditAssignment = (assignment: Assignment) => {
-    // Implementar la lógica de edición
+    // eslint-disable-next-line no-console
     console.log('Editar asignación:', assignment);
+    // Implementar la lógica de edición
   };
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
       // Implementar la lógica de eliminación
+      // eslint-disable-next-line no-console
       console.log('Eliminar asignación:', assignmentId);
       // Recargar la página para mostrar los cambios
       window.location.reload();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error deleting assignment:', error);
       toast.error('Error al eliminar la asignación');
     }
@@ -466,7 +466,7 @@ export default function PropertyDetailClient({
                             <span className="font-medium">Cliente:</span> {formatNumber(item.precioCliente || 0)}€
                           </>
                         ) : (
-                          formatNumber(item.value || 0) + '€'
+                          `${formatNumber(item.value || 0)}€`
                         )}
                       </p>
                     </div>

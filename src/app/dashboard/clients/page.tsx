@@ -45,6 +45,7 @@ export default function ClientsPage() {
         setFilteredClients(data);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching clients:', error);
     } finally {
       setIsLoading(false);
@@ -62,6 +63,7 @@ export default function ClientsPage() {
       setIsFormOpen(false);
       setSelectedClient(null);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error saving client:', error);
     }
   };
@@ -79,6 +81,7 @@ export default function ClientsPage() {
       await deleteClient(clientId);
       await fetchClients();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error deleting client:', error);
     } finally {
       setIsDeleting(false);

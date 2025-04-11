@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, createActivity } from './actions';
-import { Property, Activity } from '@/types/property';
+import { Property, Activity, OperationType, PropertyAction, PropertyType } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { getZones } from '../zones/actions';
 import { Dialog } from '@headlessui/react';

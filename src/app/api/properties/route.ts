@@ -1,12 +1,26 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { OperationType, PropertyType, PropertyStatus, PropertyAction } from '@/types/property';
+import { OperationType, PropertyType, PropertyAction } from '@/types/property';
 
 const prisma = new PrismaClient();
 
+interface PropertyInput {
+  address: string;
+  population: string;
+  ownerName: string;
+  ownerPhone: string;
+  type: typeof PropertyType[keyof typeof PropertyType];
+  status: typeof OperationType[keyof typeof OperationType];
+  action: typeof PropertyAction[keyof typeof PropertyAction];
+  isOccupied?: boolean;
+  occupiedBy?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const data = await request.json() as PropertyInput;
     
     // Validar datos requeridos
     if (!data.address || !data.population || !data.ownerName || !data.ownerPhone) {
@@ -43,20 +57,19 @@ export async function POST(request: Request) {
         address: data.address,
         population: data.population,
         status: data.status,
-        action: data.action as PropertyAction,
-        type: data.type as PropertyType,
+        action: data.action,
+        type: data.type,
         ownerName: data.ownerName,
         ownerPhone: data.ownerPhone,
-        isOccupied: data.isOccupied,
-        occupiedBy: data.occupiedBy,
-        latitude: data.latitude,
-        longitude: data.longitude,
+        isOccupied: data.isOccupied ?? false,
+        occupiedBy: data.occupiedBy ?? null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
       },
     });
 
     return NextResponse.json(property);
   } catch (error) {
-    console.error('Error creating property:', error);
     return NextResponse.json(
       { error: 'Error al crear el inmueble' },
       { status: 500 }
@@ -73,7 +86,6 @@ export async function GET() {
     });
     return NextResponse.json(properties);
   } catch (error) {
-    console.error('Error fetching properties:', error);
     return NextResponse.json(
       { error: 'Error fetching properties' },
       { status: 500 }

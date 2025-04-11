@@ -10,7 +10,7 @@ import AuthForm from "@/components/AuthForm";
 
 // Componente para el layout con autenticación
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading, logout, user } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const pathname = usePathname();
   
   // Si está cargando, mostrar un spinner
@@ -50,47 +50,40 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 <h1 className="text-2xl font-bold text-gray-900">Real Estate CRM</h1>
               </div>
               <nav className="mt-5 flex-1 space-y-1 bg-white px-2">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                      pathname === item.href
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                    onClick={(e) => {
-                      // Prevenir el comportamiento predeterminado solo si es necesario
-                      if (pathname === item.href) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    <item.icon
-                      className={`mr-3 h-6 w-6 flex-shrink-0 ${
-                        pathname === item.href
-                          ? 'text-gray-500'
-                          : 'text-gray-400 group-hover:text-gray-500'
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`group flex items-center rounded-md px-2 py-2 text-sm font-medium ${
+                        isActive
+                          ? "bg-indigo-100 text-indigo-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                ))}
+                    >
+                      <item.icon
+                        className={`mr-3 h-6 w-6 flex-shrink-0 ${
+                          isActive ? "text-indigo-500" : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
               </nav>
-              <div className="mt-6 px-4">
-                <button
-                  onClick={logout}
-                  className="w-full rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
+            </div>
+            <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
+              <button
+                onClick={logout}
+                className="group block w-full flex-shrink-0 rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              >
+                Cerrar sesión
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Main content */}
         <div className="flex flex-1 flex-col">
           <main className="flex-1">
             <div className="py-6">

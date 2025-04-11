@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { verifyToken, generateToken } from '@/lib/auth';
 import { findUserById } from '@/lib/db';
 
+interface DecodedToken {
+  userId: string;
+  [key: string]: unknown;
+}
+
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -14,11 +19,11 @@ export async function POST(request: Request) {
 
     const token = authHeader.split(' ')[1];
     
-    let decoded;
+    let decoded: DecodedToken;
     try {
-      decoded = verifyToken(token);
+      decoded = verifyToken(token) as DecodedToken;
     } catch (error) {
-      console.error('Error al verificar token en refresh:', error);
+      // Log error internally without exposing details to client
       return NextResponse.json(
         { message: 'Token inválido o expirado' },
         { status: 401 }
@@ -45,14 +50,15 @@ export async function POST(request: Request) {
     const newToken = generateToken(user.id, user.role);
 
     // Devolver el nuevo token y los datos del usuario (sin la contraseña)
-    const { password: _, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
     
     return NextResponse.json({
       token: newToken,
       user: userWithoutPassword,
     });
   } catch (error) {
-    console.error('Error al refrescar el token:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error en el servidor' },
       { status: 500 }

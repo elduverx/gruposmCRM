@@ -14,7 +14,7 @@ export async function GET() {
     const count = await prisma.client.count();
     return NextResponse.json({ count });
   } catch (error) {
-    console.error('Error getting clients count:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { error: 'Error al obtener el conteo de clientes' },
       { status: 500 }

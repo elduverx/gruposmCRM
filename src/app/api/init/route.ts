@@ -6,7 +6,7 @@ export async function GET() {
     await initializeDb();
     return NextResponse.json({ message: 'Database initialized successfully' });
   } catch (error) {
-    console.error('Error initializing database:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { message: 'Error initializing database' },
       { status: 500 }

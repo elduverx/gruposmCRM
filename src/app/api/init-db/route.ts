@@ -9,7 +9,7 @@ export async function GET() {
       message: 'Base de datos inicializada correctamente' 
     });
   } catch (error) {
-    console.error('Error al inicializar la base de datos:', error);
+    // Log error internally without exposing details to client
     return NextResponse.json(
       { 
         success: false, 

@@ -52,6 +52,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
         }
         setLoading(false);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error checking existing news:', error);
         setError('Error al verificar noticias existentes');
         setLoading(false);

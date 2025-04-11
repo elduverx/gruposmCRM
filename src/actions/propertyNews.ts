@@ -29,9 +29,11 @@ export async function createPropertyNews(propertyId: string, data: CreatePropert
       },
     });
 
-    return propertyNews;
+    return { success: true, data: propertyNews };
   } catch (error) {
-    console.error('Error creating property news:', error);
-    throw new Error('Failed to create property news');
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create property news'
+    };
   }
 } 

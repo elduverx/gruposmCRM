@@ -22,7 +22,6 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>(orders);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -57,6 +56,7 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
       await deleteOrder(orderId);
       toast.success('Pedido eliminado correctamente');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error deleting order:', error);
       toast.error('Error al eliminar el pedido');
     } finally {
@@ -65,7 +65,6 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
   };
 
   const handleFormSubmit = async (formData: OrderCreateInput) => {
-    setIsSubmitting(true);
     try {
       if (selectedOrder) {
         // TODO: Implementar actualización de pedido
@@ -77,10 +76,9 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
       setIsFormOpen(false);
       setSelectedOrder(null);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error submitting order:', error);
       toast.error('Error al guardar el pedido');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

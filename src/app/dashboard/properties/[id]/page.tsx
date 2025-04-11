@@ -1,5 +1,4 @@
-import { Property, Activity } from '@/types/property';
-import { getProperty, updateProperty, getActivitiesByPropertyId, createActivity, getDPVByPropertyId, createOrUpdateDPV, getPropertyNews, getAssignmentsByPropertyId } from '../actions';
+import { getProperty, getActivitiesByPropertyId, getDPVByPropertyId, getPropertyNews, getAssignmentsByPropertyId } from '../actions';
 import PropertyDetailClient from './PropertyDetailClient';
 
 interface PageProps {
