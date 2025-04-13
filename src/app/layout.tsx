@@ -7,7 +7,6 @@ import LeafletStyles from '@/components/map/LeafletStyles';
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -21,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} font-sans`}>
+    <html lang="es" className={inter.className}>
       <body className="antialiased">
         <LeafletStyles />
         <AuthProvider>
