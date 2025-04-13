@@ -16,9 +16,28 @@ export default function LeafletStyles() {
     drawLink.href = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css';
     document.head.appendChild(drawLink);
 
+    // Add custom Leaflet styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .leaflet-default-icon-path {
+        background-image: url('/images/marker-icon.png');
+      }
+      .leaflet-default-shadow-path {
+        background-image: url('/images/marker-shadow.png');
+      }
+      .leaflet-control-layers-toggle {
+        background-image: url('/images/layers.png');
+      }
+      .leaflet-retina .leaflet-control-layers-toggle {
+        background-image: url('/images/layers-2x.png');
+      }
+    `;
+    document.head.appendChild(style);
+
     return () => {
       document.head.removeChild(link);
       document.head.removeChild(drawLink);
+      document.head.removeChild(style);
     };
   }, []);
 
