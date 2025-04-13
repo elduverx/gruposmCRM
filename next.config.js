@@ -29,6 +29,13 @@ const nextConfig = {
     };
     config.resolve.extensions = ['.ts', '.tsx', '.js', '.jsx', ...config.resolve.extensions];
     config.resolve.modules = [path.resolve(__dirname, 'src'), 'node_modules'];
+
+    // Handle Leaflet images
+    config.module.rules.push({
+      test: /\.(png|jpg|gif|svg)$/i,
+      type: 'asset/resource'
+    });
+
     return config;
   },
 };
