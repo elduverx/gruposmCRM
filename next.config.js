@@ -8,6 +8,10 @@ const nextConfig = {
   images: {
     domains: ['nominatim.openstreetmap.org'],
   },
+  experimental: {
+    esmExternals: true,
+    serverComponentsExternalPackages: [],
+  },
   // Configure dynamic routes and disable static generation for database-dependent routes
   async rewrites() {
     return [
@@ -22,13 +26,17 @@ const nextConfig = {
     ]
   },
   // Configure module resolution
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, './src'),
     };
     config.resolve.extensions = ['.ts', '.tsx', '.js', '.jsx', ...config.resolve.extensions];
-    config.resolve.modules = [path.resolve(__dirname, 'src'), 'node_modules'];
+    config.resolve.modules = [
+      path.resolve(__dirname, 'src'),
+      path.resolve(__dirname, '.'),
+      'node_modules'
+    ];
 
     // Handle Leaflet images
     config.module.rules.push({
