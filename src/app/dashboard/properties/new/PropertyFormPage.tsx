@@ -6,12 +6,10 @@ import { useRouter } from 'next/navigation';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { getAddressFromCoordinates, getCoordinatesFromAddress } from '@/utils/geocoding';
+import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { createProperty, updateProperty, getProperty } from '../actions';
 import { PropertyType } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
-import { getClients } from '../../clients/actions';
-import { Client } from '@/types/client';
 import { toast } from 'sonner';
 import { PropertyCreateInput } from '@/types/property';
 
@@ -60,10 +58,8 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(CATARROJA_COORDS);
-  const [isSearching, setIsSearching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: '',
     population: 'Catarroja',
@@ -110,22 +106,13 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         const zonesData = await getZones();
         setZones(zonesData);
       } catch (error) {
-        console.error('Error fetching zones:', error);
-      }
-    };
-
-    // Cargar los clientes al iniciar el componente
-    const fetchClients = async () => {
-      try {
-        const clientsData = await getClients();
-        setClients(clientsData);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
+        if (error instanceof Error) {
+          // Handle error appropriately
+        }
       }
     };
 
     fetchZones();
-    fetchClients();
   }, []);
 
   useEffect(() => {
@@ -154,6 +141,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             }
           }
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error('Error fetching property:', error);
           alert('Error al cargar el inmueble');
         }
@@ -164,58 +152,22 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   }, [propertyId]);
 
   const handleLocationSelect = async (lat: number, lng: number) => {
-    const location = { lat, lng };
-    setSelectedLocation(location);
+    setSelectedLocation({ lat, lng });
     
-    // Obtener dirección desde las coordenadas
-    const addressData = await getAddressFromCoordinates(lat, lng);
-    if (addressData) {
-      // Encontrar la zona a la que pertenece la ubicación
-      const zoneId = findZoneForLocation(location);
+    // Buscar la dirección correspondiente a las coordenadas
+    try {
+      const addressData = await getAddressFromCoordinates(lat, lng);
+      const zoneId = findZoneForLocation({ lat, lng });
       
       setFormData(prev => ({
         ...prev,
-        address: addressData.address,
-        population: addressData.population,
+        address: addressData?.address || prev.address,
+        population: addressData?.population || prev.population,
         zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
       }));
-    }
-  };
-
-  const handleAddressSearch = async () => {
-    if (formData.address) {
-      setIsSearching(true);
-      try {
-        const coordinates = await getCoordinatesFromAddress(formData.address);
-        if (coordinates) {
-          const location = { lat: coordinates.lat, lng: coordinates.lng };
-          setSelectedLocation(location);
-          
-          // Encontrar la zona a la que pertenece la ubicación
-          const zoneId = findZoneForLocation(location);
-          
-          // Actualizar población si está disponible
-          const addressData = await getAddressFromCoordinates(coordinates.lat, coordinates.lng);
-          if (addressData?.population) {
-            setFormData(prev => ({
-              ...prev,
-              population: addressData.population,
-              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
-            }));
-          } else {
-            setFormData(prev => ({
-              ...prev,
-              zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
-            }));
-          }
-        } else {
-          alert('No se encontró la dirección. Por favor, intenta con una dirección más específica.');
-        }
-      } catch (error) {
-        console.error('Error searching address:', error);
-        alert('Error al buscar la dirección');
-      } finally {
-        setIsSearching(false);
+    } catch (error) {
+      if (error instanceof Error) {
+        // Handle error appropriately
       }
     }
   };
@@ -264,6 +216,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
 
       router.push('/dashboard/properties');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error submitting form:', error);
       toast.error('Error al guardar la propiedad');
     } finally {

@@ -6,7 +6,7 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { Dialog } from '@headlessui/react';
 import { toast } from 'sonner';
-import { deleteOrder, createOrder } from './actions';
+import { deleteOrder, createOrder, updateOrder } from './actions';
 import OrderForm from '@/components/orders/OrderForm';
 import { Client } from '@/types/client';
 import { Property } from '@/types/property';
@@ -67,11 +67,19 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
   const handleFormSubmit = async (formData: OrderCreateInput) => {
     try {
       if (selectedOrder) {
-        // TODO: Implementar actualización de pedido
-        toast.success('Pedido actualizado correctamente');
+        const result = await updateOrder(selectedOrder.id, formData);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success('Pedido actualizado correctamente');
+        }
       } else {
-        await createOrder(formData);
-        toast.success('Pedido creado correctamente');
+        const result = await createOrder(formData);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success('Pedido creado correctamente');
+        }
       }
       setIsFormOpen(false);
       setSelectedOrder(null);

@@ -1,19 +1,10 @@
 // @ts-nocheck
 'use server';
 
-import { Prisma } from '@prisma/client';
-import { Property, PropertyCreateInput, Activity, DPV, PropertyNews, Assignment, PropertyUpdateInput, PropertyType, PropertyStatus, PropertyAction, OperationType } from '@/types/property';
+import { Property, PropertyCreateInput, Activity, DPV, Assignment, PropertyType, PropertyAction, OperationType } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { PropertyNewsWithProperty, PropertyNewsCreateInput } from '@/types/prisma';
-
-type PrismaProperty = Prisma.PropertyGetPayload<{
-  include: {
-    zone: true;
-    activities: true;
-    responsibleUser: true;
-  }
-}>;
+import { PropertyNewsWithProperty } from '@/types/prisma';
 
 export async function getProperties(): Promise<Property[]> {
   try {
@@ -24,8 +15,8 @@ export async function getProperties(): Promise<Property[]> {
         responsibleUser: true
       }
     });
-
-    return properties.map(property => ({
+    
+    return properties.map((property): Property => ({
       ...property,
       captureDate: property.captureDate.toISOString(),
       createdAt: property.createdAt.toISOString(),
@@ -50,7 +41,10 @@ export async function getProperties(): Promise<Property[]> {
       } : null
     }));
   } catch (error) {
-    console.error('Error getting properties:', error);
+    if (error instanceof Error) {
+      // eslint-disable-next-line no-console
+      console.error('Error getting properties:', error.message);
+    }
     return [];
   }
 }
@@ -95,6 +89,7 @@ export async function getProperty(id: string): Promise<Property | null> {
       } : null
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error getting property:', error);
     return null;
   }
@@ -135,6 +130,7 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
 
     return property;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating property:', error);
     throw new Error('Error al crear la propiedad');
   }
@@ -241,6 +237,7 @@ export async function updateProperty(id: string, data: {
       }))
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating property:', error);
     return null;
   }
@@ -249,10 +246,17 @@ export async function updateProperty(id: string, data: {
 export async function deleteProperty(id: string): Promise<boolean> {
   try {
     await prisma.property.delete({
-      where: { id },
+      where: { id }
     });
+    
+    // eslint-disable-next-line no-console
+    console.log('Property deleted:', id);
+    
+    revalidatePath('/dashboard/properties');
+    revalidatePath('/dashboard/zones');
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error deleting property:', error);
     return false;
   }
@@ -263,23 +267,38 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
   try {
     const activities = await prisma.activity.findMany({
       where: { propertyId },
-      orderBy: { date: 'desc' },
+      orderBy: { createdAt: 'desc' }
     });
-    
-    return activities.map(activity => ({
-      ...activity,
-      date: activity.date.toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      createdAt: activity.createdAt.toISOString(),
-      updatedAt: activity.updatedAt.toISOString()
-    }));
+
+    if (!activities) {
+      return [];
+    }
+
+    return activities.map(activity => {
+      if (!activity || typeof activity !== 'object') {
+        return null;
+      }
+
+      const date = activity.date instanceof Date ? activity.date : new Date(activity.date);
+      const createdAt = activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt);
+      const updatedAt = activity.updatedAt instanceof Date ? activity.updatedAt : new Date(activity.updatedAt);
+
+      return {
+        id: activity.id,
+        propertyId: activity.propertyId,
+        type: activity.type,
+        description: activity.description,
+        date: date.toLocaleDateString('es-ES'),
+        createdAt: createdAt.toISOString(),
+        updatedAt: updatedAt.toISOString()
+      };
+    }).filter((activity): activity is NonNullable<typeof activity> => activity !== null);
   } catch (error) {
-    console.error('Error fetching activities:', error);
+    if (error instanceof Error) {
+      console.error('Error fetching activities:', error.message);
+    } else {
+      console.error('Error fetching activities:', error);
+    }
     return [];
   }
 }
@@ -308,6 +327,7 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       updatedAt: activity.updatedAt.toISOString()
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating activity:', error);
     return null;
   }
@@ -316,24 +336,28 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
 // Funciones para DPV
 export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null> {
   try {
-    const dpv = await prisma.dPV.findUnique({
-      where: { propertyId },
+    const dpv = await prisma.dPV.findFirst({
+      where: { propertyId }
     });
+    
+    // eslint-disable-next-line no-console
+    console.log('DPV fetched for property:', propertyId, dpv ? 'found' : 'not found');
     
     if (!dpv) return null;
     
-    // Asegurarnos de que links sea un array de strings
-    const links = Array.isArray(dpv.links) 
-      ? dpv.links.filter((link): link is string => typeof link === 'string')
-      : [];
-    
     return {
-      ...dpv,
-      links,
+      id: dpv.id,
+      propertyId: dpv.propertyId,
+      links: dpv.links as string[],
+      realEstate: dpv.realEstate,
+      phone: dpv.phone,
+      currentPrice: dpv.currentPrice,
+      estimatedValue: dpv.estimatedValue,
       createdAt: dpv.createdAt.toISOString(),
       updatedAt: dpv.updatedAt.toISOString()
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching DPV:', error);
     return null;
   }
@@ -352,9 +376,9 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
     
     revalidatePath(`/dashboard/properties/${propertyId}`);
 
-    // Asegurarnos de que links sea un array de strings
+    // Asegurar que links sea un array de strings
     const links = Array.isArray(dpv.links) 
-      ? dpv.links.filter((link): link is string => typeof link === 'string')
+      ? (dpv.links as unknown[]).filter((link): link is string => typeof link === 'string')
       : [];
 
     return {
@@ -364,7 +388,10 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
       updatedAt: dpv.updatedAt.toISOString()
     };
   } catch (error) {
-    console.error('Error creating/updating DPV:', error);
+    if (error instanceof Error) {
+      // eslint-disable-next-line no-console
+      console.error('Error creating/updating DPV:', error.message);
+    }
     return null;
   }
 }
@@ -402,6 +429,7 @@ export async function createPropertyNews(propertyId: string, data: {
     revalidatePath(`/dashboard/properties/${propertyId}`);
     return news;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating property news:', error);
     throw error;
   }
@@ -416,30 +444,53 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNewsW
       include: {
         property: {
           select: {
+            id: true,
             address: true,
-            population: true
+            population: true,
+            zoneId: true
           }
         }
       }
     });
 
-    // Convertir las fechas a strings y asegurarse de que todos los campos estén presentes
-    return news.map(item => ({
-      id: item.id,
-      type: item.type,
-      action: item.action,
-      valuation: item.valuation,
-      priority: item.priority,
-      responsible: item.responsible,
-      value: item.value,
-      precioSM: item.precioSM,
-      precioCliente: item.precioCliente,
-      propertyId: item.propertyId,
-      property: item.property,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString()
-    }));
+    // Corregir los problemas de seguridad de tipos
+    return news.map(item => {
+      // Asegurarse de que item es un objeto válido
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      
+      // Validar y convertir los valores
+      const value = typeof item.value === 'string' ? parseFloat(item.value) : (item.value || 0);
+      const precioSM = item.precioSM !== null ? (typeof item.precioSM === 'string' ? parseFloat(item.precioSM) : item.precioSM) : null;
+      const precioCliente = item.precioCliente !== null ? (typeof item.precioCliente === 'string' ? parseFloat(item.precioCliente) : item.precioCliente) : null;
+      
+      // Crear un objeto seguro con las propiedades necesarias
+      const safeItem: PropertyNewsWithProperty = {
+        id: item.id || '',
+        propertyId: item.propertyId || '',
+        type: item.type || '',
+        action: item.action || '',
+        valuation: typeof item.valuation === 'string' ? item.valuation === 'true' : Boolean(item.valuation),
+        priority: item.priority === 'HIGH' ? 'HIGH' : 'LOW',
+        responsible: item.responsible || '',
+        value: value,
+        precioSM: precioSM,
+        precioCliente: precioCliente,
+        createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt || Date.now()),
+        updatedAt: item.updatedAt instanceof Date ? item.updatedAt : new Date(item.updatedAt || Date.now()),
+        property: {
+          id: item.property?.id || '',
+          address: item.property?.address || '',
+          population: item.property?.population || '',
+          zoneId: item.property?.zoneId || ''
+        }
+      };
+      
+      return safeItem;
+    }).filter(Boolean) as PropertyNewsWithProperty[];
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error getting property news:', error);
     return [];
   }
@@ -479,6 +530,7 @@ export async function createAssignment(data: {
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
     return assignment;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error creating assignment:', error);
     return null;
   }
@@ -487,19 +539,31 @@ export async function createAssignment(data: {
 export async function getAssignmentsByPropertyId(propertyId: string): Promise<Assignment[]> {
   try {
     const assignments = await prisma.assignment.findMany({
-      where: {
-        propertyId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        client: true
-      }
+      where: { propertyId },
+      orderBy: { createdAt: 'desc' }
     });
-    return assignments;
+    
+    // eslint-disable-next-line no-console
+    console.log('Assignments fetched for property:', propertyId, assignments.length);
+    
+    return assignments.map(assignment => ({
+      id: assignment.id,
+      type: assignment.type,
+      price: assignment.price,
+      exclusiveUntil: assignment.exclusiveUntil.toLocaleDateString('es-ES'),
+      origin: assignment.origin,
+      clientId: assignment.clientId,
+      sellerFeeType: assignment.sellerFeeType,
+      sellerFeeValue: assignment.sellerFeeValue,
+      buyerFeeType: assignment.buyerFeeType,
+      buyerFeeValue: assignment.buyerFeeValue,
+      propertyId: assignment.propertyId,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString()
+    }));
   } catch (error) {
-    console.error('Error getting assignments:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error fetching assignments:', error);
     return [];
   }
 }
@@ -511,25 +575,13 @@ export async function getAssignments(): Promise<Assignment[]> {
         createdAt: 'desc'
       },
       include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true
-          }
-        },
-        property: {
-          select: {
-            id: true,
-            address: true,
-            population: true
-          }
-        }
+        client: true,
+        property: true
       }
     });
     return assignments;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error getting assignments:', error);
     return [];
   }
@@ -558,18 +610,31 @@ export async function updateAssignment(id: string, data: {
         sellerFeeType: data.sellerFeeType,
         sellerFeeValue: data.sellerFeeValue,
         buyerFeeType: data.buyerFeeType,
-        buyerFeeValue: data.buyerFeeValue,
-      },
-      include: {
-        client: true,
-        property: true
+        buyerFeeValue: data.buyerFeeValue
       }
     });
     
-    revalidatePath('/dashboard/assignments');
+    // eslint-disable-next-line no-console
+    console.log('Assignment updated:', id);
+    
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
-    return assignment;
+    return {
+      id: assignment.id,
+      type: assignment.type,
+      price: assignment.price,
+      exclusiveUntil: assignment.exclusiveUntil,
+      origin: assignment.origin,
+      clientId: assignment.clientId,
+      sellerFeeType: assignment.sellerFeeType,
+      sellerFeeValue: assignment.sellerFeeValue,
+      buyerFeeType: assignment.buyerFeeType,
+      buyerFeeValue: assignment.buyerFeeValue,
+      propertyId: assignment.propertyId,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString()
+    };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating assignment:', error);
     return null;
   }
@@ -581,11 +646,13 @@ export async function deleteAssignment(id: string): Promise<boolean> {
       where: { id }
     });
     
-    revalidatePath('/dashboard/assignments');
+    // eslint-disable-next-line no-console
+    console.log('Assignment deleted:', id);
+    
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
     return true;
   } catch (error) {
     console.error('Error deleting assignment:', error);
     return false;
   }
-} 
+}

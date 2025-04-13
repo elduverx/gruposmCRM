@@ -15,7 +15,8 @@ import {
   UsersIcon,
   NewspaperIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -126,14 +127,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform overflow-y-auto bg-white transition duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform overflow-y-auto bg-white shadow-lg transition duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
             <Link href="/dashboard" className="flex items-center">
-              <span className="text-xl font-bold text-gray-900">{AppName}</span>
+              <span className="text-xl font-bold text-blue-600">{AppName}</span>
             </Link>
             <button
               className="lg:hidden -mr-1 rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
@@ -156,12 +157,34 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* Contenido principal */}
-      <div className="flex min-h-screen flex-col lg:pl-24">
-        {/* Header unificado */}
-       
+      <div className="flex min-h-screen flex-col lg:pl-64">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white shadow-sm">
+          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+            <button
+              type="button"
+              className="lg:hidden -ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-gray-500 hover:text-gray-900"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <span className="sr-only">Abrir sidebar</span>
+              <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+            </button>
+            <div className="flex flex-1 justify-end">
+              <div className="ml-4 flex items-center md:ml-6">
+                <button
+                  type="button"
+                  className="rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <span className="sr-only">Ver notificaciones</span>
+                  <BellIcon className="h-6 w-6" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
 
-        <main className="flex-1 pb-16 lg:pb-0">
-          <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+        <main className="flex-1">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
             {children}
           </div>
         </main>

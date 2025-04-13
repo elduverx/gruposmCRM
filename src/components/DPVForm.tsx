@@ -12,7 +12,7 @@ interface DPVFormProps {
 }
 
 export default function DPVForm({ initialData, onSubmit, onCancel }: DPVFormProps) {
-  const [links, setLinks] = useState<string[]>(initialData.links);
+  const [links, setLinks] = useState<string[]>(initialData.links || []);
   const [newLink, setNewLink] = useState('');
   const [realEstate, setRealEstate] = useState(initialData.realEstate);
   const [phone, setPhone] = useState(initialData.phone);

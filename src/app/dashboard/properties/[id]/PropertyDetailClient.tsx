@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, createAssignment, getAssignmentsByPropertyId, getPropertyNews } from '../actions';
+import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews } from '../actions';
 import { PlusIcon, CheckIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
@@ -138,26 +138,6 @@ export default function PropertyDetailClient({
     window.location.reload();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleAssignmentSubmit = async (data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      const result = await createAssignment({
-        ...data,
-        propertyId
-      });
-      
-      if (result) {
-        setAssignments(prev => [...prev, result]);
-        toast.success('Encargo creado correctamente');
-      }
-      setIsAssignmentFormOpen(false);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error creating assignment:', error);
-      toast.error('Error al crear el encargo');
-    }
-  };
-
   const handleEditAssignment = (assignment: Assignment) => {
     // eslint-disable-next-line no-console
     console.log('Editar asignación:', assignment);
@@ -236,7 +216,7 @@ export default function PropertyDetailClient({
             {activities.length > 0 ? (
               <div>
                 <p className="font-medium">
-                  {new Date(activities[0].date).toLocaleDateString('es-ES')}
+                  {activities[0].date}
                 </p>
                 <p className="text-sm text-gray-600">
                   Tipo: {activities[0].type}
@@ -341,7 +321,9 @@ export default function PropertyDetailClient({
                   <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm text-gray-500">{new Date(activity.date).toLocaleDateString('es-ES')}</p>
+                        <p className="text-sm text-gray-500">
+                          {activity.date}
+                        </p>
                         <p className="font-medium">Tipo: {activity.type}</p>
                         {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
                         {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
@@ -377,13 +359,17 @@ export default function PropertyDetailClient({
                 <div>
                   <label className="text-sm text-gray-700">Links:</label>
                   <ul className="list-disc list-inside text-blue-600 mt-1">
-                    {dpv.links.map((link, index) => (
-                      <li key={index} className="mb-1">
-                        <a href={link} className="hover:underline break-all" target="_blank" rel="noopener noreferrer">
-                          {link}
-                        </a>
-                      </li>
-                    ))}
+                    {dpv.links && dpv.links.length > 0 ? (
+                      dpv.links.map((link, index) => (
+                        <li key={index} className="mb-1">
+                          <a href={link} className="hover:underline break-all" target="_blank" rel="noopener noreferrer">
+                            {link}
+                          </a>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-gray-500">No hay links disponibles</li>
+                    )}
                   </ul>
                 </div>
                 
@@ -505,7 +491,7 @@ export default function PropertyDetailClient({
                             Cliente: {assignment.client?.name || 'Sin cliente'}
                           </p>
                           <p className="text-sm text-gray-500">
-                            Fecha límite: {new Date(assignment.exclusiveUntil).toLocaleDateString('es-ES')}
+                            Fecha límite: {assignment.exclusiveUntil}
                           </p>
                           <p className="text-sm text-gray-500">
                             Origen: {assignment.origin}

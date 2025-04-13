@@ -16,8 +16,8 @@ export function formatDate(date: string | Date): string {
 
 export function formatNumber(number: number | undefined | null): string {
   if (number === undefined || number === null) return '0,00 €';
-  return number.toLocaleString('es-ES', {
+  return `${number.toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }) + ' €';
+  })} €`;
 } 

@@ -1,6 +1,3 @@
-import { Client } from './client';
-import { PropertyType } from '@/types/property';
-
 export interface Order {
   id: string;
   client: {

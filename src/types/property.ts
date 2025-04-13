@@ -49,16 +49,16 @@ export interface Assignment {
   id: string;
   type: string; // SALE o RENT
   price: number;
-  exclusiveUntil: Date;
+  exclusiveUntil: string;
   origin: string;
-  clientId: string;
+  clientId: string | null;
   sellerFeeType: string; // PERCENTAGE o FIXED
   sellerFeeValue: number;
   buyerFeeType: string; // PERCENTAGE o FIXED
   buyerFeeValue: number;
   propertyId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   client?: {
     id: string;
     name: string;

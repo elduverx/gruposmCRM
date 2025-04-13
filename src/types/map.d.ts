@@ -1,4 +1,4 @@
-import { Map as LeafletMap, Marker, FeatureGroup, LatLng, LeafletMouseEvent } from 'leaflet';
+import { Map as LeafletMap, Marker, LatLng, LeafletMouseEvent } from 'leaflet';
 
 declare module 'react-leaflet' {
   interface MapContainerProps {

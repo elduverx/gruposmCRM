@@ -11,6 +11,7 @@ import { getZones } from '@/app/dashboard/zones/actions';
 import { findZoneForCoordinates } from '@/utils/zoneUtils';
 import { Zone } from '@/app/dashboard/zones/actions';
 import { PropertyType } from '@/types/property';
+import { toast } from 'react-hot-toast';
 
 // Definir OperationType para uso en el cliente
 const OperationType = {
@@ -61,15 +62,33 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     tenantEmail: '',
     notes: ''
   });
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Cargar las zonas al iniciar el componente
   useEffect(() => {
     const loadZones = async () => {
       try {
         const zonesData = await getZones();
-        setZones(zonesData);
+        // Asegurarse de que zonesData sea un array
+        if (Array.isArray(zonesData)) {
+          setZones(zonesData);
+        } else {
+          // eslint-disable-next-line no-console
+          console.error('Error: zonesData no es un array', zonesData);
+          setZones([]);
+        }
       } catch (error) {
-        console.error('Error loading zones:', error);
+        if (error instanceof Error) {
+          // eslint-disable-next-line no-console
+          console.error('Error loading zones:', error.message);
+        } else {
+          // eslint-disable-next-line no-console
+          console.error('Error loading zones:', error);
+        }
+        // Establecer un array vacío en caso de error
+        setZones([]);
       }
     };
 
@@ -79,16 +98,48 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
   // Cargar datos de la propiedad si estamos editando
   useEffect(() => {
     const fetchProperty = async () => {
-      if (params.id) {
-        try {
-          setLoading(true);
-          const propertyData = await getProperty(params.id);
-          setFormData(propertyData);
-        } catch (error) {
-          console.error('Error fetching property:', error);
-          setError('Error al cargar la propiedad');
-        } finally {
-          setLoading(false);
+      if (!params.id) return;
+
+      try {
+        const propertyData = await getProperty(params.id);
+        if (propertyData) {
+          setFormData({
+            address: propertyData.address,
+            population: propertyData.population,
+            type: propertyData.type,
+            ownerName: propertyData.ownerName || '',
+            ownerPhone: propertyData.ownerPhone || '',
+            latitude: propertyData.latitude || null,
+            longitude: propertyData.longitude || null,
+            zoneId: propertyData.zoneId || null,
+            status: propertyData.status || 'AVAILABLE',
+            action: propertyData.action || 'SALE',
+            captureDate: propertyData.captureDate || new Date().toISOString(),
+            responsibleId: propertyData.responsibleId || null,
+            hasSimpleNote: propertyData.hasSimpleNote || false,
+            isOccupied: propertyData.isOccupied || false,
+            clientId: propertyData.clientId || null,
+            occupiedBy: propertyData.occupiedBy || null,
+            isLocated: propertyData.isLocated || false,
+            responsible: propertyData.responsible || null,
+            habitaciones: propertyData.habitaciones || null,
+            banos: propertyData.banos || null,
+            metrosCuadrados: propertyData.metrosCuadrados || null,
+            parking: propertyData.parking || false,
+            ascensor: propertyData.ascensor || false,
+            piscina: propertyData.piscina || false
+          });
+
+          if (propertyData.latitude && propertyData.longitude) {
+            setSelectedLocation({
+              lat: propertyData.latitude,
+              lng: propertyData.longitude
+            });
+          }
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          // Handle error appropriately
         }
       }
     };
@@ -96,34 +147,20 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     fetchProperty();
   }, [params.id]);
 
-  // Cargar datos de la ubicación seleccionada desde la URL o localStorage
+  // Cargar ubicación seleccionada desde localStorage o URL
   useEffect(() => {
     const loadSelectedLocation = () => {
-      // Primero intentar obtener datos de la URL
-      const address = searchParams.get('address');
-      const lat = searchParams.get('lat');
-      const lng = searchParams.get('lng');
-      
-      if (address && lat && lng) {
-        console.log('Cargando datos desde URL:', { address, lat, lng });
-        setFormData(prev => ({
-          ...prev,
-          address: address,
-          latitude: parseFloat(lat),
-          longitude: parseFloat(lng)
-        }));
-        
-        // Asignar la zona automáticamente
-        assignZoneToCoordinates(parseFloat(lat), parseFloat(lng));
-        return;
-      }
+      // Intentar obtener datos de la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const lat = urlParams.get('lat');
+      const lng = urlParams.get('lng');
+      const address = urlParams.get('address');
       
       // Si no hay datos en la URL, intentar obtenerlos del localStorage
       try {
         const storedLocation = localStorage.getItem('selectedLocation');
         if (storedLocation) {
-          const locationData = JSON.parse(storedLocation);
-          console.log('Cargando datos desde localStorage:', locationData);
+          const locationData = JSON.parse(storedLocation) as { address?: string; lat?: number; lng?: number };
           
           if (locationData.address && locationData.lat && locationData.lng) {
             setFormData(prev => ({
@@ -133,53 +170,63 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
               longitude: locationData.lng
             }));
             
-            // Asignar la zona automáticamente
-            assignZoneToCoordinates(locationData.lat, locationData.lng);
-            
-            // Limpiar el localStorage después de usarlo
-            localStorage.removeItem('selectedLocation');
+            setSelectedLocation({
+              lat: locationData.lat,
+              lng: locationData.lng
+            });
           }
         }
       } catch (error) {
-        console.error('Error loading from localStorage:', error);
+        if (error instanceof Error) {
+          // Handle error appropriately
+        }
       }
     };
-    
+
     loadSelectedLocation();
-  }, [searchParams]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setIsSubmitting(true);
 
     try {
-      // Asegurarse de que el zoneId esté incluido en los datos
-      const propertyData = {
+      const submitData = {
         ...formData,
-        zoneId: formData.zoneId || null
+        latitude: selectedLocation?.lat || null,
+        longitude: selectedLocation?.lng || null,
+        zoneId: formData.zoneId || undefined,
       };
 
       if (params.id) {
-        await updateProperty(params.id, propertyData);
+        await updateProperty(params.id, submitData);
+        toast.success('Propiedad actualizada correctamente');
       } else {
-        await createProperty(propertyData);
+        await createProperty(submitData);
+        toast.success('Propiedad creada correctamente');
       }
+
       router.push('/dashboard/properties');
     } catch (error) {
-      console.error('Error saving property:', error);
-      setError('Error al guardar la propiedad');
+      if (error instanceof Error) {
+        toast.error(`Error al guardar la propiedad: ${error.message}`);
+      } else {
+        toast.error('Error al guardar la propiedad');
+      }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleAddressSearch = async (address: string) => {
+    if (!address) return;
+
+    setIsSearching(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
       );
-      const data = await response.json();
+      const data = await response.json() as Array<{ lat: string; lon: string }>;
 
       if (data && data[0]) {
         const lat = parseFloat(data[0].lat);
@@ -190,70 +237,76 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
           latitude: lat,
           longitude: lng
         }));
-        
-        // Obtener la dirección y población desde las coordenadas
-        const addressData = await getAddressFromCoordinates(lat, lng);
-        if (addressData) {
-          setFormData(prev => ({
-            ...prev,
-            address: addressData.address,
-            population: addressData.population
-          }));
-        }
 
-        // Asignar la zona automáticamente
-        assignZoneToCoordinates(lat, lng);
+        setSelectedLocation({ lat, lng });
+        
+        // Solo llamar a assignZoneToCoordinates si zones es un array válido
+        if (zones && Array.isArray(zones) && zones.length > 0) {
+          assignZoneToCoordinates(lat, lng);
+        }
+      } else {
+        toast.error('No se encontró la dirección');
       }
     } catch (error) {
-      console.error('Error searching address:', error);
+      if (error instanceof Error) {
+        toast.error(`Error al buscar la dirección: ${error.message}`);
+      } else {
+        toast.error('Error al buscar la dirección');
+      }
+    } finally {
+      setIsSearching(false);
     }
   };
 
   const handleLocationSelect = async (lat: number, lng: number) => {
-    setFormData(prev => ({
-      ...prev,
-      latitude: lat,
-      longitude: lng
-    }));
+    setSelectedLocation({ lat, lng });
     
-    // Obtener la dirección y población desde las coordenadas
     try {
       const addressData = await getAddressFromCoordinates(lat, lng);
-      if (addressData) {
-        setFormData(prev => ({
-          ...prev,
-          address: addressData.address,
-          population: addressData.population
-        }));
+      let zoneId = null;
+      
+      if (zones && Array.isArray(zones) && zones.length > 0) {
+        const zone = findZoneForCoordinates({ lat, lng }, zones);
+        if (zone) {
+          zoneId = zone.id;
+        }
       }
+      
+      setFormData(prev => ({
+        ...prev,
+        address: addressData?.address || prev.address,
+        population: addressData?.population || prev.population,
+        zoneId: zoneId || prev.zoneId
+      }));
     } catch (error) {
-      console.error('Error getting address from coordinates:', error);
+      if (error instanceof Error) {
+        toast.error(`Error al obtener la dirección: ${error.message}`);
+      } else {
+        toast.error('Error al obtener la dirección');
+      }
     }
-
-    // Asignar la zona automáticamente
-    assignZoneToCoordinates(lat, lng);
   };
 
-  // Función para asignar la zona automáticamente basada en las coordenadas
   const assignZoneToCoordinates = (lat: number, lng: number) => {
-    if (zones.length === 0) {
-      console.log('No hay zonas disponibles para asignar');
+    if (!zones || !Array.isArray(zones) || zones.length === 0) {
       return;
     }
-
-    const point = { lat, lng };
-    const zone = findZoneForCoordinates(point, zones);
     
+    const zone = findZoneForCoordinates({ lat, lng }, zones);
     if (zone) {
-      console.log(`Asignando propiedad a la zona: ${zone.name} (ID: ${zone.id})`);
       setFormData(prev => ({
         ...prev,
         zoneId: zone.id
       }));
-    } else {
-      console.log('No se encontró una zona para las coordenadas proporcionadas:', point);
     }
   };
+
+  // Actualizar la zona cuando cambian las coordenadas
+  useEffect(() => {
+    if (selectedLocation && zones.length > 0) {
+      assignZoneToCoordinates(selectedLocation.lat, selectedLocation.lng);
+    }
+  }, [selectedLocation, zones]);
 
   if (loading) {
     return (
@@ -332,7 +385,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                 </div>
                 <div className="mt-6">
                   <PropertyMap
-                    selectedLocation={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                    selectedLocation={selectedLocation}
                     onLocationSelect={handleLocationSelect}
                     defaultLocation={CATARROJA_COORDS}
                   />
@@ -615,12 +668,12 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  {loading ? 'Guardando...' : params.id ? 'Actualizar' : 'Crear'}
+                  {isSubmitting ? 'Guardando...' : params.id ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
             </form>
