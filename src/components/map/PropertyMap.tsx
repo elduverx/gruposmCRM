@@ -37,7 +37,7 @@ function MapController({ coordinates }: MapControllerProps) {
   
   useEffect(() => {
     if (coordinates) {
-      map.setView([coordinates.lat, coordinates.lng], 15);
+      map.setView([coordinates.lat, coordinates.lng], 14);
     }
   }, [coordinates, map]);
   
@@ -53,8 +53,8 @@ interface PropertyMapProps {
 export default function PropertyMap({ selectedLocation, onLocationSelect, defaultLocation }: PropertyMapProps) {
   return (
     <MapContainer
-      center={selectedLocation ? [selectedLocation.lat, selectedLocation.lng] : [defaultLocation.lat, defaultLocation.lng]}
-      zoom={15}
+      center={[defaultLocation.lat, defaultLocation.lng]}
+      zoom={14}
       style={{ height: '600px', width: '100%' }}
     >
       <TileLayer

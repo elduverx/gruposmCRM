@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import UserList from '../../../components/users/UserList';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { UsersIcon } from '@heroicons/react/24/outline';
 
 interface User {
   id: string;
@@ -16,13 +15,13 @@ interface User {
 
 export default function UsersPage() {
   const router = useRouter();
-  const { user, loading: authLoading, isAuthenticated, isAdmin, refreshToken } = useAuth();
+  const { loading: authLoading, isAuthenticated, isAdmin } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setError(null);
       const token = localStorage.getItem('token');
@@ -46,12 +45,13 @@ export default function UsersPage() {
       setUsers(data);
       updateStats(data);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error al cargar usuarios:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar usuarios');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (authLoading) {
@@ -59,19 +59,14 @@ export default function UsersPage() {
     }
     
     if (!isAuthenticated) {
+      // eslint-disable-next-line no-console
       console.log('Usuario no autenticado, redirigiendo a login');
       router.replace('/login');
       return;
     }
     
-    // Eliminar la verificación de permisos de administrador
-    // if (!isAdmin) {
-    //   console.log('Usuario no es administrador, redirigiendo a dashboard');
-    //   router.replace('/dashboard');
-    //   return;
-    // }
-    
     // Si el usuario está autenticado, cargar los usuarios
+    // eslint-disable-next-line no-console
     console.log('Usuario autenticado, cargando usuarios');
     fetchUsers();
   }, [authLoading, isAuthenticated, router, fetchUsers]);
@@ -86,6 +81,7 @@ export default function UsersPage() {
   };
 
   const handleUsersChange = (newUsers: User[]) => {
+    // eslint-disable-next-line no-console
     console.log('handleUsersChange llamado con:', newUsers);
     setUsers(newUsers);
     updateStats(newUsers);

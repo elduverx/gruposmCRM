@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PropertyCreateInput, PropertyType, PropertyStatus, PropertyAction, OperationType } from '@/types/property';
+import { PropertyCreateInput, PropertyType, PropertyAction, OperationType } from '@/types/property';
 //comment
 interface PropertyFormProps {
   onSubmit: (data: PropertyCreateInput) => void;

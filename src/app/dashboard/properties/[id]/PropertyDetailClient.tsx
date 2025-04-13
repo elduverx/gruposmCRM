@@ -32,7 +32,7 @@ export default function PropertyDetailClient({
   const [property, setProperty] = useState<Property | null>(initialProperty);
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
   const [dpv, setDPV] = useState<DPV | null>(initialDPV);
-  const [news, setNews] = useState<PropertyNews[]>(initialNews);
+  const [news, setNews] = useState<PropertyNews[]>(initialNews || []);
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
   const [isDPVFormOpen, setIsDPVFormOpen] = useState(false);

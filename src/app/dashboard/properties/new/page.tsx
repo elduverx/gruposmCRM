@@ -1,10 +1,9 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { createProperty, updateProperty, getProperty } from '../actions';
-import { Property } from '@/types/property';
 import dynamic from 'next/dynamic';
 import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { getZones } from '@/app/dashboard/zones/actions';
@@ -25,21 +24,18 @@ const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
   loading: () => <div className="h-[600px] w-full bg-gray-100 animate-pulse" />
 });
 
-// Coordenadas de Catarroja, Valencia
+// Coordenadas de Camí Real 87, Catarroja
 const CATARROJA_COORDS = {
-  lat: 39.4015,
+  lat: 39.4035,
   lng: -0.4027
 };
 
 export default function PropertyFormPage({ params }: { params: { id?: string } }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
-  const [formData, setFormData] = useState<Partial<Property>>({
+  const [formData, setFormData] = useState({
     address: '',
-    population: 'Catarroja',
+    population: '',
     type: '',
     status: '',
     price: '',
@@ -64,34 +60,18 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
   });
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
 
   // Cargar las zonas al iniciar el componente
   useEffect(() => {
     const loadZones = async () => {
       try {
         const zonesData = await getZones();
-        // Asegurarse de que zonesData sea un array
-        if (Array.isArray(zonesData)) {
-          setZones(zonesData);
-        } else {
-          // eslint-disable-next-line no-console
-          console.error('Error: zonesData no es un array', zonesData);
-          setZones([]);
-        }
+        setZones(zonesData);
       } catch (error) {
-        if (error instanceof Error) {
-          // eslint-disable-next-line no-console
-          console.error('Error loading zones:', error.message);
-        } else {
-          // eslint-disable-next-line no-console
-          console.error('Error loading zones:', error);
-        }
-        // Establecer un array vacío en caso de error
-        setZones([]);
+        // eslint-disable-next-line no-console
+        console.error('Error loading zones:', error);
       }
     };
-
     loadZones();
   }, []);
 
@@ -151,10 +131,8 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
   useEffect(() => {
     const loadSelectedLocation = () => {
       // Intentar obtener datos de la URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const lat = urlParams.get('lat');
-      const lng = urlParams.get('lng');
-      const address = urlParams.get('address');
+      // Eliminar la variable no utilizada
+      // const urlParams = new URLSearchParams(window.location.search);
       
       // Si no hay datos en la URL, intentar obtenerlos del localStorage
       try {
@@ -177,12 +155,10 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
           }
         }
       } catch (error) {
-        if (error instanceof Error) {
-          // Handle error appropriately
-        }
+        // eslint-disable-next-line no-console
+        console.error('Error loading location from localStorage:', error);
       }
     };
-
     loadSelectedLocation();
   }, []);
 
@@ -221,7 +197,6 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
   const handleAddressSearch = async (address: string) => {
     if (!address) return;
 
-    setIsSearching(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
@@ -248,13 +223,8 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         toast.error('No se encontró la dirección');
       }
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error(`Error al buscar la dirección: ${error.message}`);
-      } else {
-        toast.error('Error al buscar la dirección');
-      }
-    } finally {
-      setIsSearching(false);
+      // eslint-disable-next-line no-console
+      console.error('Error getting address from coordinates:', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -265,6 +235,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
       const addressData = await getAddressFromCoordinates(lat, lng);
       let zoneId = null;
       
+      // Buscar la zona correspondiente a las coordenadas
       if (zones && Array.isArray(zones) && zones.length > 0) {
         const zone = findZoneForCoordinates({ lat, lng }, zones);
         if (zone) {
@@ -274,20 +245,18 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
       
       setFormData(prev => ({
         ...prev,
-        address: addressData?.address || prev.address,
-        population: addressData?.population || prev.population,
+        address: addressData?.address ? String(addressData.address) : prev.address,
+        population: addressData?.population ? String(addressData.population) : prev.population,
         zoneId: zoneId || prev.zoneId
       }));
     } catch (error) {
-      if (error instanceof Error) {
-        toast.error(`Error al obtener la dirección: ${error.message}`);
-      } else {
-        toast.error('Error al obtener la dirección');
-      }
+      // eslint-disable-next-line no-console
+      console.error('Error getting address from coordinates:', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
-  const assignZoneToCoordinates = (lat: number, lng: number) => {
+  // Envolver la función en useCallback para evitar recreaciones en cada render
+  const assignZoneToCoordinates = useCallback((lat: number, lng: number) => {
     if (!zones || !Array.isArray(zones) || zones.length === 0) {
       return;
     }
@@ -299,40 +268,14 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         zoneId: zone.id
       }));
     }
-  };
+  }, [zones]);
 
-  // Actualizar la zona cuando cambian las coordenadas
+  // Asignar zona a las coordenadas seleccionadas
   useEffect(() => {
     if (selectedLocation && zones.length > 0) {
       assignZoneToCoordinates(selectedLocation.lat, selectedLocation.lng);
     }
-  }, [selectedLocation, zones]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button 
-            onClick={() => router.refresh()}
-            className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  }, [selectedLocation, zones, assignZoneToCoordinates]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -357,7 +300,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                         type="text"
                         id="address"
                         value={formData.address || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value as string }))}
                         className="flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       />
                       <button
@@ -377,7 +320,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="text"
                       id="population"
                       value={formData.population || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, population: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, population: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -403,7 +346,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                     <select
                       id="type"
                       value={formData.type || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>
@@ -427,7 +370,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                     <select
                       id="status"
                       value={formData.status || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>
@@ -444,7 +387,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                         type="number"
                         id="price"
                         value={formData.price || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, price: String(e.target.value) }))}
                         className="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="0.00"
                       />
@@ -499,7 +442,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="number"
                       id="yearBuilt"
                       value={formData.yearBuilt || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, yearBuilt: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, yearBuilt: String(e.target.value) }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -548,7 +491,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                     id="description"
                     rows={4}
                     value={formData.description || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value as string }))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
                 </div>
@@ -566,7 +509,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="text"
                       id="ownerName"
                       value={formData.ownerName || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -578,7 +521,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="tel"
                       id="ownerPhone"
                       value={formData.ownerPhone || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, ownerPhone: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerPhone: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -590,7 +533,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="email"
                       id="ownerEmail"
                       value={formData.ownerEmail || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, ownerEmail: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ownerEmail: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -609,7 +552,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="text"
                       id="tenantName"
                       value={formData.tenantName || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tenantName: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantName: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -621,7 +564,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="tel"
                       id="tenantPhone"
                       value={formData.tenantPhone || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tenantPhone: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantPhone: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -633,7 +576,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                       type="email"
                       id="tenantEmail"
                       value={formData.tenantEmail || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tenantEmail: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tenantEmail: e.target.value as string }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                   </div>
@@ -652,7 +595,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                   id="notes"
                   rows={4}
                   value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value as string }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>

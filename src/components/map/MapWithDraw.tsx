@@ -9,6 +9,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import DrawControl from './DrawControl';
+import L from 'leaflet';
 
 // Importar DrawControl dinámicamente para evitar errores de SSR
 const DrawControlDynamic = dynamic(() => import('@/components/map/DrawControl'), {

@@ -43,5 +43,14 @@
     "role": "ADMIN",
     "createdAt": "2025-04-09T10:39:05.957Z",
     "updatedAt": "2025-04-09T10:39:05.957Z"
+  },
+  {
+    "id": "1744543640261",
+    "name": "m",
+    "email": "t@gmail.com",
+    "password": "$2a$10$DBWkp8Cxd4OvzKHZUVReje.1uRNy6D.qaYF3nPolikr08D.jPQFNq",
+    "role": "ADMIN",
+    "createdAt": "2025-04-13T11:27:20.261Z",
+    "updatedAt": "2025-04-13T11:37:56.786Z"
   }
 ]

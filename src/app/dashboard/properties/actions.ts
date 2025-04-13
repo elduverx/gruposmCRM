@@ -56,41 +56,31 @@ export async function getProperty(id: string): Promise<Property | null> {
       include: {
         zone: true,
         activities: true,
-        responsibleUser: true
+        responsibleUser: true,
+        assignments: true,
+        dpv: true,
+        clients: true
       }
     });
 
-    if (!property) {
-      return null;
-    }
+    if (!property) return null;
 
+    // Asegurarse de que las propiedades existan antes de acceder a ellas
     return {
       ...property,
-      captureDate: property.captureDate.toISOString(),
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-      activities: property.activities.map(activity => ({
-        ...activity,
-        createdAt: activity.createdAt.toISOString(),
-        updatedAt: activity.updatedAt.toISOString(),
-        date: activity.date.toISOString()
-      })),
-      zone: property.zone ? {
-        id: property.zone.id,
-        name: property.zone.name
-      } : null,
-      assignments: [],
-      dpv: null,
-      clients: [],
-      responsibleUser: property.responsibleUser ? {
-        id: property.responsibleUser.id,
-        name: property.responsibleUser.name,
-        email: property.responsibleUser.email
-      } : null
+      createdAt: property.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: property.updatedAt?.toISOString() || new Date().toISOString(),
+      activities: Array.isArray(property.activities) 
+        ? property.activities.map(activity => ({
+            ...activity,
+            createdAt: activity.createdAt?.toISOString() || new Date().toISOString(),
+            updatedAt: activity.updatedAt?.toISOString() || new Date().toISOString()
+          }))
+        : []
     };
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error getting property:', error);
+    console.error('Error getting property:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
@@ -131,7 +121,7 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
     return property;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error creating property:', error);
+    console.error('Error creating property:', error instanceof Error ? error.message : 'Unknown error');
     throw new Error('Error al crear la propiedad');
   }
 }
@@ -226,38 +216,86 @@ export async function updateProperty(id: string, data: {
     revalidatePath(`/dashboard/properties/${id}`);
     revalidatePath('/dashboard/zones');
 
-    return {
+    if (!property) {
+      return null;
+    }
+
+    // Asegurarse de que las propiedades existan antes de acceder a ellas
+    const formattedProperty = {
       ...property,
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-      activities: property.activities.map(activity => ({
-        ...activity,
-        createdAt: activity.createdAt.toISOString(),
-        updatedAt: activity.updatedAt.toISOString()
-      }))
+      createdAt: property.createdAt ? new Date(property.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: property.updatedAt ? new Date(property.updatedAt).toISOString() : new Date().toISOString(),
+      activities: Array.isArray(property.activities) 
+        ? property.activities.map(activity => ({
+            ...activity,
+            createdAt: activity.createdAt ? new Date(activity.createdAt).toISOString() : new Date().toISOString(),
+            updatedAt: activity.updatedAt ? new Date(activity.updatedAt).toISOString() : new Date().toISOString()
+          }))
+        : []
     };
+
+    return formattedProperty;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error updating property:', error);
+    console.error('Error updating property:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
 
 export async function deleteProperty(id: string): Promise<boolean> {
   try {
-    await prisma.property.delete({
-      where: { id }
+    // Primero eliminar registros relacionados
+    await prisma.$transaction(async (tx) => {
+      // Eliminar actividades
+      await tx.activity.deleteMany({
+        where: { propertyId: id }
+      });
+      
+      // Eliminar DPV
+      await tx.dPV.deleteMany({
+        where: { propertyId: id }
+      });
+      
+      // Eliminar noticias
+      await tx.propertyNews.deleteMany({
+        where: { propertyId: id }
+      });
+      
+      // Eliminar asignaciones
+      await tx.assignment.deleteMany({
+        where: { propertyId: id }
+      });
+      
+      // Eliminar referencias de clientes a la propiedad
+      await tx.client.updateMany({
+        where: {
+          properties: {
+            some: {
+              id: id
+            }
+          }
+        },
+        data: {
+          properties: {
+            disconnect: {
+              id: id
+            }
+          }
+        }
+      });
+      
+      // Finalmente eliminar la propiedad
+      await tx.property.delete({
+        where: { id }
+      });
     });
     
     // eslint-disable-next-line no-console
-    console.log('Property deleted:', id);
-    
-    revalidatePath('/dashboard/properties');
-    revalidatePath('/dashboard/zones');
+    console.log('Property and related records deleted:', id);
     return true;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error deleting property:', error);
+    console.error('Error deleting property:', error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 }
@@ -267,38 +305,34 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
   try {
     const activities = await prisma.activity.findMany({
       where: { propertyId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { date: 'desc' }
     });
 
-    if (!activities) {
+    if (!Array.isArray(activities)) {
       return [];
     }
 
     return activities.map(activity => {
-      if (!activity || typeof activity !== 'object') {
-        return null;
-      }
-
-      const date = activity.date instanceof Date ? activity.date : new Date(activity.date);
-      const createdAt = activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt);
-      const updatedAt = activity.updatedAt instanceof Date ? activity.updatedAt : new Date(activity.updatedAt);
+      // Asegurarse de que las fechas sean válidas
+      const date = activity.date ? new Date(activity.date) : new Date();
+      const createdAt = activity.createdAt ? new Date(activity.createdAt) : new Date();
+      const updatedAt = activity.updatedAt ? new Date(activity.updatedAt) : new Date();
 
       return {
         id: activity.id,
         propertyId: activity.propertyId,
-        type: activity.type,
-        description: activity.description,
+        type: activity.type || '',
+        status: activity.status || '',
+        client: activity.client,
+        notes: activity.notes,
         date: date.toLocaleDateString('es-ES'),
         createdAt: createdAt.toISOString(),
         updatedAt: updatedAt.toISOString()
       };
-    }).filter((activity): activity is NonNullable<typeof activity> => activity !== null);
+    });
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error fetching activities:', error.message);
-    } else {
-      console.error('Error fetching activities:', error);
-    }
+    // eslint-disable-next-line no-console
+    console.error('Error getting activities:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -314,21 +348,30 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
     
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
 
+    if (!activity) {
+      return null;
+    }
+
+    // Asegurarse de que las fechas sean válidas
+    const date = activity.date ? new Date(activity.date) : new Date();
+    const createdAt = activity.createdAt ? new Date(activity.createdAt) : new Date();
+    const updatedAt = activity.updatedAt ? new Date(activity.updatedAt) : new Date();
+
     return {
       ...activity,
-      date: activity.date.toLocaleString('es-ES', {
+      date: date.toLocaleString('es-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       }),
-      createdAt: activity.createdAt.toISOString(),
-      updatedAt: activity.updatedAt.toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     };
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error creating activity:', error);
+    console.error('Error creating activity:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
@@ -358,7 +401,7 @@ export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null
     };
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error fetching DPV:', error);
+    console.error('Error fetching DPV:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
@@ -430,7 +473,7 @@ export async function createPropertyNews(propertyId: string, data: {
     return news;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error creating property news:', error);
+    console.error('Error creating property news:', error instanceof Error ? error.message : 'Unknown error');
     throw error;
   }
 }
@@ -491,7 +534,7 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNewsW
     }).filter(Boolean) as PropertyNewsWithProperty[];
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error getting property news:', error);
+    console.error('Error getting property news:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -523,15 +566,31 @@ export async function createAssignment(data: {
         propertyId: data.propertyId
       },
       include: {
-        client: true
+        client: true,
+        property: true
       }
     });
-    
-    revalidatePath(`/dashboard/properties/${data.propertyId}`);
-    return assignment;
+
+    return {
+      ...assignment,
+      exclusiveUntil: assignment.exclusiveUntil.toISOString(),
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString(),
+      client: assignment.client ? {
+        id: assignment.client.id,
+        name: assignment.client.name,
+        email: assignment.client.email,
+        phone: assignment.client.phone
+      } : undefined,
+      property: assignment.property ? {
+        id: assignment.property.id,
+        address: assignment.property.address,
+        population: assignment.property.population
+      } : undefined
+    };
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error creating assignment:', error);
+    console.error('Error creating assignment:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
@@ -540,30 +599,33 @@ export async function getAssignmentsByPropertyId(propertyId: string): Promise<As
   try {
     const assignments = await prisma.assignment.findMany({
       where: { propertyId },
+      include: {
+        client: true,
+        property: true
+      },
       orderBy: { createdAt: 'desc' }
     });
-    
-    // eslint-disable-next-line no-console
-    console.log('Assignments fetched for property:', propertyId, assignments.length);
-    
+
     return assignments.map(assignment => ({
-      id: assignment.id,
-      type: assignment.type,
-      price: assignment.price,
-      exclusiveUntil: assignment.exclusiveUntil.toLocaleDateString('es-ES'),
-      origin: assignment.origin,
-      clientId: assignment.clientId,
-      sellerFeeType: assignment.sellerFeeType,
-      sellerFeeValue: assignment.sellerFeeValue,
-      buyerFeeType: assignment.buyerFeeType,
-      buyerFeeValue: assignment.buyerFeeValue,
-      propertyId: assignment.propertyId,
+      ...assignment,
+      exclusiveUntil: assignment.exclusiveUntil.toISOString(),
       createdAt: assignment.createdAt.toISOString(),
-      updatedAt: assignment.updatedAt.toISOString()
+      updatedAt: assignment.updatedAt.toISOString(),
+      client: assignment.client ? {
+        id: assignment.client.id,
+        name: assignment.client.name,
+        email: assignment.client.email,
+        phone: assignment.client.phone
+      } : undefined,
+      property: assignment.property ? {
+        id: assignment.property.id,
+        address: assignment.property.address,
+        population: assignment.property.population
+      } : undefined
     }));
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error fetching assignments:', error);
+    console.error('Error getting assignments:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -582,7 +644,7 @@ export async function getAssignments(): Promise<Assignment[]> {
     return assignments;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error getting assignments:', error);
+    console.error('Error getting assignments:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -635,7 +697,7 @@ export async function updateAssignment(id: string, data: {
     };
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Error updating assignment:', error);
+    console.error('Error updating assignment:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }
@@ -652,7 +714,8 @@ export async function deleteAssignment(id: string): Promise<boolean> {
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
     return true;
   } catch (error) {
-    console.error('Error deleting assignment:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error deleting assignment:', error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 }

@@ -13,6 +13,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ActivityForm } from './ActivityForm';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -62,6 +63,7 @@ export default function PropertiesPage() {
         
         setActivitiesMap(activitiesMap);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
@@ -75,10 +77,12 @@ export default function PropertiesPage() {
     if (window.confirm('¿Estás seguro de que deseas eliminar este inmueble?')) {
       setIsDeleting(id);
       try {
+        // eslint-disable-next-line no-console
         console.log('Intentando eliminar propiedad con ID:', id);
         const success = await deleteProperty(id);
         
         if (success) {
+          // eslint-disable-next-line no-console
           console.log('Propiedad eliminada correctamente');
           setProperties(properties.filter(property => property.id !== id));
           toast.success('Inmueble eliminado correctamente');
@@ -86,10 +90,12 @@ export default function PropertiesPage() {
           // Recargar la página para asegurar que los datos estén actualizados
           router.refresh();
         } else {
+          // eslint-disable-next-line no-console
           console.error('No se pudo eliminar la propiedad');
           toast.error('No se pudo eliminar el inmueble');
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error deleting property:', error);
         toast.error('Error al eliminar el inmueble');
       } finally {
@@ -99,15 +105,13 @@ export default function PropertiesPage() {
   };
 
   const handleEditZone = (zone: Zone) => {
+    if (!zone) return;
+    
     setSelectedZone(zone);
-    setNewZoneName(zone.name);
+    setNewZoneName(zone.name || '');
     setNewZoneDescription(zone.description || '');
-    setNewZoneColor(zone.color);
+    setNewZoneColor(zone.color || '#FF0000');
     setShowZoneModal(true);
-  };
-
-  const handleZoneCreated = () => {
-    // Implementation needed if required
   };
 
   const handleSaveZone = async () => {
@@ -121,12 +125,15 @@ export default function PropertiesPage() {
         coordinates: [] // Empty array as we're not handling coordinates anymore
       });
       
-      setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
-      setShowZoneModal(false);
-      alert('Zona actualizada correctamente');
+      if (updatedZone && typeof updatedZone === 'object') {
+        setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
+        setShowZoneModal(false);
+        toast.success('Zona actualizada correctamente');
+      }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error updating zone:', error);
-      alert('Error al actualizar la zona');
+      toast.error('Error al actualizar la zona');
     }
   };
 
@@ -137,33 +144,35 @@ export default function PropertiesPage() {
 
   // Funciones para editar propiedades
   const handleEditProperty = (property: Property) => {
+    if (!property) return;
+    
     setSelectedProperty(property);
     setEditFormData({
-      address: property.address,
-      population: property.population,
-      status: property.status,
-      action: property.action,
-      type: property.type,
-      ownerName: property.ownerName,
-      ownerPhone: property.ownerPhone,
-      captureDate: property.captureDate,
-      responsibleId: property.responsibleId,
-      hasSimpleNote: property.hasSimpleNote,
-      isOccupied: property.isOccupied,
-      clientId: property.clientId,
-      zoneId: property.zoneId,
-      latitude: property.latitude,
-      longitude: property.longitude,
-      occupiedBy: property.occupiedBy,
-      isLocated: property.isLocated,
-      responsible: property.responsible,
+      address: property.address || '',
+      population: property.population || '',
+      status: property.status || '',
+      action: property.action || '',
+      type: property.type || '',
+      ownerName: property.ownerName || '',
+      ownerPhone: property.ownerPhone || '',
+      captureDate: property.captureDate || '',
+      responsibleId: property.responsibleId || '',
+      hasSimpleNote: property.hasSimpleNote || false,
+      isOccupied: property.isOccupied || false,
+      clientId: property.clientId || '',
+      zoneId: property.zoneId || '',
+      latitude: property.latitude || 0,
+      longitude: property.longitude || 0,
+      occupiedBy: property.occupiedBy || '',
+      isLocated: property.isLocated || false,
+      responsible: property.responsible || '',
       // Campos de detalles de la propiedad
-      habitaciones: property.habitaciones,
-      banos: property.banos,
-      metrosCuadrados: property.metrosCuadrados,
-      parking: property.parking,
-      ascensor: property.ascensor,
-      piscina: property.piscina
+      habitaciones: property.habitaciones || 0,
+      banos: property.banos || 0,
+      metrosCuadrados: property.metrosCuadrados || 0,
+      parking: property.parking || false,
+      ascensor: property.ascensor || false,
+      piscina: property.piscina || false
     });
     setShowPropertyModal(true);
   };
@@ -173,15 +182,15 @@ export default function PropertiesPage() {
     
     if (type === 'checkbox') {
       const checkbox = e.target as HTMLInputElement;
-      setEditFormData({
-        ...editFormData,
+      setEditFormData(prev => ({
+        ...prev,
         [name]: checkbox.checked
-      });
+      }));
     } else {
-      setEditFormData({
-        ...editFormData,
+      setEditFormData(prev => ({
+        ...prev,
         [name]: value
-      });
+      }));
     }
   };
 
@@ -194,7 +203,7 @@ export default function PropertiesPage() {
       // Convertir la fecha de captura a formato ISO string si es necesario
       const formData = {
         ...editFormData,
-        captureDate: editFormData.captureDate ? new Date(editFormData.captureDate).toISOString() : undefined,
+        captureDate: editFormData.captureDate ? new Date(editFormData.captureDate as string).toISOString() : undefined,
         zoneId: editFormData.zoneId || null, // Asegurar que zoneId sea null si no está definido
         // Campos de detalles de la propiedad
         habitaciones: editFormData.habitaciones ? parseInt(editFormData.habitaciones as string) : null,
@@ -205,32 +214,19 @@ export default function PropertiesPage() {
         piscina: editFormData.piscina || false
       };
       
-      console.log('Enviando datos de actualización:', formData);
-      
       const updatedProperty = await updateProperty(selectedProperty.id, formData);
       
-      console.log('Propiedad actualizada:', updatedProperty);
-      
-      if (updatedProperty) {
-        // Actualizar la lista de propiedades
+      if (updatedProperty && typeof updatedProperty === 'object') {
         setProperties(properties.map(property => 
           property.id === updatedProperty.id ? updatedProperty : property
         ));
-        
-        // Cerrar el modal
         setShowPropertyModal(false);
-        
-        // Mostrar mensaje de éxito
-        toast.success('Propiedad actualizada correctamente');
-        
-        // Recargar la página para asegurar que los datos estén actualizados
-        router.refresh();
-      } else {
-        toast.error('No se pudo actualizar la propiedad');
+        toast.success('Inmueble actualizado correctamente');
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error updating property:', error);
-      toast.error('Error al actualizar la propiedad');
+      toast.error('Error al actualizar el inmueble');
     } finally {
       setIsSaving(false);
     }
@@ -243,7 +239,15 @@ export default function PropertiesPage() {
   };
 
   const handlePropertyClick = async (property: Property) => {
-    router.push(`/dashboard/properties/${property.id}`);
+    if (!property) return;
+    
+    try {
+      router.push(`/dashboard/properties/${property.id}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error navigating to property:', error);
+      toast.error('Error al navegar al inmueble');
+    }
   };
 
   const handleActivitySubmit = async (data: Omit<Activity, 'id' | 'propertyId' | 'createdAt' | 'updatedAt'>) => {
@@ -255,37 +259,43 @@ export default function PropertiesPage() {
         propertyId: selectedPropertyForActivity.id
       });
       
-      if (newActivity) {
+      if (newActivity && typeof newActivity === 'object') {
         setActivitiesMap(prev => ({
           ...prev,
           [selectedPropertyForActivity.id]: [
-            newActivity,
-            ...(prev[selectedPropertyForActivity.id] || [])
+            ...(prev[selectedPropertyForActivity.id] || []),
+            newActivity
           ]
         }));
-        
         setIsActivityFormOpen(false);
-        setSelectedPropertyForActivity(null);
+        toast.success('Actividad creada correctamente');
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error creating activity:', error);
+      toast.error('Error al crear la actividad');
     }
   };
 
   const handleToggleLocated = async (property: Property) => {
+    if (!property) return;
+    
     try {
       setIsUpdating(true);
       const updatedProperty = await updateProperty(property.id, {
         isLocated: !property.isLocated
       });
       
-      if (updatedProperty) {
+      if (updatedProperty && typeof updatedProperty === 'object') {
         setProperties(properties.map(p => 
           p.id === updatedProperty.id ? updatedProperty : p
         ));
+        toast.success('Estado de ubicación actualizado correctamente');
       }
     } catch (error) {
-      console.error('Error updating property:', error);
+      // eslint-disable-next-line no-console
+      console.error('Error toggling located status:', error);
+      toast.error('Error al actualizar el estado de ubicación');
     } finally {
       setIsUpdating(false);
     }

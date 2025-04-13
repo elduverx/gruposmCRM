@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,14 +7,13 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { createProperty, updateProperty, getProperty } from '../actions';
-import { PropertyType } from '@/types/property';
+import { PropertyType, PropertyCreateInput } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
 import { toast } from 'sonner';
-import { PropertyCreateInput } from '@/types/property';
 
-// Coordenadas de Catarroja, Valencia
+// Coordenadas de Camí Real 87, Catarroja
 const CATARROJA_COORDS = {
-  lat: 39.4015,
+  lat: 39.4035,
   lng: -0.4027
 };
 
@@ -43,7 +41,10 @@ function MapController({ coordinates }: { coordinates: { lat: number; lng: numbe
   
   useEffect(() => {
     if (coordinates) {
-      map.setView([coordinates.lat, coordinates.lng], 15);
+      map.setView([coordinates.lat, coordinates.lng], 14);
+    } else {
+      // Si no hay coordenadas seleccionadas, centrar en Catarroja
+      map.setView([CATARROJA_COORDS.lat, CATARROJA_COORDS.lng], 14);
     }
   }, [coordinates, map]);
   
@@ -57,7 +58,7 @@ interface PropertyFormPageProps {
 export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(CATARROJA_COORDS);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
   const [formData, setFormData] = useState<PropertyCreateInput>({
@@ -159,10 +160,10 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
       const addressData = await getAddressFromCoordinates(lat, lng);
       const zoneId = findZoneForLocation({ lat, lng });
       
-      setFormData(prev => ({
+      setFormData((prev: PropertyCreateInput) => ({
         ...prev,
-        address: addressData?.address || prev.address,
-        population: addressData?.population || prev.population,
+        address: addressData?.address ? String(addressData.address) : prev.address,
+        population: addressData?.population ? String(addressData.population) : prev.population,
         zoneId: zoneId || prev.zoneId // Mantener la zona anterior si no se encuentra una nueva
       }));
     } catch (error) {
@@ -177,17 +178,17 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     
     if (type === 'checkbox') {
       const checkbox = e.target as HTMLInputElement;
-      setFormData(prev => ({
+      setFormData((prev: PropertyCreateInput) => ({
         ...prev,
         [name]: checkbox.checked
       }));
     } else if (name === 'type') {
-      setFormData(prev => ({
+      setFormData((prev: PropertyCreateInput) => ({
         ...prev,
         [name]: value as PropertyType
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev: PropertyCreateInput) => ({
         ...prev,
         [name]: value
       }));
@@ -199,25 +200,29 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     setIsSubmitting(true);
 
     try {
-      const submitData = {
+      const propertyData = {
         ...formData,
-        latitude: selectedLocation?.lat || null,
-        longitude: selectedLocation?.lng || null,
-        zoneId: formData.zoneId || undefined,
+        captureDate: formData.captureDate ? new Date(formData.captureDate) : null,
+        latitude: selectedLocation?.lat ?? null,
+        longitude: selectedLocation?.lng ?? null,
+        zoneId: formData.zoneId || null
       };
 
       if (propertyId) {
-        await updateProperty(propertyId, submitData);
+        await updateProperty(propertyId, {
+          ...propertyData,
+          captureDate: propertyData.captureDate?.toISOString()
+        });
         toast.success('Propiedad actualizada correctamente');
       } else {
-        await createProperty(submitData);
+        await createProperty(propertyData);
         toast.success('Propiedad creada correctamente');
       }
 
       router.push('/dashboard/properties');
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error submitting form:', error);
+      console.error('Error submitting property:', error);
       toast.error('Error al guardar la propiedad');
     } finally {
       setIsSubmitting(false);
@@ -350,7 +355,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             <div className="h-[600px]">
               <MapContainer
                 center={[CATARROJA_COORDS.lat, CATARROJA_COORDS.lng]}
-                zoom={15}
+                zoom={14}
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer
