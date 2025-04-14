@@ -8,7 +8,7 @@ import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { getZones } from '@/app/dashboard/zones/actions';
 import { findZoneForCoordinates } from '@/utils/zoneUtils';
 import { Zone } from '@/app/dashboard/zones/actions';
-import { PropertyType, PropertyAction, OperationType, PropertyCreateInput } from '@/types/property';
+import { PropertyType, PropertyAction, OperationType } from '@/types/property';
 import { toast } from 'react-hot-toast';
 
 // Importar el mapa dinámicamente para evitar errores de SSR
@@ -146,7 +146,16 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
             metrosCuadrados: propertyData.metrosCuadrados || null,
             parking: propertyData.parking || false,
             ascensor: propertyData.ascensor || false,
-            piscina: propertyData.piscina || false
+            piscina: propertyData.piscina || false,
+            price: propertyData.price || '',
+            description: propertyData.description || '',
+            yearBuilt: propertyData.yearBuilt || '',
+            isFurnished: propertyData.isFurnished || false,
+            ownerEmail: propertyData.ownerEmail || '',
+            tenantName: propertyData.tenantName || '',
+            tenantPhone: propertyData.tenantPhone || '',
+            tenantEmail: propertyData.tenantEmail || '',
+            notes: propertyData.notes || ''
           });
 
           if (propertyData.latitude && propertyData.longitude) {
@@ -182,9 +191,9 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
           if (locationData.address && locationData.lat && locationData.lng) {
             setFormData(prev => ({
               ...prev,
-              address: locationData.address,
-              latitude: locationData.lat,
-              longitude: locationData.lng
+              address: locationData.address || prev.address,
+              latitude: locationData.lat || null,
+              longitude: locationData.lng || null
             }));
             
             setSelectedLocation({
@@ -206,7 +215,8 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     setIsSubmitting(true);
 
     try {
-      const submitData: PropertyCreateInput = {
+      // Datos comunes para ambas funciones
+      const commonData = {
         address: formData.address,
         population: formData.population,
         type: formData.type,
@@ -215,16 +225,15 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         ownerPhone: formData.ownerPhone,
         latitude: selectedLocation?.lat !== undefined && !isNaN(Number(selectedLocation.lat)) ? Number(selectedLocation.lat) : null,
         longitude: selectedLocation?.lng !== undefined && !isNaN(Number(selectedLocation.lng)) ? Number(selectedLocation.lng) : null,
-        zoneId: formData.zoneId ?? undefined,
+        zoneId: formData.zoneId,
         action: formData.action,
-        captureDate: new Date(formData.captureDate),
-        responsibleId: formData.responsibleId ?? undefined,
+        responsibleId: formData.responsibleId,
         hasSimpleNote: formData.hasSimpleNote,
         isOccupied: formData.isOccupied,
-        clientId: formData.clientId ?? undefined,
-        occupiedBy: formData.occupiedBy ?? undefined,
+        clientId: formData.clientId,
+        occupiedBy: formData.occupiedBy,
         isLocated: formData.isLocated,
-        responsible: formData.responsible ?? undefined,
+        responsible: formData.responsible,
         habitaciones: formData.habitaciones,
         banos: formData.banos,
         metrosCuadrados: formData.metrosCuadrados,
@@ -234,10 +243,22 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
       };
 
       if (params.id) {
-        await updateProperty(params.id, submitData);
+        // Para updateProperty, captureDate debe ser un string
+        const updateData = {
+          ...commonData,
+          captureDate: formData.captureDate
+        };
+        
+        await updateProperty(params.id, updateData);
         toast.success('Propiedad actualizada correctamente');
       } else {
-        await createProperty(submitData);
+        // Para createProperty, captureDate debe ser un Date
+        const createData = {
+          ...commonData,
+          captureDate: formData.captureDate ? new Date(formData.captureDate) : null
+        };
+        
+        await createProperty(createData);
         toast.success('Propiedad creada correctamente');
       }
 

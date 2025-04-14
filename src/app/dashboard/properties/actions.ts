@@ -163,37 +163,54 @@ export async function updateProperty(id: string, data: {
       }
     }
 
+    // Si se proporciona un responsibleId, verificar que el usuario existe
+    if (data.responsibleId) {
+      const user = await prisma.user.findUnique({
+        where: { id: data.responsibleId }
+      });
+      if (!user) {
+        throw new Error('El usuario responsable especificado no existe');
+      }
+    }
+
     // Convertir la fecha de captura a objeto Date si es necesario
     const captureDate = data.captureDate ? new Date(data.captureDate) : undefined;
 
+    // Preparar los datos para la actualización
+    const updateData: Record<string, unknown> = {
+      address: data.address,
+      population: data.population,
+      type: data.type,
+      ownerName: data.ownerName,
+      ownerPhone: data.ownerPhone,
+      zoneId: data.zoneId || null,
+      status: data.status,
+      action: data.action,
+      captureDate: captureDate,
+      hasSimpleNote: data.hasSimpleNote,
+      isOccupied: data.isOccupied,
+      clientId: data.clientId,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      occupiedBy: data.occupiedBy,
+      isLocated: data.isLocated,
+      responsible: data.responsible,
+      habitaciones: data.habitaciones,
+      banos: data.banos,
+      metrosCuadrados: data.metrosCuadrados,
+      parking: data.parking,
+      ascensor: data.ascensor,
+      piscina: data.piscina
+    };
+
+    // Solo incluir responsibleId si está definido
+    if (data.responsibleId !== undefined) {
+      updateData.responsibleId = data.responsibleId;
+    }
+
     const property = await prisma.property.update({
       where: { id },
-      data: {
-        address: data.address,
-        population: data.population,
-        type: data.type,
-        ownerName: data.ownerName,
-        ownerPhone: data.ownerPhone,
-        zoneId: data.zoneId || null,
-        status: data.status,
-        action: data.action,
-        captureDate: captureDate,
-        responsibleId: data.responsibleId,
-        hasSimpleNote: data.hasSimpleNote,
-        isOccupied: data.isOccupied,
-        clientId: data.clientId,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        occupiedBy: data.occupiedBy,
-        isLocated: data.isLocated,
-        responsible: data.responsible,
-        habitaciones: data.habitaciones,
-        banos: data.banos,
-        metrosCuadrados: data.metrosCuadrados,
-        parking: data.parking,
-        ascensor: data.ascensor,
-        piscina: data.piscina
-      },
+      data: updateData,
       include: {
         responsibleUser: {
           select: {
@@ -267,22 +284,30 @@ export async function deleteProperty(id: string): Promise<boolean> {
       });
       
       // Eliminar referencias de clientes a la propiedad
-      await tx.client.updateMany({
+      // Primero obtener los clientes que tienen esta propiedad
+      const clientsWithProperty = await tx.client.findMany({
         where: {
           properties: {
             some: {
               id: id
             }
           }
-        },
-        data: {
-          properties: {
-            disconnect: {
-              id: id
-            }
-          }
         }
       });
+      
+      // Luego actualizar cada cliente individualmente
+      for (const client of clientsWithProperty) {
+        await tx.client.update({
+          where: { id: client.id },
+          data: {
+            properties: {
+              disconnect: {
+                id: id
+              }
+            }
+          }
+        });
+      }
       
       // Finalmente eliminar la propiedad
       await tx.property.delete({

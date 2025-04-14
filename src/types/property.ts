@@ -133,6 +133,15 @@ export interface Property {
   parking: boolean;
   ascensor: boolean;
   piscina: boolean;
+  price: string;
+  description: string;
+  yearBuilt: string;
+  isFurnished: boolean;
+  ownerEmail: string;
+  tenantName: string;
+  tenantPhone: string;
+  tenantEmail: string;
+  notes: string;
 }
 
 export interface PropertyCreateInput {

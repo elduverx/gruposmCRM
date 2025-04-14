@@ -7,13 +7,14 @@ import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { getProperties, deleteProperty, getActivitiesByPropertyId, updateProperty, createActivity } from './actions';
 import { Property, Activity, OperationType, PropertyAction, PropertyType } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import { getZones } from '../zones/actions';
+import { getZones, updateZone } from '../zones/actions';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { ActivityForm } from './ActivityForm';
+import { Zone } from '@/types/zone';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -31,7 +32,9 @@ export default function PropertiesPage() {
   const [editFormData, setEditFormData] = useState<Partial<Property>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedPropertyForActivity, setSelectedPropertyForActivity] = useState<Property | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isUpdating, setIsUpdating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
@@ -45,8 +48,13 @@ export default function PropertiesPage() {
           getZones()
         ]);
         
-        setProperties(propertiesData);
-        setZones(zonesData);
+        if (Array.isArray(propertiesData)) {
+          setProperties(propertiesData);
+        }
+        
+        if (Array.isArray(zonesData)) {
+          setZones(zonesData);
+        }
         
         // Obtener las actividades para cada propiedad
         const activitiesPromises = propertiesData.map(property => 
@@ -104,6 +112,7 @@ export default function PropertiesPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEditZone = (zone: Zone) => {
     if (!zone) return;
     
@@ -114,6 +123,7 @@ export default function PropertiesPage() {
     setShowZoneModal(true);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSaveZone = async () => {
     if (!selectedZone) return;
     
@@ -125,7 +135,7 @@ export default function PropertiesPage() {
         coordinates: [] // Empty array as we're not handling coordinates anymore
       });
       
-      if (updatedZone && typeof updatedZone === 'object') {
+      if (updatedZone && typeof updatedZone === 'object' && 'id' in updatedZone) {
         setZones(zones.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
         setShowZoneModal(false);
         toast.success('Zona actualizada correctamente');
@@ -205,6 +215,7 @@ export default function PropertiesPage() {
         ...editFormData,
         captureDate: editFormData.captureDate ? new Date(editFormData.captureDate as string).toISOString() : undefined,
         zoneId: editFormData.zoneId || null, // Asegurar que zoneId sea null si no está definido
+        responsibleId: editFormData.responsibleId || null, // Asegurar que responsibleId sea null si no está definido
         // Campos de detalles de la propiedad
         habitaciones: editFormData.habitaciones ? parseInt(editFormData.habitaciones as string) : null,
         banos: editFormData.banos ? parseInt(editFormData.banos as string) : null,
@@ -277,6 +288,7 @@ export default function PropertiesPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleToggleLocated = async (property: Property) => {
     if (!property) return;
     
@@ -381,9 +393,9 @@ export default function PropertiesPage() {
                               <div className="flex items-center">
                                 <span 
                                   className="inline-block w-3 h-3 rounded-full mr-2" 
-                                  style={{ backgroundColor: propertyZone.color }}
+                                  style={{ backgroundColor: propertyZone.color || '#FF0000' }}
                                 ></span>
-                                {propertyZone.name}
+                                {propertyZone.name || ''}
                               </div>
                             ) : '-'}
                           </td>
@@ -641,7 +653,7 @@ export default function PropertiesPage() {
                             style={{ backgroundColor: zones.find(z => z.id === editFormData.zoneId)?.color || '#FF0000' }}
                           ></span>
                           <span className="text-xs text-gray-500">
-                            {zones.find(z => z.id === editFormData.zoneId)?.name}
+                            {zones.find(z => z.id === editFormData.zoneId)?.name || ''}
                           </span>
                         </div>
                       )}
