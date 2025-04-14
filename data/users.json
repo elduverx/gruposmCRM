@@ -52,5 +52,14 @@
     "role": "USER",
     "createdAt": "2025-04-14T18:22:47.648Z",
     "updatedAt": "2025-04-14T18:22:47.648Z"
+  },
+  {
+    "id": "1744658695946",
+    "name": "new",
+    "email": "n@e",
+    "password": "$2a$10$J5L3I9VUAoUwBFGpjrmdTOlEIvY5mBK0pTMDmqepP6TlFDPui3tjO",
+    "role": "USER",
+    "createdAt": "2025-04-14T19:24:55.946Z",
+    "updatedAt": "2025-04-14T19:24:55.946Z"
   }
 ]

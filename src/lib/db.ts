@@ -106,24 +106,43 @@ export const getUsers = (): User[] => {
 
 // Save users
 export const saveUsers = (users: User[]) => {
-  ensureDataDir();
-  fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2));
+  try {
+    console.log(`Intentando guardar ${users.length} usuarios en ${DB_PATH}`);
+    ensureDataDir();
+    fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2));
+    console.log('Usuarios guardados exitosamente');
+    return true;
+  } catch (error) {
+    console.error('Error al guardar usuarios:', error);
+    throw new Error(`Error al guardar usuarios: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+  }
 };
 
 // Add a new user
 export const addUser = (user: User) => {
-  const users = getUsers();
-  const now = new Date().toISOString();
-  const newUser = {
-    ...user,
-    createdAt: now,
-    updatedAt: now
-  };
-  users.push(newUser);
-  saveUsers(users);
-  // eslint-disable-next-line no-console
-  console.log('Usuario añadido a la base de datos:', newUser);
-  return newUser;
+  try {
+    console.log('Iniciando proceso de añadir usuario:', user.email);
+    const users = getUsers();
+    console.log(`Usuarios actuales: ${users.length}`);
+    
+    const now = new Date().toISOString();
+    const newUser = {
+      ...user,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    users.push(newUser);
+    console.log('Usuario agregado a la lista, intentando guardar...');
+    
+    saveUsers(users);
+    console.log('Usuario añadido exitosamente a la base de datos:', newUser.id);
+    
+    return newUser;
+  } catch (error) {
+    console.error('Error al añadir usuario:', error);
+    throw new Error(`Error al añadir usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+  }
 };
 
 // Update a user

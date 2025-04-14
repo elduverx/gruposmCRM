@@ -54,24 +54,29 @@ export async function POST(request: Request) {
     try {
       isUserAdmin = await isAdmin(request);
     } catch (error) {
-      // Log error internally without exposing details to client
+      console.error('Error al verificar permisos de admin:', error);
       return NextResponse.json(
-        { message: 'Error al verificar permisos' },
+        { message: 'Error al verificar permisos', details: error instanceof Error ? error.message : 'Error desconocido' },
         { status: 401 }
       );
     }
 
     if (!isUserAdmin) {
+      console.error('Usuario no tiene permisos de admin');
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    const { name, email, password, role } = await request.json() as CreateUserRequest;
+    const body = await request.json();
+    console.log('Datos recibidos para crear usuario:', JSON.stringify(body));
+    
+    const { name, email, password, role } = body as CreateUserRequest;
 
     // Validaciones básicas
     if (!name || !email || !password || !role) {
+      console.error('Validación fallida - campos faltantes:', { name, email, password: !!password, role });
       return NextResponse.json(
         { message: 'Todos los campos son requeridos' },
         { status: 400 }
@@ -81,12 +86,15 @@ export async function POST(request: Request) {
     // Verificar si el email ya existe
     const existingUser = findUserByEmail(email);
     if (existingUser) {
+      console.error('Email ya existe:', email);
       return NextResponse.json(
         { message: 'El correo electrónico ya está en uso' },
         { status: 400 }
       );
     }
 
+    console.log('Iniciando creación de usuario:', email);
+    
     // Encriptar la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -101,21 +109,26 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString()
     };
 
+    console.log('Intentando guardar usuario en la base de datos');
+    
     // Guardar el usuario
     const savedUser = addUser(newUser);
-    // Log success internally without exposing details to client
+    console.log('Usuario guardado exitosamente:', savedUser.id);
 
     // Devolver el usuario creado (sin la contraseña)
     const { password: _unused, ...userWithoutPassword } = savedUser;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     void _unused; // Explicitly mark as intentionally unused
-    // Log response internally without exposing details to client
     
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (error) {
-    // Log error internally without exposing details to client
+    console.error('Error detallado al crear usuario:', error);
     return NextResponse.json(
-      { message: 'Error al crear usuario' },
+      { 
+        message: 'Error al crear usuario', 
+        details: error instanceof Error ? error.message : 'Error desconocido',
+        stack: process.env.NODE_ENV !== 'production' ? (error instanceof Error ? error.stack : null) : null
+      },
       { status: 500 }
     );
   }
