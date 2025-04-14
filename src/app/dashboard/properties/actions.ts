@@ -596,6 +596,12 @@ export async function createAssignment(data: {
       }
     });
 
+    // Revalidar todas las rutas relevantes
+    revalidatePath(`/dashboard/properties/${data.propertyId}`);
+    revalidatePath('/dashboard/assignments');
+    revalidatePath('/dashboard/properties');
+    revalidatePath('/dashboard');
+
     return {
       ...assignment,
       exclusiveUntil: assignment.exclusiveUntil.toISOString(),
@@ -704,7 +710,12 @@ export async function updateAssignment(id: string, data: {
     // eslint-disable-next-line no-console
     console.log('Assignment updated:', id);
     
+    // Revalidar todas las rutas relevantes
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
+    revalidatePath('/dashboard/assignments');
+    revalidatePath('/dashboard/properties');
+    revalidatePath('/dashboard');
+    
     return {
       id: assignment.id,
       type: assignment.type,
@@ -736,7 +747,12 @@ export async function deleteAssignment(id: string): Promise<boolean> {
     // eslint-disable-next-line no-console
     console.log('Assignment deleted:', id);
     
+    // Revalidar todas las rutas relevantes
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
+    revalidatePath('/dashboard/assignments');
+    revalidatePath('/dashboard/properties');
+    revalidatePath('/dashboard');
+    
     return true;
   } catch (error) {
     // eslint-disable-next-line no-console
