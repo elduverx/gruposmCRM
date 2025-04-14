@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { deleteOrder, createOrder, updateOrder } from './actions';
 import OrderForm from '@/components/orders/OrderForm';
 import { Client } from '@/types/client';
-import { Property } from '@/types/property';
 import SearchBar from '@/components/common/SearchBar';
 
 interface OrderListProps {

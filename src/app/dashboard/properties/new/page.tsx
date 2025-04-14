@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,14 +8,8 @@ import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { getZones } from '@/app/dashboard/zones/actions';
 import { findZoneForCoordinates } from '@/utils/zoneUtils';
 import { Zone } from '@/app/dashboard/zones/actions';
-import { PropertyType } from '@/types/property';
+import { PropertyType, PropertyAction, OperationType, PropertyCreateInput } from '@/types/property';
 import { toast } from 'react-hot-toast';
-
-// Definir OperationType para uso en el cliente
-const OperationType = {
-  SALE: 'SALE',
-  RENT: 'RENT'
-};
 
 // Importar el mapa dinámicamente para evitar errores de SSR
 const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
@@ -30,14 +23,50 @@ const CATARROJA_COORDS = {
   lng: -0.4027
 };
 
+interface FormData {
+  address: string;
+  population: string;
+  type: PropertyType;
+  status: typeof OperationType[keyof typeof OperationType];
+  price: string;
+  description: string;
+  habitaciones: number | null;
+  banos: number | null;
+  metrosCuadrados: number | null;
+  parking: boolean;
+  ascensor: boolean;
+  piscina: boolean;
+  yearBuilt: string;
+  isFurnished: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  tenantName: string;
+  tenantPhone: string;
+  tenantEmail: string;
+  notes: string;
+  zoneId: string | null;
+  action: PropertyAction;
+  captureDate: string;
+  responsibleId: string | null;
+  hasSimpleNote: boolean;
+  isOccupied: boolean;
+  clientId: string | null;
+  occupiedBy: string | null;
+  isLocated: boolean;
+  responsible: string | null;
+}
+
 export default function PropertyFormPage({ params }: { params: { id?: string } }) {
   const router = useRouter();
   const [zones, setZones] = useState<Zone[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     address: '',
     population: '',
-    type: '',
-    status: '',
+    type: 'CASA',
+    status: OperationType.SALE,
     price: '',
     description: '',
     habitaciones: null,
@@ -56,7 +85,17 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     tenantName: '',
     tenantPhone: '',
     tenantEmail: '',
-    notes: ''
+    notes: '',
+    zoneId: null,
+    action: PropertyAction.IR_A_DIRECCION,
+    captureDate: new Date().toISOString(),
+    responsibleId: null,
+    hasSimpleNote: false,
+    isOccupied: false,
+    clientId: null,
+    occupiedBy: null,
+    isLocated: false,
+    responsible: null
   });
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,8 +131,8 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
             latitude: propertyData.latitude || null,
             longitude: propertyData.longitude || null,
             zoneId: propertyData.zoneId || null,
-            status: propertyData.status || 'AVAILABLE',
-            action: propertyData.action || 'SALE',
+            status: propertyData.status || OperationType.SALE,
+            action: propertyData.action || PropertyAction.IR_A_DIRECCION,
             captureDate: propertyData.captureDate || new Date().toISOString(),
             responsibleId: propertyData.responsibleId || null,
             hasSimpleNote: propertyData.hasSimpleNote || false,
@@ -167,11 +206,31 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     setIsSubmitting(true);
 
     try {
-      const submitData = {
-        ...formData,
-        latitude: selectedLocation?.lat !== undefined ? Number(selectedLocation.lat) : null,
-        longitude: selectedLocation?.lng !== undefined ? Number(selectedLocation.lng) : null,
+      const submitData: PropertyCreateInput = {
+        address: formData.address,
+        population: formData.population,
+        type: formData.type,
+        status: formData.status,
+        ownerName: formData.ownerName,
+        ownerPhone: formData.ownerPhone,
+        latitude: selectedLocation?.lat !== undefined && !isNaN(Number(selectedLocation.lat)) ? Number(selectedLocation.lat) : null,
+        longitude: selectedLocation?.lng !== undefined && !isNaN(Number(selectedLocation.lng)) ? Number(selectedLocation.lng) : null,
         zoneId: formData.zoneId ?? undefined,
+        action: formData.action,
+        captureDate: new Date(formData.captureDate),
+        responsibleId: formData.responsibleId ?? undefined,
+        hasSimpleNote: formData.hasSimpleNote,
+        isOccupied: formData.isOccupied,
+        clientId: formData.clientId ?? undefined,
+        occupiedBy: formData.occupiedBy ?? undefined,
+        isLocated: formData.isLocated,
+        responsible: formData.responsible ?? undefined,
+        habitaciones: formData.habitaciones,
+        banos: formData.banos,
+        metrosCuadrados: formData.metrosCuadrados,
+        parking: formData.parking,
+        ascensor: formData.ascensor,
+        piscina: formData.piscina
       };
 
       if (params.id) {
@@ -258,7 +317,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         ...prev,
         address: addressData?.address ? String(addressData.address) : prev.address,
         population: addressData?.population ? String(addressData.population) : prev.population,
-        zoneId: zoneId !== undefined ? String(zoneId) : prev.zoneId
+        zoneId: zoneId !== undefined && zoneId !== null ? String(zoneId) : prev.zoneId
       }));
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -358,7 +417,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                     <select
                       id="type"
                       value={formData.type || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as string }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as PropertyType }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>
@@ -382,7 +441,7 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                     <select
                       id="status"
                       value={formData.status || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as string }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as typeof OperationType[keyof typeof OperationType] }))}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
                       <option value="">Seleccionar...</option>

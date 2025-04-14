@@ -26,12 +26,6 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
   const [sortField, setSortField] = useState<keyof User>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'USER'
-  });
 
   const handleEdit = (user: User) => {
     if (!isAdmin) return;
@@ -49,7 +43,7 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('No estás autenticado. Por favor, inicia sesión nuevamente.');
+        alert('No estás autenticado');
         router.push('/login');
         return;
       }
@@ -61,19 +55,13 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
         }
       });
 
-      if (response.status === 401) {
-        alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-        localStorage.removeItem('token');
-        router.push('/login');
-        return;
-      }
-
       if (!response.ok) {
         throw new Error('Error al eliminar el usuario');
       }
 
       onUsersChange(users.filter(user => user.id !== userId));
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error:', error);
       alert('Error al eliminar el usuario');
     }
@@ -88,8 +76,8 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
         return;
       }
 
-      const url = selectedUser
-        ? `/api/users/${selectedUser.id}`
+      const url = selectedUser 
+        ? `/api/users/${selectedUser.id}` 
         : '/api/users';
       
       const method = selectedUser ? 'PUT' : 'POST';
@@ -103,8 +91,8 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
         body: JSON.stringify(formData)
       });
 
+      // Si el token ha expirado, intentar refrescarlo
       if (response.status === 401) {
-        // Intentar refrescar el token
         const refreshResponse = await fetch('/api/auth/refresh', {
           method: 'POST',
           headers: {
@@ -113,7 +101,8 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
         });
 
         if (refreshResponse.ok) {
-          const { token: newToken } = await refreshResponse.json();
+          const refreshData = await refreshResponse.json() as { token: string };
+          const newToken = refreshData.token;
           localStorage.setItem('token', newToken);
 
           // Reintentar la operación original con el nuevo token
@@ -127,61 +116,57 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
           });
 
           if (!retryResponse.ok) {
-            throw new Error('Error al procesar la solicitud después de refrescar el token');
+            const errorData = await retryResponse.json() as { message?: string };
+            throw new Error(errorData.message || 'Error al procesar la solicitud después de refrescar el token');
           }
 
-          const data = await retryResponse.json();
+          const data = await retryResponse.json() as User;
           handleSuccess(data);
-          return;
-        } else {
-          alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-          router.push('/login');
           return;
         }
       }
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al procesar la solicitud');
+        const errorData = await response.json() as { message?: string };
+        throw new Error(errorData.message || 'Error al procesar la solicitud');
       }
 
-      const data = await response.json();
+      const data = await response.json() as User;
+      // eslint-disable-next-line no-console
       console.log('Usuario creado/actualizado:', data);
       handleSuccess(data);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error:', error);
       alert(error instanceof Error ? error.message : 'Error al procesar la solicitud');
     }
   };
 
   const handleSuccess = (data: User) => {
+    // eslint-disable-next-line no-console
     console.log('Manejando éxito con datos:', data);
     // Actualizar la lista de usuarios
     if (selectedUser) {
       const updatedUsers = users.map(user => 
         user.id === selectedUser.id ? data : user
       );
+      // eslint-disable-next-line no-console
       console.log('Usuarios actualizados (edición):', updatedUsers);
       onUsersChange(updatedUsers);
     } else {
       const updatedUsers = [...users, data];
+      // eslint-disable-next-line no-console
       console.log('Usuarios actualizados (creación):', updatedUsers);
       onUsersChange(updatedUsers);
     }
 
     // Limpiar el formulario
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: 'USER'
-    });
     setSelectedUser(null);
     setShowForm(false);
   };
 
   const handleSort = (field: keyof User) => {
-    if (field === sortField) {
+    if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
@@ -189,10 +174,12 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
     }
   };
 
+  // Filtrar y ordenar usuarios
   const filteredUsers = users
     .filter(user => 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -206,129 +193,89 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
     });
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Lista de Usuarios</h2>
-          {isAdmin && (
-            <button
-              onClick={() => {
-                setSelectedUser(null);
-                setShowForm(true);
-              }}
-              className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Agregar Usuario
-            </button>
-          )}
+    <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Usuarios
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            Lista de usuarios del sistema
+          </p>
         </div>
-
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Buscar usuarios..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    onClick={() => handleSort('name')}
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    Nombre
-                  </th>
-                  <th
-                    onClick={() => handleSort('email')}
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    Email
-                  </th>
-                  <th
-                    onClick={() => handleSort('role')}
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    Rol
-                  </th>
-                  <th
-                    onClick={() => handleSort('createdAt')}
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    Fecha de Registro
-                  </th>
-                  {isAdmin && (
-                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.email}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'ADMIN' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No se encontraron usuarios que coincidan con la búsqueda
-          </div>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setSelectedUser(null);
+              setShowForm(true);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Nuevo Usuario
+          </button>
         )}
       </div>
 
-      {showForm && (
-        <UserForm
-          user={selectedUser}
-          onSubmit={handleFormSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            setSelectedUser(null);
-          }}
+      <div className="px-4 py-3 border-b border-gray-200 sm:px-6">
+        <input
+          type="text"
+          placeholder="Buscar usuarios..."
+          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
+      </div>
+
+      <ul className="divide-y divide-gray-200">
+        {filteredUsers.map((user) => (
+          <li key={user.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-indigo-600 truncate">
+                  {user.name}
+                </p>
+                <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                <p className="text-xs text-gray-400">
+                  Rol: {user.role} | Creado: {new Date(user.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              {isAdmin && (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <PencilIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.id)}
+                    className="inline-flex items-center p-1 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    <TrashIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
+              {selectedUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+            </h2>
+            <UserForm
+              user={selectedUser}
+              onSubmit={handleFormSubmit}
+              onCancel={() => {
+                setShowForm(false);
+                setSelectedUser(null);
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

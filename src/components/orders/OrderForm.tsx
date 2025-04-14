@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Order, OrderCreateInput } from '@/types/order';
 import { Client } from '@/types/client';
-import { Property, PropertyType } from '@/types/property';
+import { PropertyType } from '@/types/property';
 
 interface OrderFormProps {
   order?: Order | null;
