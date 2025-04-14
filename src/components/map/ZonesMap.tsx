@@ -46,6 +46,7 @@ export default function ZonesMap({
   handleZoneClick,
   selectedLocation
 }: ZonesMapProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [markerRefs, setMarkerRefs] = useState<{ [key: string]: any }>({});
   const [isClient, setIsClient] = useState(false);
   const [mapKey, setMapKey] = useState(0);

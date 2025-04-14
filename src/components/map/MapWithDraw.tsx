@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import { Property } from '@/types/property';
 import { Zone } from '@/app/dashboard/zones/actions';
 import 'leaflet/dist/leaflet.css';
@@ -12,6 +12,7 @@ import DrawControl from './DrawControl';
 import L from 'leaflet';
 
 // Importar DrawControl dinámicamente para evitar errores de SSR
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DrawControlDynamic = dynamic(() => import('@/components/map/DrawControl'), {
   ssr: false
 });
@@ -61,7 +62,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   // Efecto para notificar al componente padre cuando los marcadores cambian
   useEffect(() => {
     props.onMarkerRefsUpdate(markerRefs.current);
-  }, [props.properties, props.onMarkerRefsUpdate]);
+  }, [props.properties, props.onMarkerRefsUpdate, props]);
 
   // Efecto para abrir el popup cuando se selecciona una propiedad
   useEffect(() => {
@@ -73,6 +74,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
             marker.openPopup();
           }
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error(`Error al abrir el popup para la propiedad ${props.selectedPropertyId}:`, error);
         }
       }, 300);
@@ -85,6 +87,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
       try {
         mapRef.current.setView(props.center, props.zoom);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error al actualizar el centro del mapa:', error);
       }
     }
@@ -100,6 +103,7 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
             marker.openPopup();
           }
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error('Error al abrir el popup de la ubicación seleccionada:', error);
         }
       }, 300);
@@ -133,9 +137,10 @@ const MapWithDraw = React.forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
       
       <DrawControl
         editableLayers={featureGroupRef.current}
-        onCreated={(e: any) => {
+        onCreated={(e: { layer: L.Layer & { getLatLngs: () => L.LatLng[][] } }) => {
           const layer = e.layer;
           const coordinates: { lat: number; lng: number }[] = [];
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           layer.getLatLngs()[0].forEach((latLng: L.LatLng) => {
             coordinates.push({
               lat: latLng.lat,

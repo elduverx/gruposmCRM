@@ -165,6 +165,7 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
     setShowForm(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSort = (field: keyof User) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');

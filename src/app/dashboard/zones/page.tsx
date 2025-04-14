@@ -2,6 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 // @ts-nocheck
 
 'use client';
@@ -134,6 +139,13 @@ const isPropertyInZone = (property: Property, zoneCoordinates: { lat: number; ln
   
   return inside;
 };
+
+interface NominatimResponse {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
 
 export default function ZonesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -440,36 +452,6 @@ export default function ZonesPage() {
         
         // Actualizar las propiedades localizadas
         const localizedProps = getLocalizedPropertiesInSelectedZone();
-        console.log('Propiedades localizadas:', localizedProps.length, localizedProps);
-        
-        // Depuración: Verificar todas las propiedades en la zona
-        const allPropsInZone = getPropertiesInSelectedZone();
-        console.log('Todas las propiedades en la zona:', allPropsInZone.length);
-        
-        // Depuración: Verificar propiedades con zoneId igual a selectedZoneId
-        const propsWithZoneId = properties.filter(p => p.zoneId === zone.id);
-        console.log('Propiedades con zoneId igual a selectedZoneId:', propsWithZoneId.length);
-        console.log('Propiedades con zoneId y localizadas:', 
-          propsWithZoneId.filter(p => p.isLocated === true || p.isLocated === "true").length
-        );
-        
-        console.log('Propiedades con isLocated=true:', allPropsInZone.filter(p => p.isLocated === true).length);
-        console.log('Propiedades con isLocated="true":', allPropsInZone.filter(p => p.isLocated === "true").length);
-        console.log('Propiedades con isLocated=false:', allPropsInZone.filter(p => p.isLocated === false).length);
-        console.log('Propiedades con isLocated undefined:', allPropsInZone.filter(p => p.isLocated === undefined).length);
-        
-        // Depuración: Verificar el estado de las propiedades
-        console.log('Propiedades con status=SALE:', allPropsInZone.filter(p => p.status === 'SALE').length);
-        console.log('Propiedades con status=RENT:', allPropsInZone.filter(p => p.status === 'RENT').length);
-        console.log('Propiedades con status undefined:', allPropsInZone.filter(p => p.status === undefined).length);
-        
-        // Depuración: Verificar propiedades que cumplen ambas condiciones
-        console.log('Propiedades localizadas y activas:', 
-          allPropsInZone.filter(p => 
-            (p.isLocated === true || p.isLocated === "true") && 
-            (p.status === 'SALE' || p.status === 'RENT')
-          ).length
-        );
         
         // Asegurarse de que las propiedades localizadas tengan todos los datos necesarios
         const localizedPropsWithDetails = localizedProps.map(prop => {

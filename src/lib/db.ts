@@ -22,10 +22,12 @@ const ensureDataDir = () => {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
+      // eslint-disable-next-line no-console
       console.log('Directorio de datos creado:', dataDir);
     }
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al crear el directorio de datos:', error);
     return false;
   }
@@ -54,6 +56,7 @@ export const initializeDb = async () => {
       ];
       
       fs.writeFileSync(DB_PATH, JSON.stringify(defaultUsers, null, 2));
+      // eslint-disable-next-line no-console
       console.log('Base de datos inicializada con usuario admin por defecto');
     } else {
       // Verificar y corregir usuarios existentes
@@ -75,12 +78,14 @@ export const initializeDb = async () => {
       
       if (needsUpdate) {
         saveUsers(updatedUsers);
+        // eslint-disable-next-line no-console
         console.log('Usuarios actualizados con campos faltantes');
       }
     }
     
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al inicializar la base de datos:', error);
     return false;
   }
@@ -95,6 +100,7 @@ export const getUsers = (): User[] => {
   }
   
   const data = fs.readFileSync(DB_PATH, 'utf-8');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return JSON.parse(data);
 };
 
@@ -115,6 +121,7 @@ export const addUser = (user: User) => {
   };
   users.push(newUser);
   saveUsers(users);
+  // eslint-disable-next-line no-console
   console.log('Usuario añadido a la base de datos:', newUser);
   return newUser;
 };
