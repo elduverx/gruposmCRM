@@ -16,7 +16,8 @@ import {
   NewspaperIcon,
   Bars3Icon,
   XMarkIcon,
-  BellIcon
+  BellIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -25,6 +26,7 @@ const commonNavigation = [
   { name: 'Inmuebles', href: '/dashboard/properties', icon: BuildingOfficeIcon },
   { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
+  // { name: 'Metas', href: '/dashboard/metas', icon: TrophyIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
   { name: 'Pedidos', href: '/dashboard/orders', icon: ClipboardDocumentListIcon },
 ];
@@ -46,7 +48,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Combinar navegación basada en el rol
   const mobileNavigation = [...commonNavigation];
   if (isAdmin) {
-    mobileNavigation.push({ name: 'Usuarios', href: '/dashboard/users', icon: UserGroupIcon });
+    mobileNavigation.push(...adminNavigation);
   }
 
   const renderNavLinks = (items: typeof commonNavigation, isMobile: boolean = false) => {
@@ -65,11 +67,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             }`}
           >
             <item.icon
-              className={`h-6 w-6 ${
+              className={`h-5 w-5 ${
                 isActive ? 'text-blue-600' : 'text-gray-400'
               }`}
             />
-            <span className="mt-1">{item.name}</span>
+            <span className="mt-1 text-[10px]">{item.name}</span>
           </Link>
         );
       }
@@ -158,28 +160,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* Contenido principal */}
       <div className="flex min-h-screen flex-col lg:pl-64">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white shadow-sm">
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Header solo visible en móvil */}
+        <header className="sticky top-0 z-40 bg-white shadow-sm lg:hidden">
+          <div className="flex h-12 items-center px-4">
             <button
               type="button"
-              className="lg:hidden -ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-gray-500 hover:text-gray-900"
+              className="-ml-0.5 -mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-500 hover:text-gray-900"
               onClick={() => setSidebarOpen(true)}
             >
               <span className="sr-only">Abrir sidebar</span>
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
             </button>
-            <div className="flex flex-1 justify-end">
-              <div className="ml-4 flex items-center md:ml-6">
-                <button
-                  type="button"
-                  className="rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                  <span className="sr-only">Ver notificaciones</span>
-                  <BellIcon className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
           </div>
         </header>
 
@@ -191,7 +182,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Navegación móvil inferior */}
         <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white lg:hidden">
-          <div className="mx-auto grid h-16 w-full grid-cols-5 items-center px-2">
+          <div className="flex w-full overflow-x-auto px-2 py-1 justify-start">
             {renderNavLinks(mobileNavigation, true)}
           </div>
         </nav>
