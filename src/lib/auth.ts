@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { findUserById } from './db';
+import { findUserByEmail as findUserByEmailPrisma } from './prisma-users';
 
 // Clave secreta para JWT
 export const JWT_SECRET = process.env.JWT_SECRET || 'gruposm_crm_secret_key_2024';
@@ -82,17 +83,30 @@ export const isAdmin = async (request: Request) => {
         return true;
       }
       
-      // Si el token no incluye el rol, verificar en la base de datos
-      const user = findUserById(decoded.userId);
-      if (!user) {
+      try {
+        // Intentar verificar en Prisma primero
+        const prismaUser = await findUserByEmailPrisma(decoded.userId);
+        if (prismaUser) {
+          // eslint-disable-next-line no-console
+          console.log('Usuario encontrado en Prisma, rol:', prismaUser.role);
+          return prismaUser.role === 'ADMIN';
+        }
+      } catch (prismaError) {
+        // eslint-disable-next-line no-console
+        console.error('Error al verificar en Prisma, intentando con JSON:', prismaError);
+      }
+      
+      // Si no se encuentra en Prisma o hay error, verificar en JSON
+      const jsonUser = findUserById(decoded.userId);
+      if (!jsonUser) {
         // eslint-disable-next-line no-console
         console.log('Usuario no encontrado para el ID:', decoded.userId);
         return false;
       }
       
-      const isAdminUser = user.role === 'ADMIN';
+      const isAdminUser = jsonUser.role === 'ADMIN';
       // eslint-disable-next-line no-console
-      console.log('¿Es administrador?:', isAdminUser, 'Rol del usuario:', user.role);
+      console.log('¿Es administrador?:', isAdminUser, 'Rol del usuario:', jsonUser.role);
       return isAdminUser;
     } catch (error) {
       // eslint-disable-next-line no-console
