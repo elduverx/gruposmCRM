@@ -39,10 +39,11 @@ const LeafletInit: React.FC = () => {
     // Función para establecer los iconos por defecto de Leaflet
     const setDefaultIcon = () => {
       try {
-        // Importar L dinámicamente para evitar errores de SSR
-        const L = require('leaflet');
-        
-        delete L.Icon.Default.prototype._getIconUrl;
+        // Usar la importación global de L en lugar de require
+        const defaultIcon = L.Icon.Default.prototype as any;
+        if (defaultIcon._getIconUrl) {
+          delete defaultIcon._getIconUrl;
+        }
         
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: '/marker-icon-2x.png',
