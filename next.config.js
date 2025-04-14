@@ -14,9 +14,7 @@ const nextConfig = {
   },
   // Desactivar la generación estática para las rutas de dashboard
   output: 'standalone',
-  generateStaticParams: async () => {
-    return [];
-  },
+  
   // Configure dynamic routes and disable static generation for database-dependent routes
   async rewrites() {
     return [
