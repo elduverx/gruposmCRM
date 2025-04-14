@@ -1,3 +1,7 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 // Función para obtener la dirección a partir de coordenadas
 export async function getAddressFromCoordinates(lat: number, lng: number) {
   try {

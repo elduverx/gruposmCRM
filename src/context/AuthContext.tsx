@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable no-console */
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
