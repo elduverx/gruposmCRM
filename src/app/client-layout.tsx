@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { HomeIcon, BuildingOfficeIcon, UserGroupIcon, NewspaperIcon, ClipboardDocumentListIcon, MapIcon, UsersIcon } from "@heroicons/react/24/outline";
 import 'leaflet/dist/leaflet.css';
-import { AuthProvider } from "@/context/AuthContext";
-import { useAuth } from "@/context/AuthContext";
+import { AuthProvider } from "./dashboard/context/AuthContext";
+import { useAuth } from "./dashboard/context/AuthContext";
 import { usePathname } from "next/navigation";
 import AuthForm from "@/components/AuthForm";
 

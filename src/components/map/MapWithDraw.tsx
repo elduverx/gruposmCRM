@@ -8,7 +8,6 @@
 import React, { useEffect, useState, useRef, forwardRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
-import { useMap } from 'react-leaflet';
 import { Property } from '@/types/property';
 import { Zone } from '@/app/dashboard/zones/actions';
 import 'leaflet/dist/leaflet.css';
@@ -64,7 +63,6 @@ export interface MapWithDrawProps {
   selectedLocation?: {lat: number, lng: number, name: string} | null;
   initialCenter?: [number, number];
   initialZoom?: number;
-  editableLayers?: L.FeatureGroup | null;
 }
 
 const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
@@ -85,8 +83,7 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
     handleZoneClick,
     selectedLocation,
     initialCenter = [-34.603722, -58.381592],
-    initialZoom = 13,
-    editableLayers
+    initialZoom = 13
   } = props;
 
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
@@ -201,8 +198,8 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   }
 
   // Función que maneja la creación de zonas
-  const handleCreated = (e: any) => {
-    if (e.layerType === 'polygon' && e.layer.getLatLngs) {
+  const handleCreated = (e: { layer: L.Layer & { getLatLngs: () => L.LatLng[][] } }) => {
+    if (e.layer.getLatLngs) {
       const coordinates = e.layer.getLatLngs()[0].map(latLng => ({
         lat: latLng.lat,
         lng: latLng.lng
@@ -212,11 +209,14 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   };
 
   // Función para manejar la edición de un polígono
-  const handleEdited = (e: any) => {
-    const layers = e.layers;
-    layers.eachLayer((layer: L.Layer & { getLatLngs: () => L.LatLng[][] }) => {
-      if (layer.getLatLngs) {
-        const coordinates = layer.getLatLngs()[0].map(latLng => ({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleEdited = (e: { layers: L.LayerGroup }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    e.layers.eachLayer((layer: L.Layer) => {
+      // Verificar primero si la capa tiene la propiedad getLatLngs
+      if ('getLatLngs' in layer) {
+        const polygonLayer = layer as L.Layer & { getLatLngs: () => L.LatLng[][] };
+        const coordinates = polygonLayer.getLatLngs()[0].map(latLng => ({
           lat: latLng.lat,
           lng: latLng.lng
         }));
@@ -226,7 +226,8 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   };
 
   // Función para manejar la eliminación de un polígono
-  const handleDeleted = (e: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleDeleted = (e: { layers: L.LayerGroup }) => {
     console.log('Polígono eliminado:', e);
   };
 

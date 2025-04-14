@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from './AuthContextLink';
+import { useAuth } from './context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 
 export default function InicioLayout({

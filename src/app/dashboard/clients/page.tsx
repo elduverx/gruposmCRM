@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Client } from '@/types/client';
 import { getClients, createClient, updateClient, deleteClient } from './actions';
-import ClientForm from './ClientFormLink';
+import ClientForm from './components/ClientForm';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
-import SearchBar from './SearchBarLink';
+import SearchBar from './components/SearchBar';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);

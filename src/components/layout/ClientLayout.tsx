@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/app/dashboard/context/AuthContext';
 import MainLayout from './MainLayout';
 
 // Rutas que requieren permisos de administrador

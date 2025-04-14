@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import UserList from '../../../components/users/UserList';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 interface User {

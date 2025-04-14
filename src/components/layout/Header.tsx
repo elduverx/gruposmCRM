@@ -2,7 +2,7 @@
 
 import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/app/dashboard/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
   BellIcon,

@@ -16,13 +16,6 @@ import DrawControl from './DrawControl';
 import { Zone } from '@/app/dashboard/zones/actions';
 import { Property } from '@/types/property';
 
-// Definir tipos para los eventos de dibujo
-interface DrawEvent {
-  layer: L.Layer & { getLatLngs: () => L.LatLng[][] };
-  layerType: string;
-  layers?: L.FeatureGroup;
-}
-
 interface ZonesMapProps {
   zones: Zone[];
   onZoneCreated: (coordinates: { lat: number; lng: number }[]) => void;
@@ -49,7 +42,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
   initialZoom = 13
 }) => {
   const mapRef = useRef<L.Map | null>(null);
-  const [map, setMap] = useState<L.Map | null>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
@@ -66,7 +58,8 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
 
   // Efecto para inicializar el mapa
   useEffect(() => {
-    if (!map) return;
+    if (!mapRef.current) return;
+    const map = mapRef.current;
 
     // Inicializar FeatureGroup si no existe
     if (!featureGroupRef.current) {
@@ -89,13 +82,13 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
         map.removeLayer(featureGroupRef.current);
       }
     };
-  }, [map, zones]);
+  }, [zones]);
 
   // Efecto para actualizar bounds cuando cambian las zonas
   useEffect(() => {
-    if (!map || !bounds) return;
-    map.fitBounds(bounds);
-  }, [map, bounds]);
+    if (!mapRef.current || !bounds) return;
+    mapRef.current.fitBounds(bounds);
+  }, [bounds]);
 
   // Efecto para establecer los iconos por defecto
   useEffect(() => {

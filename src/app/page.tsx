@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from './dashboard/context/AuthContext';
 import { 
   BuildingOfficeIcon, 
   UserGroupIcon, 
@@ -30,6 +30,7 @@ export default function Home() {
   ]);
 
   const { isAuthenticated, loading } = useAuth();
+  
   const router = useRouter();
 
   useEffect(() => {

@@ -11,7 +11,7 @@ import {
   ArrowDownIcon,
   PlusIcon
 } from "@heroicons/react/24/outline";
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';

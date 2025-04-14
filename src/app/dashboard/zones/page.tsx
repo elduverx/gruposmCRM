@@ -18,7 +18,7 @@ import { updateProperty } from '../properties/actions';
 import { Property } from '@/types/property';
 import { useRouter, usePathname } from 'next/navigation';
 import React from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/common/SearchBar';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';

@@ -48,6 +48,7 @@ const LocationMarkerComponent = ({ onLocationSelect }: { onLocationSelect: (lat:
   const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
   
   // Always keep the same number of hooks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const callbackRef = useRef<any>(null);
   
   useEffect(() => {
@@ -88,6 +89,7 @@ const MapControllerComponent = ({ coordinates }: { coordinates: { lat: number; l
   const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
   
   // Always keep the same number of hooks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const callbackRef = useRef<any>(null);
   
   useEffect(() => {
@@ -127,7 +129,7 @@ const MapControllerComponent = ({ coordinates }: { coordinates: { lat: number; l
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         map.setView([CATARROJA_COORDS.lat, CATARROJA_COORDS.lng], 14);
       }
-    }, [map, lat, lng, coordinates]);
+    }, [map, lat, lng]);
     
     return null;
   };

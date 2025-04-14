@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider } from './dashboard/context/AuthContext';
 import LeafletStyles from '@/components/map/LeafletStyles';
 
 const inter = Inter({
