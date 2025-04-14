@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "SKIP_DB_CHECK=true next build",
+    "build": "npm install tailwindcss postcss autoprefixer --save && SKIP_DB_CHECK=true next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
