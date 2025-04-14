@@ -35,9 +35,12 @@ const Marker = dynamic(
 const LocationMarkerComponent = ({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) => {
   const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
   
-  // Always the same number of hooks
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-  const callbackRef = useRef<any>(null);
+  // Define un tipo más específico para el hook useMapEvents
+  type UseMapEventsType = (handlers: {
+    click: (e: { latlng: { lat: number, lng: number } }) => void;
+  }) => void;
+  
+  const callbackRef = useRef<UseMapEventsType | null>(null);
   
   useEffect(() => {
     // Only load once
@@ -77,9 +80,12 @@ const LocationMarkerComponent = ({ onLocationSelect }: { onLocationSelect: (lat:
 const MapControllerComponent = ({ coordinates }: { coordinates: { lat: number; lng: number } | null }) => {
   const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
   
-  // Always the same number of hooks
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-  const callbackRef = useRef<any>(null);
+  // Define un tipo más específico para el hook useMap
+  type UseMapType = () => {
+    setView: (center: [number, number], zoom: number) => void;
+  };
+  
+  const callbackRef = useRef<UseMapType | null>(null);
   
   useEffect(() => {
     // Only load once
