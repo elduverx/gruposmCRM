@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import React, { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -15,34 +15,110 @@ const icon = L.icon({
   shadowSize: [41, 41]
 });
 
-interface LocationMarkerProps {
-  onLocationSelect: (lat: number, lng: number) => void;
-}
+// Dynamically import Leaflet components
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
 
-function LocationMarker({ onLocationSelect }: LocationMarkerProps) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
 
-interface MapControllerProps {
-  coordinates: { lat: number; lng: number } | null;
-}
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
 
-function MapController({ coordinates }: MapControllerProps) {
-  const map = useMap();
+// Custom components that use hooks need special handling
+const LocationMarkerComponent = ({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) => {
+  const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
+  
+  // Always the same number of hooks
+  const callbackRef = useRef<any>(null);
   
   useEffect(() => {
-    if (coordinates) {
-      map.setView([coordinates.lat, coordinates.lng], 14);
-    }
-  }, [coordinates, map]);
+    // Only load once
+    if (reactLeafletLoaded) return;
+    
+    // Dynamic import in useEffect
+    import('react-leaflet').then((module) => {
+      // Store the module in the ref, not in state
+      callbackRef.current = module.useMapEvents;
+      setReactLeafletLoaded(true);
+    });
+  }, [reactLeafletLoaded]);
   
-  return null;
-}
+  // Don't render anything until it's loaded
+  if (!reactLeafletLoaded || !callbackRef.current) {
+    return null;
+  }
+  
+  // This never changes once loaded, so it won't cause re-renders
+  const useMapEvents = callbackRef.current;
+  
+  // We define this outside to make it stable
+  const LocationMarker = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    useMapEvents({
+      click(e: { latlng: { lat: number, lng: number } }) {
+        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      },
+    });
+    return null;
+  };
+  
+  return <LocationMarker />;
+};
+
+// Inner component for MapController
+const MapControllerComponent = ({ coordinates }: { coordinates: { lat: number; lng: number } | null }) => {
+  const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
+  
+  // Always the same number of hooks
+  const callbackRef = useRef<any>(null);
+  
+  useEffect(() => {
+    // Only load once
+    if (reactLeafletLoaded) return;
+    
+    // Dynamic import in useEffect
+    import('react-leaflet').then((module) => {
+      // Store the module in the ref, not in state
+      callbackRef.current = module.useMap;
+      setReactLeafletLoaded(true);
+    });
+  }, [reactLeafletLoaded]);
+  
+  // Don't render anything until it's loaded
+  if (!reactLeafletLoaded || !callbackRef.current) {
+    return null;
+  }
+  
+  // This never changes once loaded, so it won't cause re-renders
+  const useMap = callbackRef.current;
+  
+  const MapController = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+    const map = useMap();
+    
+    // Extract coordinates to local variables to address the exhaustive deps warning
+    const lat = coordinates?.lat;
+    const lng = coordinates?.lng;
+    
+    useEffect(() => {
+      if (coordinates && lat !== undefined && lng !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        map.setView([lat, lng], 14);
+      }
+    }, [map, lat, lng, coordinates]);
+    
+    return null;
+  };
+  
+  return <MapController />;
+};
 
 interface PropertyMapProps {
   selectedLocation: { lat: number; lng: number } | null;
@@ -51,6 +127,16 @@ interface PropertyMapProps {
 }
 
 export default function PropertyMap({ selectedLocation, onLocationSelect, defaultLocation }: PropertyMapProps) {
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  if (!isClient) {
+    return <div style={{ height: '600px', width: '100%', background: '#f0f0f0' }}></div>;
+  }
+  
   return (
     <MapContainer
       center={[defaultLocation.lat, defaultLocation.lng]}
@@ -61,14 +147,14 @@ export default function PropertyMap({ selectedLocation, onLocationSelect, defaul
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
-      <LocationMarker onLocationSelect={onLocationSelect} />
+      <LocationMarkerComponent onLocationSelect={onLocationSelect} />
       {selectedLocation && (
         <Marker
           position={[selectedLocation.lat, selectedLocation.lng]}
           icon={icon}
         />
       )}
-      <MapController coordinates={selectedLocation} />
+      <MapControllerComponent coordinates={selectedLocation} />
     </MapContainer>
   );
 } 

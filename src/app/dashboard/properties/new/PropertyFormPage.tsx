@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getAddressFromCoordinates } from '@/utils/geocoding';
@@ -27,29 +27,113 @@ const icon = L.icon({
   shadowSize: [41, 41]
 });
 
-function LocationMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
+// Dynamically import React Leaflet components
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
 
-function MapController({ coordinates }: { coordinates: { lat: number; lng: number } | null }) {
-  const map = useMap();
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+
+// LocationMarker component to avoid conditional hook calls
+const LocationMarkerComponent = ({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) => {
+  const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
+  
+  // Always keep the same number of hooks
+  const callbackRef = useRef<any>(null);
   
   useEffect(() => {
-    if (coordinates) {
-      map.setView([coordinates.lat, coordinates.lng], 14);
-    } else {
-      // Si no hay coordenadas seleccionadas, centrar en Catarroja
-      map.setView([CATARROJA_COORDS.lat, CATARROJA_COORDS.lng], 14);
-    }
-  }, [coordinates, map]);
+    // Only load once
+    if (reactLeafletLoaded) return;
+    
+    // Only import in useEffect on client
+    import('react-leaflet').then((module) => {
+      // Store the module in the ref instead of state
+      callbackRef.current = module.useMapEvents;
+      setReactLeafletLoaded(true);
+    });
+  }, [reactLeafletLoaded]);
   
-  return null;
-}
+  // Don't render anything until loaded
+  if (!reactLeafletLoaded || !callbackRef.current) {
+    return null;
+  }
+  
+  // This never changes once loaded
+  const useMapEvents = callbackRef.current;
+  
+  const LocationMarker = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    useMapEvents({
+      click(e: { latlng: { lat: number, lng: number } }) {
+        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      },
+    });
+    return null;
+  };
+  
+  return <LocationMarker />;
+};
+
+// MapController component to avoid conditional hook calls
+const MapControllerComponent = ({ coordinates }: { coordinates: { lat: number; lng: number } | null }) => {
+  const [reactLeafletLoaded, setReactLeafletLoaded] = useState(false);
+  
+  // Always keep the same number of hooks
+  const callbackRef = useRef<any>(null);
+  
+  useEffect(() => {
+    // Only load once
+    if (reactLeafletLoaded) return;
+    
+    // Only import in useEffect on client
+    import('react-leaflet').then((module) => {
+      // Store the module in the ref instead of state
+      callbackRef.current = module.useMap;
+      setReactLeafletLoaded(true);
+    });
+  }, [reactLeafletLoaded]);
+  
+  // Don't render anything until loaded
+  if (!reactLeafletLoaded || !callbackRef.current) {
+    return null;
+  }
+  
+  // This never changes once loaded
+  const useMap = callbackRef.current;
+  
+  const MapController = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+    const map = useMap();
+    
+    // Extract coordinates to local variables to address the exhaustive deps warning
+    const lat = coordinates?.lat;
+    const lng = coordinates?.lng;
+    
+    useEffect(() => {
+      if (coordinates && lat !== undefined && lng !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        map.setView([lat, lng], 14);
+      } else {
+        // Si no hay coordenadas seleccionadas, centrar en Catarroja
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        map.setView([CATARROJA_COORDS.lat, CATARROJA_COORDS.lng], 14);
+      }
+    }, [map, lat, lng, coordinates]);
+    
+    return null;
+  };
+  
+  return <MapController />;
+};
 
 interface PropertyFormPageProps {
   propertyId?: string;
@@ -61,6 +145,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
+  const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: '',
     population: 'Catarroja',
@@ -152,6 +237,10 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     }
   }, [propertyId]);
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const handleLocationSelect = async (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
     
@@ -227,6 +316,36 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // renderizar la sección del mapa solo en el cliente
+  const renderMap = () => {
+    if (!isClient) {
+      return <div className="bg-gray-100 animate-pulse h-[600px] w-full"></div>;
+    }
+    
+    return (
+      <div className="h-[600px] w-full">
+        <MapContainer
+          center={selectedLocation ? [selectedLocation.lat, selectedLocation.lng] : [CATARROJA_COORDS.lat, CATARROJA_COORDS.lng]}
+          zoom={14}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <LocationMarkerComponent onLocationSelect={handleLocationSelect} />
+          {selectedLocation && (
+            <Marker
+              position={[selectedLocation.lat, selectedLocation.lng]}
+              icon={icon}
+            />
+          )}
+          <MapControllerComponent coordinates={selectedLocation} />
+        </MapContainer>
+      </div>
+    );
   };
 
   return (
@@ -352,26 +471,10 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
 
           {/* Mapa */}
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="h-[600px]">
-              <MapContainer
-                center={[CATARROJA_COORDS.lat, CATARROJA_COORDS.lng]}
-                zoom={14}
-                style={{ height: '100%', width: '100%' }}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <LocationMarker onLocationSelect={handleLocationSelect} />
-                {selectedLocation && (
-                  <Marker
-                    position={[selectedLocation.lat, selectedLocation.lng]}
-                    icon={icon}
-                  />
-                )}
-                <MapController coordinates={selectedLocation} />
-              </MapContainer>
-            </div>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">Ubicación del Inmueble</h2>
+            <p className="text-sm text-gray-600 mb-4">Haz clic en el mapa para seleccionar la ubicación del inmueble.</p>
+            
+            {renderMap()}
           </div>
         </div>
       </div>

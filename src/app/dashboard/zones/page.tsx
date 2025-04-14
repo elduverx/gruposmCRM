@@ -23,6 +23,7 @@ import dynamic from 'next/dynamic';
 import SearchBar from '@/components/common/SearchBar';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import L from 'leaflet';
 
 // Importar el mapa dinámicamente para evitar errores de SSR
 const ZonesMap = dynamic(() => import('@/components/map/ZonesMap'), {
@@ -171,7 +172,7 @@ export default function ZonesPage() {
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number, name: string} | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [zoneNews, setZoneNews] = useState<PropertyNews[]>([]);
   const [zoneAssignments, setZoneAssignments] = useState<any[]>([]);
