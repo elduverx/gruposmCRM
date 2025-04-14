@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install --legacy-peer-deps && npm install tailwindcss postcss autoprefixer postcss-import postcss-nesting --save && npm run build",
+  "buildCommand": "npm install --legacy-peer-deps tailwindcss postcss autoprefixer postcss-import postcss-nesting --save && SKIP_DB_CHECK=true next build",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs"
 } 
