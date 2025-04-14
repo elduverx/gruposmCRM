@@ -44,6 +44,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
           setProperties(propertiesData);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching properties:', error);
       } finally {
         setIsLoading(false);

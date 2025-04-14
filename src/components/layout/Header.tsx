@@ -24,6 +24,7 @@ export default function Header() {
       await logout();
       router.push('/login');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error logging out:', error);
     }
   };

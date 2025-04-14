@@ -169,9 +169,9 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     try {
       const submitData = {
         ...formData,
-        latitude: selectedLocation?.lat || null,
-        longitude: selectedLocation?.lng || null,
-        zoneId: formData.zoneId || undefined,
+        latitude: selectedLocation?.lat !== undefined ? Number(selectedLocation.lat) : null,
+        longitude: selectedLocation?.lng !== undefined ? Number(selectedLocation.lng) : null,
+        zoneId: formData.zoneId ?? undefined,
       };
 
       if (params.id) {
@@ -207,6 +207,11 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         const lat = parseFloat(data[0].lat);
         const lng = parseFloat(data[0].lon);
         
+        if (isNaN(lat) || isNaN(lng)) {
+          toast.error('Coordenadas inválidas recibidas de la API');
+          return;
+        }
+
         setFormData(prev => ({
           ...prev,
           latitude: lat,
@@ -225,15 +230,21 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error getting address from coordinates:', error instanceof Error ? error.message : 'Unknown error');
+      toast.error('Error al buscar la dirección');
     }
   };
 
   const handleLocationSelect = async (lat: number, lng: number) => {
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error('Coordenadas inválidas');
+      return;
+    }
+
     setSelectedLocation({ lat, lng });
     
     try {
       const addressData = await getAddressFromCoordinates(lat, lng);
-      let zoneId = null;
+      let zoneId: string | null = null;
       
       // Buscar la zona correspondiente a las coordenadas
       if (zones && Array.isArray(zones) && zones.length > 0) {
@@ -247,11 +258,12 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
         ...prev,
         address: addressData?.address ? String(addressData.address) : prev.address,
         population: addressData?.population ? String(addressData.population) : prev.population,
-        zoneId: zoneId || prev.zoneId
+        zoneId: zoneId !== undefined ? String(zoneId) : prev.zoneId
       }));
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error getting address from coordinates:', error instanceof Error ? error.message : 'Unknown error');
+      toast.error('Error al obtener la dirección de las coordenadas');
     }
   };
 

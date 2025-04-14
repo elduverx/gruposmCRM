@@ -26,9 +26,6 @@ interface ZonesMapProps {
   onDeleteZone: (zone: Zone) => void;
   setSelectedPropertyId: (id: string | null) => void;
   handleZoneClick: (zone: Zone) => void;
-  handlePolygonEdited?: (e: any) => void;
-  handlePolygonDeleted?: (e: any) => void;
-  onMarkerRefsUpdate?: (refs: { [key: string]: any }) => void;
   selectedLocation?: {lat: number, lng: number, name: string} | null;
 }
 
@@ -47,9 +44,6 @@ export default function ZonesMap({
   onDeleteZone,
   setSelectedPropertyId,
   handleZoneClick,
-  handlePolygonEdited,
-  handlePolygonDeleted,
-  onMarkerRefsUpdate,
   selectedLocation
 }: ZonesMapProps) {
   const [markerRefs, setMarkerRefs] = useState<{ [key: string]: any }>({});

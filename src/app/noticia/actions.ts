@@ -62,6 +62,7 @@ export async function deleteNews(id: string): Promise<boolean> {
 
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error deleting news:', error);
     return false;
   }
@@ -100,6 +101,7 @@ export async function updatePropertyNews(id: string, data: {
     revalidatePath('/noticia');
     return news;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error updating property news:', error);
     throw error;
   }

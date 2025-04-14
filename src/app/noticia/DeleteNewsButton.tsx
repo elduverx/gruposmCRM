@@ -20,6 +20,7 @@ export default function DeleteNewsButton({ id }: DeleteNewsButtonProps) {
         await deleteNews(id);
         router.refresh();
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error al eliminar la noticia:', error);
       } finally {
         setIsDeleting(false);

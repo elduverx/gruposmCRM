@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +41,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { token: string; user: User; message?: string };
 
       if (!response.ok) {
         throw new Error(data.message || 'Error al iniciar sesión');
@@ -42,6 +49,7 @@ export default function LoginPage() {
 
       await login(data.token, data.user);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'Error al iniciar sesión');
     } finally {

@@ -37,14 +37,14 @@ export default function UsersPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { message?: string };
         throw new Error(errorData.message || 'Error al cargar los usuarios');
       }
 
-      const data = await response.json();
+      const data = await response.json() as User[];
       setUsers(data);
       updateStats(data);
-    } catch (err) {
+    } catch (err: unknown) {
       // eslint-disable-next-line no-console
       console.error('Error al cargar usuarios:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar usuarios');

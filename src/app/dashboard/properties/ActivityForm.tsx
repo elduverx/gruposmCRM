@@ -6,11 +6,13 @@ import { Activity } from '@/types/property';
 interface ActivityFormProps {
   // propertyId es requerido por el componente padre para asociar la actividad con la propiedad,
   // aunque no se use directamente en el formulario
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   propertyId: string;
   onSubmit: (data: Omit<Activity, 'id' | 'propertyId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   onCancel: () => void;
 }
 
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
   const [formData, setFormData] = useState({
     type: 'CONTACT',

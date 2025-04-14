@@ -130,13 +130,13 @@ export default function NewsClient({ news }: NewsClientProps) {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.valuation === 'true' ? (
+                          {item.valuation ? (
                             <>
                               <div>SM: {formatNumber(item.precioSM || 0)}€</div>
                               <div>Cliente: {formatNumber(item.precioCliente || 0)}€</div>
                             </>
                           ) : (
-                            formatNumber(item.value || 0) + '€'
+                            `${formatNumber(item.value || 0)}€`
                           )}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">

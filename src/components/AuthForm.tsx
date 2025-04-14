@@ -6,6 +6,21 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 type AuthMode = 'login' | 'register';
 
+interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  message?: string;
+}
+
+interface AuthError {
+  message: string;
+}
+
 export default function AuthForm() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -36,7 +51,7 @@ export default function AuthForm() {
         ),
       });
 
-      const data = await response.json();
+      const data = await response.json() as AuthResponse;
 
       if (!response.ok) {
         throw new Error(data.message || 'Error en la autenticación');
@@ -47,8 +62,9 @@ export default function AuthForm() {
       
       // Redirigir al dashboard
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Ocurrió un error');
+    } catch (err) {
+      const error = err as AuthError;
+      setError(error.message || 'Ocurrió un error');
     } finally {
       setLoading(false);
     }

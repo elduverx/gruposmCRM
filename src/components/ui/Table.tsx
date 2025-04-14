@@ -29,10 +29,9 @@ export function TableHeader({ children }: TableHeaderProps) {
 
 interface TableBodyProps {
   children: ReactNode;
-  className?: string;
 }
 
-export function TableBody({ children, className }: TableBodyProps) {
+export function TableBody({ children }: TableBodyProps) {
   return <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>;
 }
 

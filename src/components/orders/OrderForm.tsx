@@ -8,7 +8,6 @@ import { Property, PropertyType } from '@/types/property';
 interface OrderFormProps {
   order?: Order | null;
   clients: Client[];
-  properties: Property[];
   onSubmit: (data: OrderCreateInput) => void;
   onCancel: () => void;
 }
@@ -16,7 +15,6 @@ interface OrderFormProps {
 export default function OrderForm({
   order,
   clients,
-  properties,
   onSubmit,
   onCancel
 }: OrderFormProps) {

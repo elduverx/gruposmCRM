@@ -25,7 +25,6 @@ interface NewsFormData {
 
 export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
     type: news.type,
     action: news.action,
@@ -73,6 +72,7 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
       onSuccess();
       onClose();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error al actualizar la noticia:', error);
       toast.error('Error al actualizar la noticia');
     } finally {

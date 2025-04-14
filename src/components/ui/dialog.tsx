@@ -1,5 +1,4 @@
 import * as React from 'react';
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog as HeadlessDialog } from '@headlessui/react';
 
 interface DialogProps {

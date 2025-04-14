@@ -15,10 +15,9 @@ import SearchBar from '@/components/common/SearchBar';
 interface OrderListProps {
   orders: Order[];
   clients: Client[];
-  properties: Property[];
 }
 
-export default function OrderList({ orders = [], clients = [], properties = [] }: OrderListProps) {
+export default function OrderList({ orders = [], clients = [] }: OrderListProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -242,7 +241,6 @@ export default function OrderList({ orders = [], clients = [], properties = [] }
             <OrderForm 
               order={selectedOrder} 
               clients={clients}
-              properties={properties}
               onSubmit={handleFormSubmit} 
               onCancel={() => {
                 setIsFormOpen(false);

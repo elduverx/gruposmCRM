@@ -27,7 +27,6 @@ interface NewsFormData {
 export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
     propertyId: '',
     type: 'DPV',
@@ -46,6 +45,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
         const propertiesData = await getProperties();
         setProperties(propertiesData);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching properties:', error);
         toast.error('Error al cargar los inmuebles');
       }
@@ -100,6 +100,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
       toast.success('Noticia creada correctamente');
       onSuccess();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error creating news:', error);
       if (error instanceof Error && error.message === 'Ya existe una noticia para esta propiedad') {
         toast.error('Ya existe una noticia para esta propiedad');
