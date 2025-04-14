@@ -1,31 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "buildCommand": "npm install --legacy-peer-deps && npm install tailwindcss postcss autoprefixer --save && npm run build"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
-  "env": {
-    "NEXTAUTH_URL": "@nextauth_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "JWT_SECRET": "@jwt_secret",
-    "DATABASE_URL": "@database_url"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-    },
-    "installCommand": "npm install --legacy-peer-deps",
-    "framework": "nextjs"
-  }
+  "buildCommand": "npm install --legacy-peer-deps && npm install tailwindcss postcss autoprefixer --save && npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs"
 } 
