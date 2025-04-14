@@ -172,7 +172,7 @@ export default function ZonesPage() {
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number, name: string} | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [zoneNews, setZoneNews] = useState<PropertyNews[]>([]);
   const [zoneAssignments, setZoneAssignments] = useState<any[]>([]);
@@ -720,23 +720,22 @@ export default function ZonesPage() {
         </div>
         <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
           <ZonesMap
-            ref={mapRef}
-            center={mapCenter}
-            zoom={mapZoom}
+            zones={filteredZones} 
             properties={filteredProperties}
-            zones={filteredZones}
-            newZoneColor={newZoneColor}
-            zoneCoordinates={zoneCoordinates}
             onZoneCreated={handleZoneCreated}
             onPropertyClick={onPropertyClick}
             onZoneClick={handleZoneClick}
-            selectedPropertyId={selectedPropertyId}
             onEditZone={handleEditZone}
             onDeleteZone={handleDeleteZone}
+            selectedPropertyId={selectedPropertyId}
             setSelectedPropertyId={setSelectedPropertyId}
             handleZoneClick={handleZoneClick}
             onMarkerRefsUpdate={setMarkerRefs}
             selectedLocation={selectedLocation}
+            initialCenter={mapCenter}
+            initialZoom={mapZoom}
+            newZoneColor={newZoneColor}
+            zoneCoordinates={zoneCoordinates}
           />
         </div>
 

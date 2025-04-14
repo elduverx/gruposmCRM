@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -15,6 +15,7 @@ import 'leaflet-draw';
 import DrawControl from './DrawControl';
 import { Zone } from '@/app/dashboard/zones/actions';
 import { Property } from '@/types/property';
+import { useRouter } from 'next/navigation';
 
 interface ZonesMapProps {
   zones: Zone[];
@@ -33,17 +34,33 @@ interface ZonesMapProps {
   setSelectedPropertyId?: (id: string | null) => void;
   handleZoneClick?: (zone: Zone) => void;
   selectedLocation?: {lat: number, lng: number, name: string} | null;
+  onMarkerRefsUpdate?: (refs: { [key: string]: L.Marker | null }) => void;
 }
 
 const ZonesMap: React.FC<ZonesMapProps> = ({
-  zones,
+  zones = [],
   onZoneCreated,
-  initialCenter = [-34.603722, -58.381592],
-  initialZoom = 13
+  onZoneClick,
+  onEditZone,
+  onDeleteZone,
+  initialCenter = [39.4015, -0.4027],
+  initialZoom = 15,
+  properties = [],
+  onPropertyClick,
+  selectedPropertyId,
+  setSelectedPropertyId,
+  handleZoneClick,
+  selectedLocation,
+  newZoneColor = '#FF0000',
+  zoneCoordinates = [],
+  onMarkerRefsUpdate
 }) => {
+  const router = useRouter();
   const mapRef = useRef<L.Map | null>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
+  const [icon, setIcon] = useState<L.Icon | undefined>(undefined);
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
 
   // Función para manejar la creación de un polígono
   const handleCreated = (e: { layer: L.Layer & { getLatLngs: () => L.LatLng[][] } }) => {
@@ -56,39 +73,70 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
     }
   };
 
+  // Establecer la referencia al mapa
+  const whenCreated = (map: L.Map) => {
+    mapRef.current = map;
+  };
+
+  // Cargar icono para los marcadores
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const leafletIcon = L.icon({
+      iconUrl: '/marker-icon.png',
+      shadowUrl: '/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+    setIcon(leafletIcon);
+  }, []);
+
   // Efecto para inicializar el mapa
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
-
-    // Inicializar FeatureGroup si no existe
-    if (!featureGroupRef.current) {
-      featureGroupRef.current = new L.FeatureGroup();
-      map.addLayer(featureGroupRef.current);
-    }
-
-    // Calcular bounds iniciales
-    if (zones.length > 0) {
-      const latLngs = zones.flatMap(zone => 
-        zone.coordinates.map(coord => new L.LatLng(coord.lat, coord.lng))
-      );
-      const newBounds = new L.LatLngBounds(latLngs);
-      setBounds(newBounds);
-      map.fitBounds(newBounds);
-    }
-
-    return () => {
-      if (featureGroupRef.current) {
-        map.removeLayer(featureGroupRef.current);
+    // Intentamos obtener el mapa de manera más segura
+    setTimeout(() => {
+      try {
+        const mapElement = document.querySelector('.leaflet-container');
+        if (mapElement && !mapRef.current) {
+          // @ts-ignore
+          mapRef.current = mapElement._leaflet_map;
+          
+          // Inicializar FeatureGroup
+          if (mapRef.current && !featureGroupRef.current) {
+            featureGroupRef.current = new L.FeatureGroup();
+            mapRef.current.addLayer(featureGroupRef.current);
+          }
+          
+          // Ajustar el mapa a los bounds si hay zonas
+          if (mapRef.current && zones.length > 0) {
+            try {
+              const latLngs = zones.flatMap(zone => 
+                zone.coordinates.map(coord => new L.LatLng(coord.lat, coord.lng))
+              );
+              if (latLngs.length > 0) {
+                const newBounds = new L.LatLngBounds(latLngs);
+                setBounds(newBounds);
+                mapRef.current.fitBounds(newBounds);
+              }
+            } catch (error) {
+              console.error('Error al calcular bounds:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error al obtener referencia al mapa:', error);
       }
-    };
+    }, 500);
   }, [zones]);
 
-  // Efecto para actualizar bounds cuando cambian las zonas
+  // Actualizar marker refs cuando se actualizan las propiedades
   useEffect(() => {
-    if (!mapRef.current || !bounds) return;
-    mapRef.current.fitBounds(bounds);
-  }, [bounds]);
+    if (onMarkerRefsUpdate) {
+      onMarkerRefsUpdate(markerRefs.current);
+    }
+  }, [properties, onMarkerRefsUpdate]);
 
   // Efecto para establecer los iconos por defecto
   useEffect(() => {
@@ -121,7 +169,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
         center={initialCenter}
         zoom={initialZoom}
         style={{ height: '100%', width: '100%' }}
-        ref={mapRef}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -131,6 +178,154 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
           editableLayers={featureGroupRef.current}
           onCreated={handleCreated}
         />
+
+        {/* Renderizar las zonas como polígonos */}
+        {zones.map((zone) => (
+          <Polygon
+            key={zone.id}
+            positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
+            pathOptions={{ 
+              color: zone.color || '#FF0000',
+              fillColor: zone.color || '#FF0000',
+              fillOpacity: 0.2
+            }}
+            eventHandlers={{
+              click: () => {
+                if (handleZoneClick) handleZoneClick(zone);
+              },
+              dblclick: () => {
+                if (onEditZone) onEditZone(zone);
+              }
+            }}
+          >
+            <Popup>
+              <div className="p-2">
+                <h3 className="font-semibold">{zone.name}</h3>
+                {zone.description && (
+                  <p className="text-sm text-gray-600">{zone.description}</p>
+                )}
+                <div className="mt-2 flex space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onEditZone) onEditZone(zone);
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onDeleteZone) onDeleteZone(zone);
+                    }}
+                    className="text-sm text-red-600 hover:text-red-800"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </Popup>
+          </Polygon>
+        ))}
+        
+        {/* Renderizar la zona en creación */}
+        {zoneCoordinates && zoneCoordinates.length > 0 && (
+          <Polygon
+            positions={zoneCoordinates.map(coord => [coord.lat, coord.lng])}
+            pathOptions={{ 
+              color: newZoneColor, 
+              fillColor: newZoneColor, 
+              fillOpacity: 0.2,
+              weight: 2
+            }}
+          />
+        )}
+        
+        {/* Renderizar las propiedades como marcadores */}
+        {properties && properties.map((property) => (
+          property.latitude && property.longitude ? (
+            <Marker
+              key={property.id}
+              position={[property.latitude, property.longitude]}
+              icon={icon}
+              ref={(ref) => {
+                if (ref) {
+                  markerRefs.current[property.id as string] = ref;
+                }
+              }}
+              eventHandlers={{
+                click: () => {
+                  if (setSelectedPropertyId) setSelectedPropertyId(property.id);
+                  if (onPropertyClick) onPropertyClick(property);
+                }
+              }}
+            >
+              <Popup>
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
+                    <span className="text-sm font-medium text-gray-900">{property.population}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                        property.status === 'SALE'
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {property.status === 'SALE' ? 'Venta' : 'Alquiler'}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-gray-100 text-gray-900`}>
+                        {property.type}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
+                      <p className="text-gray-900">Tel: {property.ownerPhone}</p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        onClick={() => router.push(`/dashboard/properties/${property.id}`)}
+                        className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          ) : null
+        ))}
+
+        {/* Renderizar la ubicación seleccionada */}
+        {selectedLocation && (
+          <Marker
+            position={[selectedLocation.lat, selectedLocation.lng]}
+            icon={icon}
+            eventHandlers={{
+              click: () => {
+                const marker = markerRefs.current['selected-location'];
+                if (marker?.openPopup) {
+                  marker.openPopup();
+                }
+              }
+            }}
+            ref={(ref) => {
+              if (ref) {
+                markerRefs.current['selected-location'] = ref;
+              }
+            }}
+          >
+            <Popup>
+              <div className="p-2">
+                <h3 className="font-semibold">Ubicación seleccionada</h3>
+                <p className="text-sm text-gray-600">{selectedLocation.name}</p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );

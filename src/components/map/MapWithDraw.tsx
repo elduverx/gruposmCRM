@@ -82,8 +82,8 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
     setSelectedPropertyId,
     handleZoneClick,
     selectedLocation,
-    initialCenter = [-34.603722, -58.381592],
-    initialZoom = 13
+    initialCenter = [39.4015, -0.4027],
+    initialZoom = 15
   } = props;
 
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
