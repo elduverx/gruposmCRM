@@ -256,3 +256,29 @@ model UserActivity {
   @@index([userId])
   @@index([goalId])
 }
+
+// Modelo para almacenar los datos del catastro
+model CatastroProperty {
+  id              String    @id @default(cuid())
+  reference       String    @unique // Referencia Catastral
+  streetType      String?
+  streetName      String?
+  number          String?
+  block           String?
+  stairway        String?
+  floor           String?
+  door            String?
+  reformType      String?
+  age             String?
+  quality         String?
+  constructedArea String?
+  propertyType    String?
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([reference])
+  @@index([streetName, number])
+}

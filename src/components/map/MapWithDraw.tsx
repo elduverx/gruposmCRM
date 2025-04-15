@@ -103,15 +103,15 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const leafletIcon = L.icon({
-      iconUrl: '/marker-icon.png',
-      shadowUrl: '/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-    setIcon(leafletIcon);
+      const leafletIcon = L.icon({
+        iconUrl: '/marker-icon.png',
+        shadowUrl: '/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+      setIcon(leafletIcon);
   }, []);
 
   // Handle map reference
@@ -142,7 +142,7 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
     if (marker?.openPopup) {
       setTimeout(() => {
         try {
-          marker.openPopup();
+            marker.openPopup();
         } catch (error) {
           // Silent error handling
         }
@@ -154,9 +154,9 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   useEffect(() => {
     if (!isMapReady || !mapRef.current || !center) return;
 
-    try {
+      try {
       mapRef.current.setView(center, zoom);
-    } catch (error) {
+      } catch (error) {
       // Silent error handling
     }
   }, [center, zoom, isMapReady]);
@@ -169,7 +169,7 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
     if (marker?.openPopup) {
       setTimeout(() => {
         try {
-          marker.openPopup();
+            marker.openPopup();
         } catch (error) {
           // Silent error handling
         }
@@ -234,189 +234,189 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
   return (
     <>
       <LeafletInit />
-      <MapContainer
+    <MapContainer
         center={initialCenter}
         zoom={initialZoom}
-        style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%' }}
         // The react-leaflet types are not compatible with forwardRef
         // @ts-expect-error - React-leaflet has incompatible ref types with forwardRef
-        ref={handleMapRef}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
+      ref={handleMapRef}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      />
+      
         {/* Usar el componente DrawControl original */}
         {isMapReady && featureGroupRef.current && (
-          <DrawControl 
-            editableLayers={featureGroupRef.current}
+      <DrawControl
+        editableLayers={featureGroupRef.current}
             onCreated={handleCreated}
           />
         )}
         
         {zones.map((zone) => (
-          <Polygon
-            key={zone.id}
-            positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
-            pathOptions={{ 
-              color: zone.color || '#FF0000',
-              fillColor: zone.color || '#FF0000',
-              fillOpacity: 0.2
-            }}
-            eventHandlers={{
-              click: () => {
+        <Polygon
+          key={zone.id}
+          positions={zone.coordinates?.map(coord => [coord.lat, coord.lng]) || []}
+          pathOptions={{ 
+            color: zone.color || '#FF0000',
+            fillColor: zone.color || '#FF0000',
+            fillOpacity: 0.2
+          }}
+          eventHandlers={{
+            click: () => {
                 handleZoneClick(zone);
-              },
-              dblclick: () => {
+            },
+            dblclick: () => {
                 onEditZone(zone);
-              }
-            }}
-          >
-            <Popup>
-              <div className="p-2">
-                <h3 className="font-semibold">{zone.name}</h3>
-                {zone.description && (
-                  <p className="text-sm text-gray-600">{zone.description}</p>
-                )}
-                <div className="mt-2 flex space-x-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+            }
+          }}
+        >
+          <Popup>
+            <div className="p-2">
+              <h3 className="font-semibold">{zone.name}</h3>
+              {zone.description && (
+                <p className="text-sm text-gray-600">{zone.description}</p>
+              )}
+              <div className="mt-2 flex space-x-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                       onEditZone(zone);
-                    }}
-                    className="text-sm text-indigo-600 hover:text-indigo-800"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-800"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                       onDeleteZone(zone);
-                    }}
-                    className="text-sm text-red-600 hover:text-red-800"
-                  >
-                    Eliminar
-                  </button>
-                </div>
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800"
+                >
+                  Eliminar
+                </button>
               </div>
-            </Popup>
-          </Polygon>
-        ))}
-        
+            </div>
+          </Popup>
+        </Polygon>
+      ))}
+      
         {zoneCoordinates.length > 0 && (
-          <Polygon
+        <Polygon
             positions={zoneCoordinates.map(coord => [coord.lat, coord.lng])}
-            pathOptions={{ 
+          pathOptions={{ 
               color: newZoneColor, 
               fillColor: newZoneColor, 
-              fillOpacity: 0.2,
-              weight: 2
-            }}
-          />
-        )}
-        
+            fillOpacity: 0.2,
+            weight: 2
+          }}
+        />
+      )}
+      
         {properties.map((property) => (
-          property.latitude && property.longitude ? (
-            <Marker
-              key={property.id}
-              position={[property.latitude, property.longitude]}
-              icon={icon}
-              ref={(ref) => {
-                if (ref) {
-                  markerRefs.current[property.id as string] = ref;
-                }
-              }}
-              eventHandlers={{
-                click: () => {
-                  setSelectedPropertyId(property.id);
-                }
-              }}
-            >
-              <Popup>
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
-                    <span className="text-sm font-medium text-gray-900">{property.population}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {property.dpv && (
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-900">DPV: </span>
-                        <span className="text-gray-900">{property.dpv.toString()}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
-                        property.status === 'SALE'
-                          ? 'bg-yellow-100 text-yellow-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {property.status === 'SALE' ? 'Venta' : 'Alquiler'}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
-                        property.action === 'IR_A_DIRECCION' 
-                          ? 'bg-blue-100 text-blue-800'
-                          : property.action === 'REPETIR'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-indigo-100 text-indigo-800'
-                      }`}>
-                        {property.action === 'IR_A_DIRECCION' 
-                          ? 'Ir a dirección' 
-                          : property.action === 'REPETIR'
-                          ? 'Repetir'
-                          : 'Localizar verificado'}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-gray-100 text-gray-900`}>
-                        {property.type}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
-                      <p className="text-gray-900">Tel: {property.ownerPhone}</p>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <button
-                        onClick={() => router.push(`/dashboard/properties/${property.id}`)}
-                        className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
-                      >
-                        Ver detalles
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ) : null
-        ))}
-
-        {selectedLocation && (
+        property.latitude && property.longitude ? (
           <Marker
-            position={[selectedLocation.lat, selectedLocation.lng]}
+            key={property.id}
+            position={[property.latitude, property.longitude]}
             icon={icon}
-            eventHandlers={{
-              click: () => {
-                const marker = markerRefs.current['selected-location'];
-                if (marker?.openPopup) {
-                  marker.openPopup();
-                }
-              }
-            }}
             ref={(ref) => {
               if (ref) {
-                markerRefs.current['selected-location'] = ref;
+                markerRefs.current[property.id as string] = ref;
+              }
+            }}
+            eventHandlers={{
+              click: () => {
+                  setSelectedPropertyId(property.id);
               }
             }}
           >
             <Popup>
-              <div className="p-2">
-                <h3 className="font-semibold">Ubicación seleccionada</h3>
-                <p className="text-sm text-gray-600">{selectedLocation.name}</p>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
+                  <span className="text-sm font-medium text-gray-900">{property.population}</span>
+                </div>
+                <div className="space-y-2">
+                  {property.dpv && (
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-900">DPV: </span>
+                      <span className="text-gray-900">{property.dpv.toString()}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                      property.status === 'SALE'
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {property.status === 'SALE' ? 'Venta' : 'Alquiler'}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
+                      property.action === 'IR_A_DIRECCION' 
+                        ? 'bg-blue-100 text-blue-800'
+                        : property.action === 'REPETIR'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {property.action === 'IR_A_DIRECCION' 
+                        ? 'Ir a dirección' 
+                        : property.action === 'REPETIR'
+                        ? 'Repetir'
+                        : 'Localizar verificado'}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-gray-100 text-gray-900`}>
+                      {property.type}
+                    </span>
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">Propietario: {property.ownerName}</p>
+                    <p className="text-gray-900">Tel: {property.ownerPhone}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={() => router.push(`/dashboard/properties/${property.id}`)}
+                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 font-medium"
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
+                </div>
               </div>
             </Popup>
           </Marker>
-        )}
-      </MapContainer>
+        ) : null
+      ))}
+
+        {selectedLocation && (
+        <Marker
+            position={[selectedLocation.lat, selectedLocation.lng]}
+          icon={icon}
+          eventHandlers={{
+            click: () => {
+                const marker = markerRefs.current['selected-location'];
+                if (marker?.openPopup) {
+                marker.openPopup();
+              }
+            }
+          }}
+          ref={(ref) => {
+            if (ref) {
+                markerRefs.current['selected-location'] = ref;
+            }
+          }}
+        >
+          <Popup>
+            <div className="p-2">
+              <h3 className="font-semibold">Ubicación seleccionada</h3>
+                <p className="text-sm text-gray-600">{selectedLocation.name}</p>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+    </MapContainer>
     </>
   );
 });

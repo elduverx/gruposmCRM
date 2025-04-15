@@ -17,7 +17,8 @@ import {
   Bars3Icon,
   XMarkIcon,
   BellIcon,
-  TrophyIcon
+  TrophyIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -29,6 +30,7 @@ const commonNavigation = [
   // { name: 'Metas', href: '/dashboard/metas', icon: TrophyIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
   { name: 'Pedidos', href: '/dashboard/orders', icon: ClipboardDocumentListIcon },
+  { name: 'Catarroja', href: '/dashboard/catarroja', icon: MapPinIcon },
 ];
 
 // Navegación adicional solo para administradores
