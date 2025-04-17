@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../app/dashboard/context/AuthContext';
@@ -15,10 +15,7 @@ import {
   UsersIcon,
   NewspaperIcon,
   Bars3Icon,
-  XMarkIcon,
-  BellIcon,
-  TrophyIcon,
-  MapPinIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -27,10 +24,8 @@ const commonNavigation = [
   { name: 'Inmuebles', href: '/dashboard/properties', icon: BuildingOfficeIcon },
   { name: 'Clientes', href: '/dashboard/clients', icon: UsersIcon },
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
-  // { name: 'Metas', href: '/dashboard/metas', icon: TrophyIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
   { name: 'Pedidos', href: '/dashboard/orders', icon: ClipboardDocumentListIcon },
-  { name: 'Catarroja', href: '/dashboard/catarroja', icon: MapPinIcon },
 ];
 
 // Navegación adicional solo para administradores

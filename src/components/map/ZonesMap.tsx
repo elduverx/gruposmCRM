@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -30,7 +30,6 @@ interface ZonesMapProps {
   initialZoom?: number;
   properties?: Property[];
   onPropertyClick?: (property: Property) => void;
-  selectedPropertyId?: string | null;
   setSelectedPropertyId?: (id: string | null) => void;
   handleZoneClick?: (zone: Zone) => void;
   selectedLocation?: {lat: number, lng: number, name: string} | null;
@@ -47,7 +46,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
   initialZoom = 15,
   properties = [],
   onPropertyClick,
-  selectedPropertyId,
   setSelectedPropertyId,
   handleZoneClick,
   selectedLocation,
@@ -58,9 +56,11 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
   const router = useRouter();
   const mapRef = useRef<L.Map | null>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const [icon, setIcon] = useState<L.Icon | undefined>(undefined);
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+  const [visibleProperties, setVisibleProperties] = useState<Property[]>([]);
+  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Función para manejar la creación de un polígono
   const handleCreated = (e: { layer: L.Layer & { getLatLngs: () => L.LatLng[][] } }) => {
@@ -71,11 +71,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
       }));
       onZoneCreated(coordinates);
     }
-  };
-
-  // Establecer la referencia al mapa
-  const whenCreated = (map: L.Map) => {
-    mapRef.current = map;
   };
 
   // Cargar icono para los marcadores
@@ -117,7 +112,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
               );
               if (latLngs.length > 0) {
                 const newBounds = new L.LatLngBounds(latLngs);
-                setBounds(newBounds);
                 mapRef.current.fitBounds(newBounds);
               }
             } catch (error) {
@@ -131,12 +125,43 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
     }, 500);
   }, [zones]);
 
-  // Actualizar marker refs cuando se actualizan las propiedades
+  // Función para cargar propiedades visibles en el área actual del mapa
+  const loadVisibleProperties = useCallback((bounds: L.LatLngBounds) => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    
+    // Filtrar propiedades que están dentro de los límites del mapa
+    const visible = properties.filter(property => {
+      if (!property.latitude || !property.longitude) return false;
+      
+      // Convertir a número de manera segura
+      const lat = Number(property.latitude);
+      const lng = Number(property.longitude);
+      
+      // Verificar que los valores son números válidos
+      if (isNaN(lat) || isNaN(lng)) return false;
+      
+      return bounds.contains([lat, lng]);
+    });
+    
+    setVisibleProperties(visible);
+    setIsLoading(false);
+  }, [isLoading, properties]);
+
+  // Efecto para actualizar las propiedades visibles cuando cambia el área del mapa
+  useEffect(() => {
+    if (!mapRef.current || !mapBounds) return;
+    
+    loadVisibleProperties(mapBounds);
+  }, [mapBounds, loadVisibleProperties]);
+
+  // Efecto para actualizar los marcadores cuando cambian las propiedades visibles
   useEffect(() => {
     if (onMarkerRefsUpdate) {
       onMarkerRefsUpdate(markerRefs.current);
     }
-  }, [properties, onMarkerRefsUpdate]);
+  }, [visibleProperties, onMarkerRefsUpdate]);
 
   // Efecto para establecer los iconos por defecto
   useEffect(() => {
@@ -163,12 +188,27 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
     }
   }, []);
 
+  // Función para manejar el evento de movimiento del mapa
+  const handleMapMoveEnd = useCallback(() => {
+    if (mapRef.current) {
+      setMapBounds(mapRef.current.getBounds());
+    }
+  }, []);
+
   return (
     <div style={{ height: '100%', width: '100%' }}>
       <MapContainer
         center={initialCenter}
         zoom={initialZoom}
         style={{ height: '100%', width: '100%' }}
+        ref={mapRef}
+        whenReady={() => {
+          if (mapRef.current) {
+            setMapBounds(mapRef.current.getBounds());
+          }
+        }}
+        // @ts-ignore - La propiedad onMoveEnd existe en Leaflet pero no está tipada correctamente
+        onMoveEnd={handleMapMoveEnd}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -191,6 +231,7 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
             }}
             eventHandlers={{
               click: () => {
+                if (onZoneClick) onZoneClick(zone);
                 if (handleZoneClick) handleZoneClick(zone);
               },
               dblclick: () => {
@@ -242,22 +283,31 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
           />
         )}
         
-        {/* Renderizar las propiedades como marcadores */}
-        {properties && properties.map((property) => (
-          property.latitude && property.longitude ? (
+        {/* Renderizar las propiedades visibles */}
+        {visibleProperties.map((property) => {
+          if (!property.latitude || !property.longitude) return null;
+          
+          // Convertir a número de manera segura
+          const lat = Number(property.latitude);
+          const lng = Number(property.longitude);
+          
+          // Verificar que los valores son números válidos
+          if (isNaN(lat) || isNaN(lng)) return null;
+          
+          return (
             <Marker
               key={property.id}
-              position={[property.latitude, property.longitude]}
+              position={[lat, lng]}
               icon={icon}
               ref={(ref) => {
                 if (ref) {
-                  markerRefs.current[property.id as string] = ref;
+                  markerRefs.current[property.id] = ref;
                 }
               }}
               eventHandlers={{
                 click: () => {
-                  if (setSelectedPropertyId) setSelectedPropertyId(property.id);
                   if (onPropertyClick) onPropertyClick(property);
+                  if (setSelectedPropertyId) setSelectedPropertyId(property.id);
                 }
               }}
             >
@@ -296,8 +346,8 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
                 </div>
               </Popup>
             </Marker>
-          ) : null
-        ))}
+          );
+        })}
 
         {/* Renderizar la ubicación seleccionada */}
         {selectedLocation && (

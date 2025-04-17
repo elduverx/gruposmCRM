@@ -6,46 +6,478 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
 
-export async function getProperties(): Promise<Property[]> {
+// Type guards for database results
+interface RawProperty {
+  id: string;
+  address: string;
+  population: string | null;
+  type: string;
+  ownerName: string | null;
+  ownerPhone: string | null;
+  zoneId: string | null;
+  status: string;
+  action: string;
+  captureDate: Date;
+  responsibleId: string | null;
+  hasSimpleNote: boolean;
+  isOccupied: boolean;
+  clientId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  occupiedBy: string | null;
+  isLocated: boolean;
+  responsible: string | null;
+  habitaciones: number | null;
+  banos: number | null;
+  metrosCuadrados: number | null;
+  parking: boolean;
+  ascensor: boolean;
+  piscina: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  zone?: { id: string; name: string } | null;
+  activities?: RawActivity[];
+  responsibleUser?: { id: string; name: string; email: string } | null;
+  assignments?: RawAssignment[];
+  clients?: { id: string; name: string; email: string }[];
+  dpv?: RawDPV | null;
+}
+
+interface RawActivity {
+  id: string;
+  propertyId: string;
+  type: string;
+  notes: string | null;
+  client: string | null;
+  date: Date;
+  status: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface RawAssignment {
+  id: string;
+  propertyId: string;
+  type: string;
+  price: number;
+  exclusiveUntil: Date;
+  origin: string;
+  clientId: string;
+  sellerFeeType: string;
+  sellerFeeValue: number;
+  buyerFeeType: string;
+  buyerFeeValue: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface RawDPV {
+  id: string;
+  propertyId: string;
+  value: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Type guard functions
+function isRawProperty(obj: unknown): obj is RawProperty {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'address' in obj;
+}
+
+function isRawActivity(obj: unknown): obj is RawActivity {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'propertyId' in obj;
+}
+
+function isRawAssignment(obj: unknown): obj is RawAssignment {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'propertyId' in obj;
+}
+
+function isRawDPV(obj: unknown): obj is RawDPV {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'propertyId' in obj;
+}
+
+// Helper function to safely convert date to ISO string
+function safeToISOString(date: unknown): string {
+  if (date instanceof Date) {
+    return date.toISOString();
+  }
+  if (typeof date === 'string') {
+    return new Date(date).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+// Helper function to safely map activities
+function mapActivities(activities: unknown[]): Activity[] {
+  if (!Array.isArray(activities)) return [];
+  
+  return activities.map(activity => {
+    if (!isRawActivity(activity)) {
+      return {
+        id: '',
+        propertyId: '',
+        type: '',
+        notes: null,
+        client: null,
+        date: new Date().toISOString(),
+        status: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    return {
+      ...activity,
+      date: safeToISOString(activity.date),
+      createdAt: safeToISOString(activity.createdAt),
+      updatedAt: safeToISOString(activity.updatedAt)
+    };
+  });
+}
+
+// Helper function to safely map assignments
+function mapAssignments(assignments: unknown[]): Assignment[] {
+  if (!Array.isArray(assignments)) return [];
+  
+  return assignments.map(assignment => {
+    if (!isRawAssignment(assignment)) {
+      return {
+        id: '',
+        propertyId: '',
+        type: '',
+        price: 0,
+        exclusiveUntil: new Date().toISOString(),
+        origin: '',
+        clientId: '',
+        sellerFeeType: '',
+        sellerFeeValue: 0,
+        buyerFeeType: '',
+        buyerFeeValue: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    return {
+      ...assignment,
+      createdAt: safeToISOString(assignment.createdAt),
+      updatedAt: safeToISOString(assignment.updatedAt),
+      exclusiveUntil: safeToISOString(assignment.exclusiveUntil)
+    };
+  });
+}
+
+// Helper function to safely map clients
+function mapClients(clients: unknown[]): { id: string; name: string; email: string }[] {
+  if (!Array.isArray(clients)) return [];
+  
+  return clients.map(client => {
+    if (typeof client !== 'object' || client === null) {
+      return { id: '', name: '', email: '' };
+    }
+    
+    const id = typeof client.id === 'string' ? client.id : '';
+    const name = typeof client.name === 'string' ? client.name : '';
+    const email = typeof client.email === 'string' ? client.email : '';
+    
+    return { id, name, email };
+  });
+}
+
+// Helper function to safely map zone
+function mapZone(zone: unknown): { id: string; name: string } | null {
+  if (typeof zone !== 'object' || zone === null) return null;
+  
+  const id = typeof zone.id === 'string' ? zone.id : '';
+  const name = typeof zone.name === 'string' ? zone.name : '';
+  
+  return { id, name };
+}
+
+// Helper function to safely map responsible user
+function mapResponsibleUser(user: unknown): { id: string; name: string; email: string } | null {
+  if (typeof user !== 'object' || user === null) return null;
+  
+  const id = typeof user.id === 'string' ? user.id : '';
+  const name = typeof user.name === 'string' ? user.name : '';
+  const email = typeof user.email === 'string' ? user.email : '';
+  
+  return { id, name, email };
+}
+
+// Helper function to safely map DPV
+function mapDPV(dpv: unknown): DPV | null {
+  if (!isRawDPV(dpv)) return null;
+  
+  const createdAt = safeToISOString(dpv.createdAt);
+  const updatedAt = safeToISOString(dpv.updatedAt);
+  
+  return {
+    ...dpv,
+    createdAt,
+    updatedAt
+  };
+}
+
+// Helper function to safely map property
+function mapProperty(property: unknown): Property {
+  if (!isRawProperty(property)) {
+    return {
+      id: '',
+      address: '',
+      population: null,
+      type: PropertyType.PISO,
+      ownerName: null,
+      ownerPhone: null,
+      zoneId: null,
+      status: OperationType.SALE,
+      action: PropertyAction.IR_A_DIRECCION,
+      captureDate: new Date().toISOString(),
+      responsibleId: null,
+      hasSimpleNote: false,
+      isOccupied: false,
+      clientId: null,
+      latitude: null,
+      longitude: null,
+      occupiedBy: null,
+      isLocated: false,
+      responsible: null,
+      habitaciones: null,
+      banos: null,
+      metrosCuadrados: null,
+      parking: false,
+      ascensor: false,
+      piscina: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      activities: [],
+      assignments: [],
+      clients: [],
+      zone: null,
+      dpv: null,
+      responsibleUser: null
+    };
+  }
+  
+  return {
+    ...property,
+    captureDate: safeToISOString(property.captureDate),
+    createdAt: safeToISOString(property.createdAt),
+    updatedAt: safeToISOString(property.updatedAt),
+    activities: mapActivities(property.activities || []),
+    assignments: mapAssignments(property.assignments || []),
+    clients: mapClients(property.clients || []),
+    zone: mapZone(property.zone),
+    dpv: mapDPV(property.dpv),
+    responsibleUser: mapResponsibleUser(property.responsibleUser)
+  };
+}
+
+export async function getProperties(
+  page: number = 1,
+  limit: number = 20,
+  searchTerm: string = '',
+  sortBy: string = 'updatedAt',
+  sortOrder: 'asc' | 'desc' = 'desc',
+  zoneId?: string
+): Promise<{ properties: Property[]; total: number }> {
   try {
+    // Construir la consulta base
+    const where = {
+      ...(searchTerm 
+        ? {
+            OR: [
+              { address: { contains: searchTerm } },
+              { population: { contains: searchTerm } },
+              { ownerName: { contains: searchTerm } },
+              { ownerPhone: { contains: searchTerm } },
+              { responsible: { contains: searchTerm } },
+              { ownerEmail: { contains: searchTerm } },
+              { tenantName: { contains: searchTerm } },
+              { tenantPhone: { contains: searchTerm } },
+              { tenantEmail: { contains: searchTerm } },
+              { description: { contains: searchTerm } },
+              { notes: { contains: searchTerm } },
+              { price: { contains: searchTerm } },
+              { yearBuilt: { contains: searchTerm } },
+              { type: { contains: searchTerm } },
+              { status: { contains: searchTerm } },
+              { action: { contains: searchTerm } },
+              { occupiedBy: { contains: searchTerm } },
+              { habitaciones: { equals: parseInt(searchTerm) || undefined } },
+              { banos: { equals: parseInt(searchTerm) || undefined } },
+              { metrosCuadrados: { equals: parseInt(searchTerm) || undefined } }
+            ]
+          }
+        : {}),
+      ...(zoneId ? { zoneId } : {})
+    };
+
+    // Si hay un término de búsqueda, buscar en las relaciones
+    if (searchTerm) {
+      // Buscar en zonas
+      const zonesWithMatch = await prisma.zone.findMany({
+        where: {
+          OR: [
+            { name: { contains: searchTerm } },
+            { description: { contains: searchTerm } }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      const zoneIds = zonesWithMatch.map(zone => zone.id);
+      
+      // Buscar en usuarios responsables
+      const usersWithMatch = await prisma.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: searchTerm } },
+            { email: { contains: searchTerm } }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      const userIds = usersWithMatch.map(user => user.id);
+      
+      // Buscar en actividades
+      const activitiesWithMatch = await prisma.activity.findMany({
+        where: {
+          OR: [
+            { notes: { contains: searchTerm } },
+            { client: { contains: searchTerm } },
+            { type: { contains: searchTerm } },
+            { status: { contains: searchTerm } }
+          ]
+        },
+        select: { propertyId: true }
+      });
+      
+      const activityPropertyIds = activitiesWithMatch.map(activity => activity.propertyId);
+      
+      // Buscar en asignaciones
+      const assignmentsWithMatch = await prisma.assignment.findMany({
+        where: {
+          OR: [
+            { origin: { contains: searchTerm } },
+            { type: { contains: searchTerm } }
+          ]
+        },
+        select: { propertyId: true }
+      });
+      
+      const assignmentPropertyIds = assignmentsWithMatch.map(assignment => assignment.propertyId);
+      
+      // Buscar en clientes
+      const clientsWithMatch = await prisma.client.findMany({
+        where: {
+          OR: [
+            { name: { contains: searchTerm } },
+            { email: { contains: searchTerm } },
+            { phone: { contains: searchTerm } }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      const clientIds = clientsWithMatch.map(client => client.id);
+      
+      // Obtener propiedades relacionadas con los clientes
+      const clientProperties = await prisma.property.findMany({
+        where: {
+          clients: {
+            some: {
+              id: { in: clientIds }
+            }
+          }
+        },
+        select: { id: true }
+      });
+      
+      const clientPropertyIds = clientProperties.map(property => property.id);
+      
+      // Buscar en noticias de propiedades
+      const propertyNewsWithMatch = await prisma.propertyNews.findMany({
+        where: {
+          OR: [
+            { type: { contains: searchTerm } },
+            { action: { contains: searchTerm } },
+            { responsible: { contains: searchTerm } }
+          ]
+        },
+        select: { propertyId: true }
+      });
+      
+      const newsPropertyIds = propertyNewsWithMatch.map(news => news.propertyId);
+      
+      // Combinar todos los IDs de propiedades que coinciden
+      const allMatchingPropertyIds = new Set([
+        ...activityPropertyIds,
+        ...assignmentPropertyIds,
+        ...clientPropertyIds,
+        ...newsPropertyIds
+      ]);
+      
+      // Añadir condiciones para buscar en relaciones
+      if (zoneIds.length > 0) {
+        where.OR.push({ zoneId: { in: zoneIds } });
+      }
+      
+      if (userIds.length > 0) {
+        where.OR.push({ responsibleId: { in: userIds } });
+      }
+      
+      if (allMatchingPropertyIds.size > 0) {
+        where.OR.push({ id: { in: Array.from(allMatchingPropertyIds) } });
+      }
+    }
+
+    // Obtener el total de propiedades que coinciden con el filtro
+    const total = await prisma.property.count({ where });
+
+    // Obtener las propiedades con paginación
     const properties = await prisma.property.findMany({
+      where,
       include: {
         zone: true,
-        activities: true,
-        responsibleUser: true
-      }
+        activities: {
+          orderBy: { date: 'desc' },
+          take: 1 // Solo obtener la actividad más reciente
+        },
+        responsibleUser: true,
+        assignments: {
+          take: 1 // Solo obtener la asignación más reciente
+        },
+        clients: {
+          take: 1 // Solo obtener el cliente más reciente
+        }
+      },
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * limit,
+      take: limit
     });
     
-    return properties.map((property): Property => ({
-      ...property,
-      captureDate: property.captureDate.toISOString(),
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-      activities: property.activities.map(activity => ({
-        ...activity,
-        createdAt: activity.createdAt.toISOString(),
-        updatedAt: activity.updatedAt.toISOString(),
-        date: activity.date.toISOString()
-      })),
-      zone: property.zone ? {
-        id: property.zone.id,
-        name: property.zone.name
-      } : null,
-      assignments: [],
-      dpv: null,
-      clients: [],
-      responsibleUser: property.responsibleUser ? {
-        id: property.responsibleUser.id,
-        name: property.responsibleUser.name,
-        email: property.responsibleUser.email
-      } : null
-    }));
+    return {
+      properties: properties.map(mapProperty),
+      total
+    };
   } catch (error) {
-    if (error instanceof Error) {
-      // eslint-disable-next-line no-console
-      console.error('Error getting properties:', error.message);
-    }
-    return [];
+    // eslint-disable-next-line no-console
+    console.error('Error al obtener propiedades:', error instanceof Error ? error.message : 'Unknown error');
+    return { properties: [], total: 0 };
   }
 }
 
@@ -65,19 +497,7 @@ export async function getProperty(id: string): Promise<Property | null> {
 
     if (!property) return null;
 
-    // Asegurarse de que las propiedades existan antes de acceder a ellas
-    return {
-      ...property,
-      createdAt: property.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: property.updatedAt?.toISOString() || new Date().toISOString(),
-      activities: Array.isArray(property.activities) 
-        ? property.activities.map(activity => ({
-            ...activity,
-            createdAt: activity.createdAt?.toISOString() || new Date().toISOString(),
-            updatedAt: activity.updatedAt?.toISOString() || new Date().toISOString()
-          }))
-        : []
-    };
+    return mapProperty(property);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error getting property:', error instanceof Error ? error.message : 'Unknown error');

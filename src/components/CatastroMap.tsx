@@ -18,11 +18,10 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface CatastroMapProps {
   properties: CatastroProperty[];
+  center: [number, number];
 }
 
-export default function CatastroMap({ properties }: CatastroMapProps) {
-  // Default center is Catarroja, Spain
-  const [center, setCenter] = useState<[number, number]>([39.3989, -0.4262]);
+export default function CatastroMap({ properties, center }: CatastroMapProps) {
   const [markers, setMarkers] = useState<CatastroProperty[]>([]);
 
   useEffect(() => {
@@ -71,17 +70,10 @@ export default function CatastroMap({ properties }: CatastroMapProps) {
         >
           <Popup>
             <div className="p-2">
-              <h3 className="font-bold">{marker.address || `${marker.streetType} ${marker.streetName}, ${marker.number}`}</h3>
+              <h3 className="font-bold">{`${marker.streetName}, ${marker.number}`}</h3>
               <p>Ref. Catastral: {marker.reference}</p>
-              {marker.block && <p>Bloque: {marker.block}</p>}
-              {marker.stairway && <p>Escalera: {marker.stairway}</p>}
-              {marker.floor && <p>Planta: {marker.floor}</p>}
               {marker.door && <p>Puerta: {marker.door}</p>}
-              {marker.age && <p>Año: {marker.age}</p>}
-              {marker.quality && <p>Calidad: {marker.quality}</p>}
-              {marker.constructedArea && <p>Superficie: {marker.constructedArea}m²</p>}
-              {marker.propertyType && <p>Tipo: {marker.propertyType}</p>}
-              {marker.reformType && marker.reformType !== ' ' && <p>Tipo reforma: {marker.reformType}</p>}
+              {marker.floor && <p>Planta: {marker.floor}</p>}
             </div>
           </Popup>
         </Marker>

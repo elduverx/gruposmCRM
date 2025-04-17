@@ -41,7 +41,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
       try {
         const propertiesData = await getProperties();
         if (propertiesData) {
-          setProperties(propertiesData);
+          setProperties(propertiesData.properties);
         }
       } catch (error) {
         // eslint-disable-next-line no-console

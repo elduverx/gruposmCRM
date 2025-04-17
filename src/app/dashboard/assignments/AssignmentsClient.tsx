@@ -29,7 +29,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
     const loadProperties = async () => {
       try {
         const propertiesData = await getProperties();
-        setProperties(propertiesData);
+        setProperties(propertiesData.properties);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error loading properties:', error);
@@ -65,7 +65,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
     setIsLoading(true);
     try {
       const propertiesData = await getProperties();
-      setProperties(propertiesData);
+      setProperties(propertiesData.properties);
       setIsPropertySelectorOpen(true);
     } catch (error) {
       // eslint-disable-next-line no-console

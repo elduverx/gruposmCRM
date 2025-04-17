@@ -43,7 +43,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
     const fetchProperties = async () => {
       try {
         const propertiesData = await getProperties();
-        setProperties(propertiesData);
+        setProperties(propertiesData.properties);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error fetching properties:', error);

@@ -92,27 +92,6 @@ export interface Activity {
   updatedAt: string;
 }
 
-export interface CatastroProperty {
-  id?: string;
-  reference: string; // Referencia Catastral
-  streetType?: string; // Tipo de vía
-  streetName?: string; // Nombre de vía
-  number?: string; // Numero
-  block?: string; // Bloque
-  stairway?: string; // Escalera
-  floor?: string; // Planta
-  door?: string; // Puerta
-  reformType?: string; // Tipo reforma
-  age?: string; // Antiguedad
-  quality?: string; // Calidad
-  constructedArea?: string; // Superficie construida
-  propertyType?: string; // Tipo
-  address?: string; // Composite address (will be generated)
-  status?: string;
-  lat?: number;
-  lng?: number;
-}
-
 export interface Property {
   id: string;
   address: string;
@@ -225,4 +204,17 @@ export interface PropertyNews {
     population: string;
     zoneId: string;
   };
+}
+
+export interface CatastroProperty {
+  id: string;
+  reference: string;
+  streetName: string;
+  number: string;
+  door: string | null;
+  floor: string | null;
+  lat: number;
+  lng: number;
+  createdAt: Date;
+  updatedAt: Date;
 } 

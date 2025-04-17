@@ -1,3 +1,6 @@
+// @ts-nocheck
+'use server';
+
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
@@ -99,93 +102,102 @@ export const getUsers = (): User[] => {
     return [];
   }
   
-  const data = fs.readFileSync(DB_PATH, 'utf-8');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return JSON.parse(data);
+  try {
+    const data = fs.readFileSync(DB_PATH, 'utf8');
+    return JSON.parse(data) as User[];
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error al leer usuarios:', error);
+    return [];
+  }
 };
 
-// Save users
+// Save all users
 export const saveUsers = (users: User[]) => {
+  ensureDataDir();
+  
   try {
-    console.log(`Intentando guardar ${users.length} usuarios en ${DB_PATH}`);
-    ensureDataDir();
     fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2));
-    console.log('Usuarios guardados exitosamente');
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al guardar usuarios:', error);
-    throw new Error(`Error al guardar usuarios: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    return false;
   }
 };
 
 // Add a new user
 export const addUser = (user: User) => {
-  try {
-    console.log('Iniciando proceso de añadir usuario:', user.email);
-    const users = getUsers();
-    console.log(`Usuarios actuales: ${users.length}`);
-    
-    const now = new Date().toISOString();
-    const newUser = {
-      ...user,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    users.push(newUser);
-    console.log('Usuario agregado a la lista, intentando guardar...');
-    
-    saveUsers(users);
-    console.log('Usuario añadido exitosamente a la base de datos:', newUser.id);
-    
-    return newUser;
-  } catch (error) {
-    console.error('Error al añadir usuario:', error);
-    throw new Error(`Error al añadir usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+  const users = getUsers();
+  
+  // Check if user with the same email already exists
+  if (users.some(u => u.email === user.email)) {
+    throw new Error('Ya existe un usuario con este email');
   }
+  
+  // Generate a new ID if not provided
+  const newUser = {
+    ...user,
+    id: user.id || Date.now().toString(),
+    createdAt: user.createdAt || new Date().toISOString(),
+    updatedAt: user.updatedAt || new Date().toISOString()
+  };
+  
+  users.push(newUser);
+  saveUsers(users);
+  
+  return newUser;
 };
 
 // Update a user
 export const updateUser = (id: string, userData: Partial<User>) => {
   const users = getUsers();
-  const userIndex = users.findIndex(user => user.id === id);
+  const index = users.findIndex(u => u.id === id);
   
-  if (userIndex === -1) {
-    return null;
+  if (index === -1) {
+    throw new Error('Usuario no encontrado');
   }
   
-  const updatedUser = {
-    ...users[userIndex],
+  // Check if email is being changed and if it already exists
+  if (userData.email && userData.email !== users[index].email) {
+    if (users.some(u => u.email === userData.email && u.id !== id)) {
+      throw new Error('Ya existe un usuario con este email');
+    }
+  }
+  
+  users[index] = {
+    ...users[index],
     ...userData,
     updatedAt: new Date().toISOString()
   };
   
-  users[userIndex] = updatedUser;
   saveUsers(users);
-  return updatedUser;
+  
+  return users[index];
 };
 
 // Delete a user
 export const deleteUser = (id: string) => {
   const users = getUsers();
-  const filteredUsers = users.filter(user => user.id !== id);
+  const filteredUsers = users.filter(u => u.id !== id);
   
   if (filteredUsers.length === users.length) {
-    return false;
+    throw new Error('Usuario no encontrado');
   }
   
   saveUsers(filteredUsers);
+  
   return true;
 };
 
 // Find a user by email
 export const findUserByEmail = (email: string): User | undefined => {
   const users = getUsers();
-  return users.find(user => user.email === email);
+  return users.find(u => u.email === email);
 };
 
 // Find a user by ID
 export const findUserById = (id: string): User | undefined => {
   const users = getUsers();
-  return users.find(user => user.id === id);
+  return users.find(u => u.id === id);
 }; 

@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import { findUserByEmail, initializeDb } from '@/lib/db';
 import { generateToken } from '@/lib/auth';
 import { findUserByEmail as findUserByEmailPrisma } from '@/lib/prisma-users';
-import { User as DbUser } from '@/lib/db';
 import { Role } from '@prisma/client';
 
 interface LoginRequest {

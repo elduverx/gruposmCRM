@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { findUserById } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { getUserById } from '@/lib/prisma-users';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +22,20 @@ export async function GET(request: Request) {
     try {
       const decoded = verifyToken(token);
       
-      // Buscar el usuario
-      const user = findUserById(decoded.userId);
-      if (!user) {
+      // Intentar obtener el usuario de Prisma primero
+      try {
+        const prismaUser = await getUserById(decoded.userId);
+        if (prismaUser) {
+          return NextResponse.json(prismaUser);
+        }
+      } catch (prismaError) {
+        // eslint-disable-next-line no-console
+        console.error('Error al buscar usuario en Prisma:', prismaError);
+      }
+      
+      // Si no se encuentra en Prisma, buscar en JSON
+      const jsonUser = findUserById(decoded.userId);
+      if (!jsonUser) {
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
           { status: 404 }
@@ -32,7 +44,7 @@ export async function GET(request: Request) {
 
       // Devolver los datos del usuario (sin la contraseña)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _unused, ...userWithoutPassword } = user;
+      const { password: _unused, ...userWithoutPassword } = jsonUser;
       
       return NextResponse.json(userWithoutPassword);
     } catch (error) {

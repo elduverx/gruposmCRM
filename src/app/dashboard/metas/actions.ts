@@ -31,6 +31,54 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
+// Interfaces for database results
+interface RawUserGoal {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  targetCount: number;
+  currentCount: number;
+  startDate: string;
+  endDate: string | null;
+  isCompleted: boolean;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  activityCount?: number;
+}
+
+interface RawUserActivity {
+  id: string;
+  userId: string;
+  goalId: string | null;
+  type: string;
+  description: string | null;
+  timestamp: string;
+  metadata: string | null;
+  relatedId: string | null;
+  relatedType: string | null;
+  points: number;
+  goalTitle?: string;
+}
+
+// Type guard functions
+function isRawUserGoal(obj: unknown): obj is RawUserGoal {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'userId' in obj && 
+    'title' in obj;
+}
+
+function isRawUserActivity(obj: unknown): obj is RawUserActivity {
+  return obj !== null && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'userId' in obj && 
+    'type' in obj;
+}
+
 // Obtener todas las metas
 export async function getUserGoals(): Promise<UserGoal[]> {
   try {
@@ -52,7 +100,11 @@ export async function getUserGoals(): Promise<UserGoal[]> {
 
     // Obtener actividades recientes para cada meta
     const goalsWithActivities = await Promise.all(
-      Array.isArray(goals) ? goals.map(async (goal: any) => {
+      Array.isArray(goals) ? goals.map(async (goal) => {
+        if (!isRawUserGoal(goal)) {
+          throw new Error('Invalid goal data structure');
+        }
+
         const activities = await prisma.$queryRaw`
           SELECT * FROM UserActivity 
           WHERE goalId = ${goal.id}
@@ -66,16 +118,24 @@ export async function getUserGoals(): Promise<UserGoal[]> {
           updatedAt: new Date(goal.updatedAt).toISOString(),
           startDate: new Date(goal.startDate).toISOString(),
           endDate: goal.endDate ? new Date(goal.endDate).toISOString() : null,
-          progress: calculateProgress(goal.currentCount, goal.targetCount),
-          activities: Array.isArray(activities) ? activities.map((act: any) => mapActivityToDTO(act)) : [],
+          progress: calculateProgress(
+            Number(goal.currentCount), 
+            Number(goal.targetCount)
+          ),
+          activities: Array.isArray(activities) ? activities.map((act) => {
+            if (!isRawUserActivity(act)) {
+              throw new Error('Invalid activity data structure');
+            }
+            return mapActivityToDTO(act);
+          }) : [],
         };
       }) : []
     );
 
-    return goalsWithActivities;
+    return goalsWithActivities as UserGoal[];
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al obtener metas:', error);
-    // Devolver un arreglo vacío en lugar de lanzar un error
     return [];
   }
 }
@@ -90,7 +150,7 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
       throw new Error('Debes iniciar sesión para crear una meta');
     }
     
-    const result = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO UserGoal (
         id, userId, title, description, targetCount, currentCount, 
         startDate, endDate, isCompleted, category, createdAt, updatedAt
@@ -109,7 +169,7 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
     `;
     
     const goal = Array.isArray(newGoal) && newGoal.length > 0 ? newGoal[0] : null;
-    if (!goal) throw new Error('Error al crear meta');
+    if (!goal || !isRawUserGoal(goal)) throw new Error('Error al crear meta');
 
     revalidatePath('/dashboard/metas');
     
@@ -119,9 +179,13 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
       updatedAt: new Date(goal.updatedAt).toISOString(), 
       startDate: new Date(goal.startDate).toISOString(),
       endDate: goal.endDate ? new Date(goal.endDate).toISOString() : null,
-      progress: calculateProgress(goal.currentCount, goal.targetCount),
-    };
+      progress: calculateProgress(
+        Number(goal.currentCount), 
+        Number(goal.targetCount)
+      ),
+    } as UserGoal;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al crear meta:', error);
     throw new Error(`Error al crear meta: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -138,7 +202,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     }
     
     // Crear la actividad
-    const result = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO UserActivity (
         id, userId, goalId, type, description, timestamp, 
         metadata, relatedId, relatedType, points
@@ -158,7 +222,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     `;
     
     const activity = Array.isArray(newActivity) && newActivity.length > 0 ? newActivity[0] : null;
-    if (!activity) throw new Error('Error al crear actividad');
+    if (!activity || !isRawUserActivity(activity)) throw new Error('Error al crear actividad');
 
     // Si está asociada a una meta, actualizar el contador de la meta
     if (data.goalId) {
@@ -169,6 +233,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     
     return mapActivityToDTO(activity);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al registrar actividad:', error);
     throw new Error(`Error al registrar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -193,11 +258,19 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
       LIMIT ${limit}
     `;
 
-    return Array.isArray(activities) ? activities.map((act: any) => ({
-      ...mapActivityToDTO(act),
-      goalTitle: act.goalTitle,
-    })) : [];
+    return Array.isArray(activities) ? activities.map((act) => {
+      if (!isRawUserActivity(act)) {
+        throw new Error('Invalid activity data structure');
+      }
+      // Add type safety for goalTitle
+      const goalTitle = typeof act.goalTitle === 'string' ? act.goalTitle : undefined;
+      return {
+        ...mapActivityToDTO(act),
+        goalTitle,
+      };
+    }) : [];
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al obtener actividades:', error);
     // Devolver un arreglo vacío en lugar de lanzar un error
     return [];
@@ -221,7 +294,7 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
     
     const goal = Array.isArray(goalResult) && goalResult.length > 0 ? goalResult[0] : null;
     
-    if (!goal) {
+    if (!goal || !isRawUserGoal(goal)) {
       throw new Error('Meta no encontrada o no tienes permiso para eliminarla');
     }
     
@@ -239,6 +312,7 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
     
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al eliminar meta:', error);
     throw new Error(`Error al eliminar meta: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -253,8 +327,9 @@ async function updateGoalProgress(goalId: string): Promise<void> {
       WHERE goalId = ${goalId}
     `;
     
-    const count = Array.isArray(countResult) && countResult.length > 0 
-      ? Number(countResult[0].count) : 0;
+    const count = Array.isArray(countResult) && countResult.length > 0 && typeof countResult[0] === 'object' && countResult[0] !== null
+      ? Number((countResult[0] as { count: number }).count) 
+      : 0;
     
     // Obtener la meta actual
     const goalResult = await prisma.$queryRaw`
@@ -263,12 +338,12 @@ async function updateGoalProgress(goalId: string): Promise<void> {
     
     const goal = Array.isArray(goalResult) && goalResult.length > 0 ? goalResult[0] : null;
     
-    if (!goal) {
+    if (!goal || !isRawUserGoal(goal)) {
       throw new Error('Meta no encontrada');
     }
     
     // Actualizar el contador y verificar si se completó
-    const isCompleted = count >= goal.targetCount;
+    const isCompleted = count >= Number(goal.targetCount);
     
     await prisma.$executeRaw`
       UPDATE UserGoal 
@@ -277,6 +352,7 @@ async function updateGoalProgress(goalId: string): Promise<void> {
     `;
     
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error al actualizar progreso de meta:', error);
     throw new Error(`Error al actualizar progreso: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -289,7 +365,26 @@ function calculateProgress(current: number, target: number): number {
   return progress;
 }
 
-function mapActivityToDTO(activity: any): UserActivity {
+function mapActivityToDTO(activity: RawUserActivity): UserActivity {
+  let parsedMetadata: Record<string, unknown> | undefined;
+  
+  if (activity.metadata) {
+    try {
+      if (typeof activity.metadata === 'string') {
+        const parsed = JSON.parse(activity.metadata);
+        if (typeof parsed === 'object' && parsed !== null) {
+          parsedMetadata = parsed;
+        }
+      } else if (typeof activity.metadata === 'object' && activity.metadata !== null) {
+        parsedMetadata = activity.metadata;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error parsing metadata:', error);
+      parsedMetadata = undefined;
+    }
+  }
+
   return {
     id: activity.id,
     userId: activity.userId,
@@ -299,9 +394,7 @@ function mapActivityToDTO(activity: any): UserActivity {
     timestamp: new Date(activity.timestamp).toISOString(),
     relatedId: activity.relatedId,
     relatedType: activity.relatedType,
-    points: activity.points,
-    metadata: activity.metadata ? 
-      (typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata) 
-      : undefined,
+    points: Number(activity.points),
+    metadata: parsedMetadata,
   };
 } 

@@ -21,6 +21,7 @@ export async function GET(
     // Verificar si el usuario es administrador
     const admin = await checkIsAdmin(request);
     if (!admin) {
+      // eslint-disable-next-line no-console
       console.error('Acceso no autorizado a GET /api/users/[id]');
       return NextResponse.json(
         { message: 'No autorizado' },
@@ -30,10 +31,12 @@ export async function GET(
 
     try {
       // Intentar obtener con Prisma
+      // eslint-disable-next-line no-console
       console.log(`Buscando usuario ${params.id} con Prisma`);
       const user = await getUserById(params.id);
       
       if (!user) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en Prisma`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -41,16 +44,20 @@ export async function GET(
         );
       }
       
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} encontrado en Prisma`);
       return NextResponse.json(user);
     } catch (prismaError) {
+      // eslint-disable-next-line no-console
       console.error(`Error al obtener usuario ${params.id} de Prisma:`, prismaError);
       
       // Fallback al JSON
+      // eslint-disable-next-line no-console
       console.log(`Intentando obtener usuario ${params.id} del JSON como fallback`);
       const jsonUser = findUserByIdJson(params.id);
       
       if (!jsonUser) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en JSON`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -59,11 +66,14 @@ export async function GET(
       }
       
       // Devolver los datos del usuario (sin la contraseña)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _unused, ...userWithoutPassword } = jsonUser;
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} encontrado en JSON`);
       return NextResponse.json(userWithoutPassword);
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error en GET /api/users/[id]:', error);
     return NextResponse.json(
       { message: 'Error en el servidor', details: error instanceof Error ? error.message : 'Error desconocido' },
@@ -81,6 +91,7 @@ export async function PUT(
     // Verificar si el usuario es administrador
     const admin = await checkIsAdmin(request);
     if (!admin) {
+      // eslint-disable-next-line no-console
       console.error('Acceso no autorizado a PUT /api/users/[id]');
       return NextResponse.json(
         { message: 'No autorizado' },
@@ -89,10 +100,12 @@ export async function PUT(
     }
 
     const { name, email, password, role } = await request.json() as UpdateUserData;
+    // eslint-disable-next-line no-console
     console.log(`Datos recibidos para actualizar usuario ${params.id}:`, { name, email, role, hasPassword: !!password });
 
     // Validaciones básicas
     if (!name || !email) {
+      // eslint-disable-next-line no-console
       console.error('Validación fallida - nombre o email faltantes');
       return NextResponse.json(
         { message: 'Nombre y email son requeridos' },
@@ -104,6 +117,7 @@ export async function PUT(
       // Verificar si el usuario existe en Prisma
       const existingUser = await getUserById(params.id);
       if (!existingUser) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en Prisma`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -114,6 +128,7 @@ export async function PUT(
       // Verificar si el email ya está en uso por otro usuario
       const userWithEmail = await findUserByEmail(email);
       if (userWithEmail && userWithEmail.id !== params.id) {
+        // eslint-disable-next-line no-console
         console.error(`Email ${email} ya está en uso por otro usuario`);
         return NextResponse.json(
           { message: 'El correo electrónico ya está registrado' },
@@ -122,6 +137,7 @@ export async function PUT(
       }
       
       // Actualizar con Prisma
+      // eslint-disable-next-line no-console
       console.log(`Actualizando usuario ${params.id} con Prisma`);
       const updatedUser = await updateUser(params.id, {
         name,
@@ -130,17 +146,21 @@ export async function PUT(
         password
       });
       
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} actualizado con Prisma`);
       return NextResponse.json(updatedUser);
     } catch (prismaError) {
+      // eslint-disable-next-line no-console
       console.error(`Error al actualizar usuario ${params.id} con Prisma:`, prismaError);
       
       // Fallback al JSON
+      // eslint-disable-next-line no-console
       console.log(`Intentando actualizar usuario ${params.id} en JSON como fallback`);
       
       // Verificar si el usuario existe en JSON
       const jsonUser = findUserByIdJson(params.id);
       if (!jsonUser) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en JSON`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -151,6 +171,7 @@ export async function PUT(
       // Verificar si el email ya está en uso por otro usuario
       const jsonUserWithEmail = findUserByEmailJson(email);
       if (jsonUserWithEmail && jsonUserWithEmail.id !== params.id) {
+        // eslint-disable-next-line no-console
         console.error(`Email ${email} ya está en uso por otro usuario en JSON`);
         return NextResponse.json(
           { message: 'El correo electrónico ya está registrado' },
@@ -159,7 +180,7 @@ export async function PUT(
       }
       
       // Preparar los datos actualizados
-      const updatedData: any = {
+      const updatedData: Record<string, unknown> = {
         name,
         email,
         role: role || jsonUser.role,
@@ -173,6 +194,7 @@ export async function PUT(
       // Actualizar el usuario en JSON
       const updatedJsonUser = updateUserJson(params.id, updatedData);
       if (!updatedJsonUser) {
+        // eslint-disable-next-line no-console
         console.error(`Error al actualizar usuario ${params.id} en JSON`);
         return NextResponse.json(
           { message: 'Error al actualizar el usuario' },
@@ -181,11 +203,14 @@ export async function PUT(
       }
       
       // Devolver los datos del usuario actualizado (sin la contraseña)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _unused, ...userWithoutPassword } = updatedJsonUser;
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} actualizado en JSON`);
       return NextResponse.json(userWithoutPassword);
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error en PUT /api/users/[id]:', error);
     return NextResponse.json(
       { message: 'Error en el servidor', details: error instanceof Error ? error.message : 'Error desconocido' },
@@ -203,6 +228,7 @@ export async function DELETE(
     // Verificar si el usuario es administrador
     const admin = await checkIsAdmin(request);
     if (!admin) {
+      // eslint-disable-next-line no-console
       console.error('Acceso no autorizado a DELETE /api/users/[id]');
       return NextResponse.json(
         { message: 'No autorizado' },
@@ -214,6 +240,7 @@ export async function DELETE(
       // Verificar si el usuario existe en Prisma
       const existingUser = await getUserById(params.id);
       if (!existingUser) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en Prisma`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -227,6 +254,7 @@ export async function DELETE(
         const adminCount = allUsers.filter((u) => u.role === 'ADMIN').length;
         
         if (adminCount <= 1) {
+          // eslint-disable-next-line no-console
           console.error('Intento de eliminar el último administrador');
           return NextResponse.json(
             { message: 'No se puede eliminar el último administrador' },
@@ -236,20 +264,25 @@ export async function DELETE(
       }
       
       // Eliminar con Prisma
+      // eslint-disable-next-line no-console
       console.log(`Eliminando usuario ${params.id} con Prisma`);
       await deleteUser(params.id);
       
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} eliminado con Prisma`);
       return NextResponse.json({ message: 'Usuario eliminado correctamente' });
     } catch (prismaError) {
+      // eslint-disable-next-line no-console
       console.error(`Error al eliminar usuario ${params.id} con Prisma:`, prismaError);
       
       // Fallback al JSON
+      // eslint-disable-next-line no-console
       console.log(`Intentando eliminar usuario ${params.id} del JSON como fallback`);
       
       // Verificar si el usuario existe en JSON
       const jsonUser = findUserByIdJson(params.id);
       if (!jsonUser) {
+        // eslint-disable-next-line no-console
         console.log(`Usuario ${params.id} no encontrado en JSON`);
         return NextResponse.json(
           { message: 'Usuario no encontrado' },
@@ -263,6 +296,7 @@ export async function DELETE(
         const adminCount = allJsonUsers.filter((u) => u.role === 'ADMIN').length;
         
         if (adminCount <= 1) {
+          // eslint-disable-next-line no-console
           console.error('Intento de eliminar el último administrador en JSON');
           return NextResponse.json(
             { message: 'No se puede eliminar el último administrador' },
@@ -274,6 +308,7 @@ export async function DELETE(
       // Eliminar del JSON
       const success = deleteUserJson(params.id);
       if (!success) {
+        // eslint-disable-next-line no-console
         console.error(`Error al eliminar usuario ${params.id} del JSON`);
         return NextResponse.json(
           { message: 'Error al eliminar el usuario' },
@@ -281,10 +316,12 @@ export async function DELETE(
         );
       }
       
+      // eslint-disable-next-line no-console
       console.log(`Usuario ${params.id} eliminado del JSON`);
       return NextResponse.json({ message: 'Usuario eliminado correctamente' });
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error en DELETE /api/users/[id]:', error);
     return NextResponse.json(
       { message: 'Error en el servidor', details: error instanceof Error ? error.message : 'Error desconocido' },

@@ -41,6 +41,8 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     
     try {
       setIsLoading(true);
+      // eslint-disable-next-line no-console
+      console.log('Creando meta:', newGoalData);
       const newGoal = await createUserGoal(newGoalData);
       setGoals([newGoal, ...goals]);
       setIsNewGoalModalOpen(false);
@@ -51,6 +53,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
         category: 'GENERAL',
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error al crear meta:', error);
       alert('Error al crear la meta. Por favor intenta de nuevo.');
     } finally {
@@ -90,6 +93,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       }));
       
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error al registrar actividad:', error);
       alert('Error al registrar la actividad. Por favor intenta de nuevo.');
     } finally {
@@ -103,6 +107,8 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     
     try {
       setIsLoading(true);
+      // eslint-disable-next-line no-console
+      console.log('Eliminando meta:', goalToDelete);
       await deleteUserGoal(goalToDelete);
       
       // Actualizar la lista de metas
@@ -114,6 +120,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       setIsDeleteModalOpen(false);
       setGoalToDelete(null);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error al eliminar meta:', error);
       alert('Error al eliminar la meta. Por favor intenta de nuevo.');
     } finally {

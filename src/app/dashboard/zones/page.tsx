@@ -150,6 +150,7 @@ interface NominatimResponse {
 
 export default function ZonesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesData, setPropertiesData] = useState<{ properties: Property[]; total: number }>({ properties: [], total: 0 });
   const [zones, setZones] = useState<Zone[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showZoneForm, setShowZoneForm] = useState(false);
@@ -179,152 +180,26 @@ export default function ZonesPage() {
   const [isLoadingNews, setIsLoadingNews] = useState(false);
   const [zoneLocalizedProperties, setZoneLocalizedProperties] = useState<Property[]>([]);
   const [zoneSearchTerm, setZoneSearchTerm] = useState('');
-
-  // Obtener las propiedades dentro de la zona seleccionada
-  const getPropertiesInSelectedZone = () => {
-    if (!selectedZoneId) return [];
-    
-    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
-    if (!selectedZone) return [];
-    
-    // Filtrar propiedades que están dentro de la zona seleccionada
-    const propertiesInZone = properties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
-    
-    // También incluir propiedades que tienen zoneId igual a selectedZoneId
-    const propertiesWithZoneId = properties.filter(property => property.zoneId === selectedZoneId);
-    
-    // Combinar ambos conjuntos de propiedades, eliminando duplicados
-    const combinedProperties = [...propertiesInZone];
-    propertiesWithZoneId.forEach(property => {
-      if (!combinedProperties.some(p => p.id === property.id)) {
-        combinedProperties.push(property);
-      }
-    });
-    
-    return combinedProperties;
-  };
-
-  // Obtener las propiedades con noticias en la zona seleccionada
-  const getPropertiesWithNewsInSelectedZone = () => {
-    if (!selectedZoneId) return [];
-    
-    // Obtener las noticias de la zona seleccionada
-    const zoneNewsItems = zoneNews.filter(news => news.property.zoneId === selectedZoneId);
-    
-    // Obtener IDs únicos de propiedades con noticias
-    const propertyIdsWithNews = [...new Set(zoneNewsItems.map(news => news.propertyId))];
-    
-    // Obtener las propiedades completas
-    return properties.filter(property => propertyIdsWithNews.includes(property.id));
-  };
-
-  // Obtener las propiedades localizadas en la zona seleccionada
-  const getLocalizedPropertiesInSelectedZone = () => {
-    if (!selectedZoneId) return [];
-    
-    // Filtrar propiedades que están en la zona seleccionada y están localizadas
-    const propertiesInZone = getPropertiesInSelectedZone();
-    
-    // Filtrar propiedades que están localizadas
-    const localizedProps = propertiesInZone.filter(property => {
-      return property.isLocated === true || property.isLocated === "true";
-    });
-    
-    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
-    const propsWithZoneId = properties.filter(property => 
-      property.zoneId === selectedZoneId && 
-      (property.isLocated === true || property.isLocated === "true")
-    );
-    
-    // Combinar ambos conjuntos de propiedades, eliminando duplicados
-    const combinedProps = [...localizedProps];
-    propsWithZoneId.forEach(property => {
-      if (!combinedProps.some(p => p.id === property.id)) {
-        combinedProps.push(property);
-      }
-    });
-    
-    return combinedProps;
-  };
-
-  // Filtrar propiedades y zonas basadas en el término de búsqueda
-  const filteredProperties = useMemo(() => 
-    properties.filter(property => 
-      property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.population.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-    [properties, searchTerm]
-  );
-
-  const filteredZones = useMemo(() => 
-    zones.filter(zone => 
-      zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (zone.description && zone.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    ),
-    [zones, searchTerm]
-  );
-
-  // Filtrar propiedades, noticias y encargos basados en el término de búsqueda de la zona
-  const filteredZoneLocalizedProperties = useMemo(() => {
-    if (!zoneSearchTerm) return zoneLocalizedProperties;
-    
-    return zoneLocalizedProperties.filter(property => 
-      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
-    );
-  }, [zoneLocalizedProperties, zoneSearchTerm]);
-
-  const filteredZoneNews = useMemo(() => {
-    if (!zoneSearchTerm) return zoneNews;
-    
-    return zoneNews.filter(news => 
-      news.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      news.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      news.type.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      news.action.toLowerCase().includes(zoneSearchTerm.toLowerCase())
-    );
-  }, [zoneNews, zoneSearchTerm]);
-
-  const filteredZoneAssignments = useMemo(() => {
-    if (!zoneSearchTerm) return zoneAssignments;
-    
-    return zoneAssignments.filter(assignment => 
-      assignment.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      assignment.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      (assignment.client && assignment.client.name.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
-      assignment.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
-    );
-  }, [zoneAssignments, zoneSearchTerm]);
-
-  // Filtrar propiedades en la zona seleccionada basadas en el término de búsqueda
-  const filteredPropertiesInZone = useMemo(() => {
-    const propertiesInZone = getPropertiesInSelectedZone();
-    if (!zoneSearchTerm) return propertiesInZone;
-    
-    return propertiesInZone.filter(property => 
-      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
-      (property.ownerName && property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
-      (property.type && property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
-      (property.habitaciones && property.habitaciones.toString().includes(zoneSearchTerm)) ||
-      (property.metrosCuadrados && property.metrosCuadrados.toString().includes(zoneSearchTerm))
-    );
-  }, [selectedZoneId, zoneSearchTerm, properties]);
+  const [visibleProperties, setVisibleProperties] = useState<Property[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const propertiesPerPage = 1000;
 
   // Efecto para cargar datos cuando el componente se monta o cuando el usuario regresa a la página
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [propertiesData, zonesData] = await Promise.all([
-          getProperties(),
-          getZones()
-        ]);
-        setProperties(propertiesData);
+        
+        // Primero obtener todas las zonas
+        const zonesData = await getZones();
         setZones(zonesData);
+        
+        // Obtener todas las propiedades sin límite
+        const propertiesData = await getProperties(1, 12000, '', 'updatedAt', 'desc');
+        setPropertiesData(propertiesData);
+        setProperties(propertiesData.properties);
         
         // Cargar noticias de todas las zonas
         const allNews = await Promise.all(
@@ -377,13 +252,20 @@ export default function ZonesPage() {
           alert('Por favor, completa todos los campos requeridos');
           return;
         }
+        
+        // Crear la nueva zona
         const newZone = await createZone({
           name: data.name,
           description: data.description || '',
           color: data.color,
           coordinates: zoneCoordinates
         });
+        
+        // Actualizar el estado local con la nueva zona
         setZones(prev => [...prev, newZone]);
+
+        // Esperar un momento para asegurar que la zona se haya creado correctamente en la base de datos
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Actualizar las propiedades que estén dentro de la nueva zona
         const propertiesToUpdate = properties.filter(property => 
@@ -395,9 +277,8 @@ export default function ZonesPage() {
         // Actualizar cada propiedad encontrada
         for (const property of propertiesToUpdate) {
           try {
-            await updateProperty(property.id, {
-              zoneId: newZone.id
-            });
+            // Usar la función assignPropertyToZone en lugar de updateProperty directamente
+            await assignPropertyToZone(property.id, newZone.id);
           } catch (error) {
             console.error(`Error actualizando propiedad ${property.id}:`, error);
           }
@@ -673,6 +554,140 @@ export default function ZonesPage() {
     router.push(`/dashboard/properties/${propertyId}`);
   };
 
+  // Obtener las propiedades dentro de la zona seleccionada
+  const getPropertiesInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
+    if (!selectedZone) return [];
+    
+    // Filtrar propiedades que están dentro de la zona seleccionada
+    const propertiesInZone = properties.filter(property => isPropertyInZone(property, selectedZone.coordinates));
+    
+    // También incluir propiedades que tienen zoneId igual a selectedZoneId
+    const propertiesWithZoneId = properties.filter(property => property.zoneId === selectedZoneId);
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProperties = [...propertiesInZone];
+    propertiesWithZoneId.forEach(property => {
+      if (!combinedProperties.some(p => p.id === property.id)) {
+        combinedProperties.push(property);
+      }
+    });
+    
+    return combinedProperties;
+  };
+
+  // Obtener las propiedades con noticias en la zona seleccionada
+  const getPropertiesWithNewsInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Obtener las noticias de la zona seleccionada
+    const zoneNewsItems = zoneNews.filter(news => news.property.zoneId === selectedZoneId);
+    
+    // Obtener IDs únicos de propiedades con noticias
+    const propertyIdsWithNews = [...new Set(zoneNewsItems.map(news => news.propertyId))];
+    
+    // Obtener las propiedades completas
+    return properties.filter(property => propertyIdsWithNews.includes(property.id));
+  };
+
+  // Obtener las propiedades localizadas en la zona seleccionada
+  const getLocalizedPropertiesInSelectedZone = () => {
+    if (!selectedZoneId) return [];
+    
+    // Filtrar propiedades que están en la zona seleccionada y están localizadas
+    const propertiesInZone = getPropertiesInSelectedZone();
+    
+    // Filtrar propiedades que están localizadas
+    const localizedProps = propertiesInZone.filter(property => {
+      return property.isLocated === true || property.isLocated === "true";
+    });
+    
+    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
+    const propsWithZoneId = properties.filter(property => 
+      property.zoneId === selectedZoneId && 
+      (property.isLocated === true || property.isLocated === "true")
+    );
+    
+    // Combinar ambos conjuntos de propiedades, eliminando duplicados
+    const combinedProps = [...localizedProps];
+    propsWithZoneId.forEach(property => {
+      if (!combinedProps.some(p => p.id === property.id)) {
+        combinedProps.push(property);
+      }
+    });
+    
+    return combinedProps;
+  };
+
+  // Filtrar propiedades y zonas basadas en el término de búsqueda
+  const filteredProperties = useMemo(() => 
+    properties.filter(property => 
+      property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.population.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.ownerName.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [properties, searchTerm]
+  );
+
+  const filteredZones = useMemo(() => 
+    zones.filter(zone => 
+      zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (zone.description && zone.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    ),
+    [zones, searchTerm]
+  );
+
+  // Filtrar propiedades, noticias y encargos basados en el término de búsqueda de la zona
+  const filteredZoneLocalizedProperties = useMemo(() => {
+    if (!zoneSearchTerm) return zoneLocalizedProperties;
+    
+    return zoneLocalizedProperties.filter(property => 
+      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneLocalizedProperties, zoneSearchTerm]);
+
+  const filteredZoneNews = useMemo(() => {
+    if (!zoneSearchTerm) return zoneNews;
+    
+    return zoneNews.filter(news => 
+      news.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.type.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      news.action.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneNews, zoneSearchTerm]);
+
+  const filteredZoneAssignments = useMemo(() => {
+    if (!zoneSearchTerm) return zoneAssignments;
+    
+    return zoneAssignments.filter(assignment => 
+      assignment.property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      assignment.property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      (assignment.client && assignment.client.name.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      assignment.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+    );
+  }, [zoneAssignments, zoneSearchTerm]);
+
+  // Filtrar propiedades en la zona seleccionada basadas en el término de búsqueda
+  const filteredPropertiesInZone = useMemo(() => {
+    const propertiesInZone = getPropertiesInSelectedZone();
+    if (!zoneSearchTerm) return propertiesInZone;
+    
+    return propertiesInZone.filter(property => 
+      property.address.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      property.population.toLowerCase().includes(zoneSearchTerm.toLowerCase()) ||
+      (property.ownerName && property.ownerName.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      (property.type && property.type.toLowerCase().includes(zoneSearchTerm.toLowerCase())) ||
+      (property.habitaciones && property.habitaciones.toString().includes(zoneSearchTerm)) ||
+      (property.metrosCuadrados && property.metrosCuadrados.toString().includes(zoneSearchTerm))
+    );
+  }, [selectedZoneId, zoneSearchTerm, properties]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -709,19 +724,11 @@ export default function ZonesPage() {
           <div className="sm:flex-auto">
             <h1 className="text-xl font-semibold text-gray-900">Zonas</h1>
           </div>
-          {/* <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <button
-              onClick={() => setShowZoneForm(true)}
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
-            >
-              Añadir zona
-            </button> */}
-          {/* </div> */}
         </div>
         <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
           <ZonesMap
             zones={filteredZones} 
-            properties={filteredProperties}
+            properties={properties}
             onZoneCreated={handleZoneCreated}
             onPropertyClick={onPropertyClick}
             onZoneClick={handleZoneClick}

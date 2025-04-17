@@ -1,11 +1,15 @@
+import { Inter } from 'next/font/google';
+import { Toaster } from 'react-hot-toast';
 import './globals.css';
 import type { Metadata } from 'next';
 import { AuthProvider } from './dashboard/context/AuthContext';
 import LeafletStyles from '@/components/map/LeafletStyles';
 
+const inter = Inter({ subsets: ['latin'] });
+
 export const metadata: Metadata = {
-  title: 'Grupo SM - CRM',
-  description: 'Sistema de gestión de relaciones con clientes para Grupo SM',
+  title: 'CRM Grupo SM',
+  description: 'Sistema de gestión inmobiliaria',
 };
 
 export default function RootLayout({
@@ -16,11 +20,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="antialiased font-sans">
+      <body className={inter.className}>
+        <Toaster position="top-right" />
         <LeafletStyles />
         <AuthProvider>
           {children}
