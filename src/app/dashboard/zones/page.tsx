@@ -320,10 +320,10 @@ export default function ZonesPage() {
       try {
         setLoading(true);
         const [propertiesData, zonesData] = await Promise.all([
-          getProperties(),
+          getProperties(1, 20, '', 'updatedAt', 'desc', true), // Obtener todas las propiedades
           getZones()
         ]);
-        setProperties(propertiesData);
+        setProperties(propertiesData.properties);
         setZones(zonesData);
         
         // Cargar noticias de todas las zonas
@@ -715,7 +715,8 @@ export default function ZonesPage() {
               className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
             >
               Añadir zona
-            </button> */}
+            </button>
+          </div> */}
           {/* </div> */}
         </div>
         <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">

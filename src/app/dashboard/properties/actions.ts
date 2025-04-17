@@ -6,46 +6,79 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
 
-export async function getProperties(): Promise<Property[]> {
+export async function getProperties(
+  page: number = 1,
+  limit: number = 20,
+  searchTerm: string = '',
+  sortBy: string = 'updatedAt',
+  sortOrder: 'asc' | 'desc' = 'desc',
+  getAll: boolean = false
+): Promise<{ properties: Property[]; total: number }> {
   try {
+    // Construir la consulta base
+    const where = searchTerm 
+      ? {
+          OR: [
+            { address: { contains: searchTerm, mode: 'insensitive' } },
+            { population: { contains: searchTerm, mode: 'insensitive' } },
+            { ownerName: { contains: searchTerm, mode: 'insensitive' } },
+            { ownerPhone: { contains: searchTerm, mode: 'insensitive' } },
+            { responsible: { contains: searchTerm, mode: 'insensitive' } }
+          ]
+        }
+      : {};
+
+    // Obtener el total de propiedades que coinciden con el filtro
+    const total = await prisma.property.count({ where });
+
+    // Obtener las propiedades con o sin paginación
     const properties = await prisma.property.findMany({
+      where,
       include: {
         zone: true,
-        activities: true,
+        activities: {
+          orderBy: { date: 'desc' },
+          take: 1 // Solo obtener la actividad más reciente
+        },
         responsibleUser: true
-      }
+      },
+      orderBy: { [sortBy]: sortOrder },
+      ...(getAll ? {} : { skip: (page - 1) * limit, take: limit })
     });
     
-    return properties.map((property): Property => ({
-      ...property,
-      captureDate: property.captureDate.toISOString(),
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-      activities: property.activities.map(activity => ({
-        ...activity,
-        createdAt: activity.createdAt.toISOString(),
-        updatedAt: activity.updatedAt.toISOString(),
-        date: activity.date.toISOString()
+    return {
+      properties: properties.map((property): Property => ({
+        ...property,
+        captureDate: property.captureDate.toISOString(),
+        createdAt: property.createdAt.toISOString(),
+        updatedAt: property.updatedAt.toISOString(),
+        activities: property.activities.map(activity => ({
+          ...activity,
+          createdAt: activity.createdAt.toISOString(),
+          updatedAt: activity.updatedAt.toISOString(),
+          date: activity.date.toISOString()
+        })),
+        zone: property.zone ? {
+          id: property.zone.id,
+          name: property.zone.name
+        } : null,
+        assignments: [],
+        dpv: null,
+        clients: [],
+        responsibleUser: property.responsibleUser ? {
+          id: property.responsibleUser.id,
+          name: property.responsibleUser.name,
+          email: property.responsibleUser.email
+        } : null
       })),
-      zone: property.zone ? {
-        id: property.zone.id,
-        name: property.zone.name
-      } : null,
-      assignments: [],
-      dpv: null,
-      clients: [],
-      responsibleUser: property.responsibleUser ? {
-        id: property.responsibleUser.id,
-        name: property.responsibleUser.name,
-        email: property.responsibleUser.email
-      } : null
-    }));
+      total
+    };
   } catch (error) {
     if (error instanceof Error) {
       // eslint-disable-next-line no-console
       console.error('Error getting properties:', error.message);
     }
-    return [];
+    return { properties: [], total: 0 };
   }
 }
 
