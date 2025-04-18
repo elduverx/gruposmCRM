@@ -12,7 +12,9 @@ interface PropertyTableProps {
   onPropertyClick: (property: Property) => void;
   onEditProperty: (property: Property) => void;
   onDeleteProperty: (id: string) => void;
+  onToggleLocated: (property: Property) => void;
   isDeleting: string | null;
+  isUpdating: string | null;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   onSortChange: (field: string) => void;
@@ -26,7 +28,9 @@ export default function PropertyTable({
   onPropertyClick,
   onEditProperty,
   onDeleteProperty,
+  onToggleLocated,
   isDeleting,
+  isUpdating,
   sortBy,
   sortOrder,
   onSortChange,
@@ -39,17 +43,26 @@ export default function PropertyTable({
   };
 
   // Función para renderizar el indicador de localización
-  const renderLocationIndicator = (isLocated: boolean) => {
-    if (isLocated) {
-      return (
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
-          <CheckIcon className="h-4 w-4 text-green-600" />
-        </span>
-      );
-    }
+  const renderLocationIndicator = (property: Property) => {
+    const isLocated = property.isLocated || false;
+    const isCurrentlyUpdating = isUpdating === property.id;
+    
     return (
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300">
-      </span>
+      <button
+        onClick={() => onToggleLocated(property)}
+        disabled={isCurrentlyUpdating}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+          isLocated 
+            ? 'bg-green-100 hover:bg-green-200' 
+            : 'border-2 border-gray-300 hover:border-gray-400'
+        } ${isCurrentlyUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        title={isLocated ? 'Marcar como no localizado' : 'Marcar como localizado'}
+      >
+        {isLocated && <CheckIcon className="h-4 w-4 text-green-600" />}
+        {isCurrentlyUpdating && (
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+        )}
+      </button>
     );
   };
 
@@ -136,7 +149,7 @@ export default function PropertyTable({
                 {renderLastActivity(property.id)}
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
-                {renderLocationIndicator(property.isLocated || false)}
+                {renderLocationIndicator(property)}
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>

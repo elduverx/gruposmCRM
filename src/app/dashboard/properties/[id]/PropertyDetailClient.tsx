@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews } from '../actions';
-import { PlusIcon, CheckIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
@@ -11,6 +11,7 @@ import PropertyNewsForm from './PropertyNewsForm';
 import { AssignmentForm } from '../AssignmentForm';
 import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
+import PropertyForm from '@/components/PropertyForm';
 
 interface PropertyDetailClientProps {
   propertyId: string;
@@ -38,6 +39,7 @@ export default function PropertyDetailClient({
   const [isDPVFormOpen, setIsDPVFormOpen] = useState(false);
   const [isNewsFormOpen, setIsNewsFormOpen] = useState(false);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -158,6 +160,24 @@ export default function PropertyDetailClient({
     }
   };
 
+  const handlePropertyUpdate = async (data: any) => {
+    try {
+      setIsUpdating(true);
+      const updatedProperty = await updateProperty(propertyId, data);
+      if (updatedProperty) {
+        setProperty(updatedProperty);
+        toast.success('Propiedad actualizada correctamente');
+        setIsEditFormOpen(false);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error updating property:', error);
+      toast.error('Error al actualizar la propiedad');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (!property) return <div className="p-8 text-center">Inmueble no encontrado</div>;
 
   return (
@@ -166,22 +186,31 @@ export default function PropertyDetailClient({
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-blue-600">Información General</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Localizado:</span>
-            <button 
-              onClick={handleToggleLocated}
-              disabled={isUpdating}
-              className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              title="Marcar como localizado"
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsEditFormOpen(true)}
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              {property.isLocated && (
-                <CheckIcon 
-                  className={`absolute inset-0 m-auto h-4 w-4 ${
-                    isUpdating ? 'text-gray-400' : 'text-green-600'
-                  }`}
-                />
-              )}
+              <PencilIcon className="h-4 w-4 mr-1" />
+              Editar
             </button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Localizado:</span>
+              <button 
+                onClick={handleToggleLocated}
+                disabled={isUpdating}
+                className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Marcar como localizado"
+              >
+                {property.isLocated && (
+                  <CheckIcon 
+                    className={`absolute inset-0 m-auto h-4 w-4 ${
+                      isUpdating ? 'text-gray-400' : 'text-green-600'
+                    }`}
+                  />
+                )}
+              </button>
+            </div>
           </div>
         </div>
         
@@ -671,6 +700,62 @@ export default function PropertyDetailClient({
                     setAssignments(assignmentsData);
                   });
                 }}
+              />
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Modal de Edición de Propiedad */}
+      <Dialog
+        open={isEditFormOpen}
+        onClose={() => setIsEditFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <Dialog.Title className="text-lg font-medium">Editar Propiedad</Dialog.Title>
+              <button
+                onClick={() => setIsEditFormOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <PlusIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <PropertyForm 
+                initialData={{
+                  address: property.address,
+                  population: property.population,
+                  type: property.type,
+                  ownerName: property.ownerName,
+                  ownerPhone: property.ownerPhone,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                  zoneId: property.zoneId,
+                  status: property.status,
+                  action: property.action,
+                  captureDate: property.captureDate ? new Date(property.captureDate) : null,
+                  responsibleId: property.responsibleId,
+                  hasSimpleNote: property.hasSimpleNote,
+                  isOccupied: property.isOccupied,
+                  clientId: property.clientId,
+                  occupiedBy: property.occupiedBy,
+                  isLocated: property.isLocated,
+                  responsible: property.responsible,
+                  habitaciones: property.habitaciones,
+                  banos: property.banos,
+                  metrosCuadrados: property.metrosCuadrados,
+                  parking: property.parking,
+                  ascensor: property.ascensor,
+                  piscina: property.piscina
+                }}
+                onSubmit={handlePropertyUpdate}
+                onCancel={() => setIsEditFormOpen(false)}
               />
             </div>
           </Dialog.Panel>

@@ -319,6 +319,32 @@ export default function ZonesPage() {
 
   const onPropertyClick = (property: Property) => {
     setSelectedPropertyId(property.id);
+    
+    // Center map on property location if coordinates are available
+    if (property.latitude && property.longitude) {
+      const lat = Number(property.latitude);
+      const lng = Number(property.longitude);
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Update map center and zoom
+        setMapCenter([lat, lng]);
+        setMapZoom(16); // Zoom in to show the property better
+        
+        // Set selected location to show the marker
+        setSelectedLocation({
+          lat,
+          lng,
+          name: property.address || 'Propiedad seleccionada'
+        });
+        
+        // Force a re-render of the map component
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.setView([lat, lng], 16);
+          }
+        }, 100);
+      }
+    }
   };
 
   const handleZoneClick = (zone: Zone) => {

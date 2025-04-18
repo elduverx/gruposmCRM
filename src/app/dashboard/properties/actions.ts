@@ -188,9 +188,9 @@ function mapClients(clients: unknown[]): { id: string; name: string; email: stri
       return { id: '', name: '', email: '' };
     }
     
-    const id = typeof client.id === 'string' ? client.id : '';
-    const name = typeof client.name === 'string' ? client.name : '';
-    const email = typeof client.email === 'string' ? client.email : '';
+    const id = typeof (client as { id?: unknown }).id === 'string' ? (client as { id: string }).id : '';
+    const name = typeof (client as { name?: unknown }).name === 'string' ? (client as { name: string }).name : '';
+    const email = typeof (client as { email?: unknown }).email === 'string' ? (client as { email: string }).email : '';
     
     return { id, name, email };
   });
@@ -200,8 +200,8 @@ function mapClients(clients: unknown[]): { id: string; name: string; email: stri
 function mapZone(zone: unknown): { id: string; name: string } | null {
   if (typeof zone !== 'object' || zone === null) return null;
   
-  const id = typeof zone.id === 'string' ? zone.id : '';
-  const name = typeof zone.name === 'string' ? zone.name : '';
+  const id = typeof (zone as { id?: unknown }).id === 'string' ? (zone as { id: string }).id : '';
+  const name = typeof (zone as { name?: unknown }).name === 'string' ? (zone as { name: string }).name : '';
   
   return { id, name };
 }
@@ -210,9 +210,9 @@ function mapZone(zone: unknown): { id: string; name: string } | null {
 function mapResponsibleUser(user: unknown): { id: string; name: string; email: string } | null {
   if (typeof user !== 'object' || user === null) return null;
   
-  const id = typeof user.id === 'string' ? user.id : '';
-  const name = typeof user.name === 'string' ? user.name : '';
-  const email = typeof user.email === 'string' ? user.email : '';
+  const id = typeof (user as { id?: unknown }).id === 'string' ? (user as { id: string }).id : '';
+  const name = typeof (user as { name?: unknown }).name === 'string' ? (user as { name: string }).name : '';
+  const email = typeof (user as { email?: unknown }).email === 'string' ? (user as { email: string }).email : '';
   
   return { id, name, email };
 }
@@ -475,7 +475,7 @@ export async function getProperties(
       total
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+      // eslint-disable-next-line no-console
     console.error('Error al obtener propiedades:', error instanceof Error ? error.message : 'Unknown error');
     return { properties: [], total: 0 };
   }

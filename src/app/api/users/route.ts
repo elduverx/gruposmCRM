@@ -87,10 +87,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const body = await request.json() as unknown;
     // eslint-disable-next-line no-console
     console.log('Datos recibidos para crear usuario:', JSON.stringify(body));
     
+    // Type assertion with proper interface
     const { name, email, password, role } = body as CreateUserRequest;
 
     // Validaciones básicas

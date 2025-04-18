@@ -18,11 +18,8 @@ async function getCurrentUserId(): Promise<string | null> {
     }
     
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (typeof decoded === 'object' && decoded.userId) {
-        return decoded.userId;
-      }
-      return null;
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      return decoded.userId;
     } catch (error) {
       return null;
     }
@@ -64,19 +61,30 @@ interface RawUserActivity {
 
 // Type guard functions
 function isRawUserGoal(obj: unknown): obj is RawUserGoal {
-  return obj !== null && 
-    typeof obj === 'object' && 
-    'id' in obj && 
-    'userId' in obj && 
-    'title' in obj;
+  if (obj === null || typeof obj !== 'object') return false;
+  const goal = obj as Record<string, unknown>;
+  return (
+    typeof goal.id === 'string' &&
+    typeof goal.userId === 'string' &&
+    typeof goal.title === 'string' &&
+    typeof goal.targetCount === 'number' &&
+    typeof goal.currentCount === 'number' &&
+    typeof goal.startDate === 'string' &&
+    typeof goal.isCompleted === 'boolean' &&
+    typeof goal.category === 'string'
+  );
 }
 
 function isRawUserActivity(obj: unknown): obj is RawUserActivity {
-  return obj !== null && 
-    typeof obj === 'object' && 
-    'id' in obj && 
-    'userId' in obj && 
-    'type' in obj;
+  if (obj === null || typeof obj !== 'object') return false;
+  const activity = obj as Record<string, unknown>;
+  return (
+    typeof activity.id === 'string' &&
+    typeof activity.userId === 'string' &&
+    typeof activity.type === 'string' &&
+    typeof activity.timestamp === 'string' &&
+    typeof activity.points === 'number'
+  );
 }
 
 // Obtener todas las metas
@@ -89,7 +97,7 @@ export async function getUserGoals(): Promise<UserGoal[]> {
       return [];
     }
     
-    const goals = await prisma.$queryRaw`
+    const goals = await prisma.$queryRaw<RawUserGoal[]>`
       SELECT g.*, COUNT(a.id) as activityCount
       FROM UserGoal g 
       LEFT JOIN UserActivity a ON g.id = a.goalId
@@ -100,12 +108,8 @@ export async function getUserGoals(): Promise<UserGoal[]> {
 
     // Obtener actividades recientes para cada meta
     const goalsWithActivities = await Promise.all(
-      Array.isArray(goals) ? goals.map(async (goal) => {
-        if (!isRawUserGoal(goal)) {
-          throw new Error('Invalid goal data structure');
-        }
-
-        const activities = await prisma.$queryRaw`
+      goals.map(async (goal) => {
+        const activities = await prisma.$queryRaw<RawUserActivity[]>`
           SELECT * FROM UserActivity 
           WHERE goalId = ${goal.id}
           ORDER BY timestamp DESC
@@ -122,17 +126,12 @@ export async function getUserGoals(): Promise<UserGoal[]> {
             Number(goal.currentCount), 
             Number(goal.targetCount)
           ),
-          activities: Array.isArray(activities) ? activities.map((act) => {
-            if (!isRawUserActivity(act)) {
-              throw new Error('Invalid activity data structure');
-            }
-            return mapActivityToDTO(act);
-          }) : [],
+          activities: activities.map(mapActivityToDTO),
         };
-      }) : []
+      })
     );
 
-    return goalsWithActivities as UserGoal[];
+    return goalsWithActivities;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al obtener metas:', error);
@@ -150,22 +149,16 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
       throw new Error('Debes iniciar sesión para crear una meta');
     }
     
-    await prisma.$executeRaw`
+    const newGoal = await prisma.$queryRaw<RawUserGoal[]>`
       INSERT INTO UserGoal (
-        id, userId, title, description, targetCount, currentCount, 
-        startDate, endDate, isCompleted, category, createdAt, updatedAt
-      ) VALUES (
-        UUID(), ${userId}, ${data.title}, ${data.description || null}, ${data.targetCount}, 0,
-        NOW(), ${data.endDate ? new Date(data.endDate) : null}, false, ${data.category || 'GENERAL'}, 
-        NOW(), NOW()
+        userId, title, description, targetCount, currentCount,
+        startDate, endDate, isCompleted, category
       )
-    `;
-    
-    const newGoal = await prisma.$queryRaw`
-      SELECT * FROM UserGoal 
-      WHERE userId = ${userId}
-      ORDER BY createdAt DESC
-      LIMIT 1
+      VALUES (
+        ${userId}, ${data.title}, ${data.description}, ${data.targetCount}, 0,
+        NOW(), ${data.endDate}, false, ${data.category}
+      )
+      RETURNING *
     `;
     
     const goal = Array.isArray(newGoal) && newGoal.length > 0 ? newGoal[0] : null;
@@ -202,23 +195,16 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     }
     
     // Crear la actividad
-    await prisma.$executeRaw`
+    const newActivity = await prisma.$queryRaw<RawUserActivity[]>`
       INSERT INTO UserActivity (
-        id, userId, goalId, type, description, timestamp, 
+        userId, goalId, type, description, timestamp,
         metadata, relatedId, relatedType, points
-      ) VALUES (
-        UUID(), ${userId}, ${data.goalId || null}, ${data.type}, ${data.description || null}, NOW(),
-        ${data.metadata ? JSON.stringify(data.metadata) : '{}'}, ${data.relatedId || null}, 
-        ${data.relatedType || null}, ${data.points || 1}
       )
-    `;
-    
-    // Obtener la actividad recién creada
-    const newActivity = await prisma.$queryRaw`
-      SELECT * FROM UserActivity 
-      WHERE userId = ${userId}
-      ORDER BY timestamp DESC
-      LIMIT 1
+      VALUES (
+        ${userId}, ${data.goalId}, ${data.type}, ${data.description}, NOW(),
+        ${data.metadata}, ${data.relatedId}, ${data.relatedType}, ${data.points}
+      )
+      RETURNING *
     `;
     
     const activity = Array.isArray(newActivity) && newActivity.length > 0 ? newActivity[0] : null;
@@ -249,7 +235,7 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
       return [];
     }
     
-    const activities = await prisma.$queryRaw`
+    const activities = await prisma.$queryRaw<RawUserActivity[]>`
       SELECT a.*, g.title as goalTitle 
       FROM UserActivity a
       LEFT JOIN UserGoal g ON a.goalId = g.id
@@ -258,21 +244,10 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
       LIMIT ${limit}
     `;
 
-    return Array.isArray(activities) ? activities.map((act) => {
-      if (!isRawUserActivity(act)) {
-        throw new Error('Invalid activity data structure');
-      }
-      // Add type safety for goalTitle
-      const goalTitle = typeof act.goalTitle === 'string' ? act.goalTitle : undefined;
-      return {
-        ...mapActivityToDTO(act),
-        goalTitle,
-      };
-    }) : [];
+    return activities.map(mapActivityToDTO);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al obtener actividades:', error);
-    // Devolver un arreglo vacío en lugar de lanzar un error
     return [];
   }
 }
@@ -288,7 +263,7 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
     }
     
     // Verificar que la meta pertenece al usuario actual
-    const goalResult = await prisma.$queryRaw`
+    const goalResult = await prisma.$queryRaw<RawUserGoal[]>`
       SELECT * FROM UserGoal WHERE id = ${goalId} AND userId = ${userId}
     `;
     
@@ -332,7 +307,7 @@ async function updateGoalProgress(goalId: string): Promise<void> {
       : 0;
     
     // Obtener la meta actual
-    const goalResult = await prisma.$queryRaw`
+    const goalResult = await prisma.$queryRaw<RawUserGoal[]>`
       SELECT * FROM UserGoal WHERE id = ${goalId}
     `;
     
@@ -371,12 +346,12 @@ function mapActivityToDTO(activity: RawUserActivity): UserActivity {
   if (activity.metadata) {
     try {
       if (typeof activity.metadata === 'string') {
-        const parsed = JSON.parse(activity.metadata);
+        const parsed = JSON.parse(activity.metadata) as Record<string, unknown>;
         if (typeof parsed === 'object' && parsed !== null) {
           parsedMetadata = parsed;
         }
       } else if (typeof activity.metadata === 'object' && activity.metadata !== null) {
-        parsedMetadata = activity.metadata;
+        parsedMetadata = activity.metadata as Record<string, unknown>;
       }
     } catch (error) {
       // eslint-disable-next-line no-console
