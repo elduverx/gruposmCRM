@@ -564,14 +564,28 @@ export async function updateProperty(id: string, data: {
   piscina?: boolean;
 }): Promise<Property | null> {
   try {
+    // Obtener la propiedad actual para preservar valores no proporcionados
+    const currentProperty = await prisma.property.findUnique({
+      where: { id }
+    });
+
+    if (!currentProperty) {
+      throw new Error('La propiedad no existe');
+    }
+
     // Si se proporciona un zoneId, verificar que la zona existe
-    if (data.zoneId) {
-      const zone = await prisma.zone.findUnique({
-        where: { id: data.zoneId }
-      });
-      if (!zone) {
-        throw new Error('La zona especificada no existe');
+    if (data.zoneId !== undefined) {
+      if (data.zoneId) {
+        const zone = await prisma.zone.findUnique({
+          where: { id: data.zoneId }
+        });
+        if (!zone) {
+          throw new Error('La zona especificada no existe');
+        }
       }
+    } else {
+      // Si no se proporciona zoneId, mantener el valor actual
+      data.zoneId = currentProperty.zoneId;
     }
 
     // Si se proporciona un responsibleId, verificar que el usuario existe
@@ -594,7 +608,7 @@ export async function updateProperty(id: string, data: {
       type: data.type,
       ownerName: data.ownerName,
       ownerPhone: data.ownerPhone,
-      zoneId: data.zoneId || null,
+      zoneId: data.zoneId,
       status: data.status,
       action: data.action,
       captureDate: captureDate,

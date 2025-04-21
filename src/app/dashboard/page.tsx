@@ -16,6 +16,13 @@ import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import { Dialog } from '@/components/ui/dialog';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
+import { Spinner } from '@/components/ui/Spinner';
+import { createUserActivity, getUserGoals } from './metas/actions';
+import { UserGoal } from '@/types/user';
 
 interface InicioStats {
   properties: number;
@@ -64,6 +71,16 @@ export default function InicioPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [date, setDate] = useState<Date>(new Date());
+  
+  // Estados para el formulario de nueva actividad
+  const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [goals, setGoals] = useState<UserGoal[]>([]);
+  const [activityFormData, setActivityFormData] = useState({
+    description: '',
+    type: 'MANUAL',
+    goalId: ''
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -140,6 +157,57 @@ export default function InicioPage() {
     fetchData();
   }, [user, authLoading, router]);
 
+  // Cargar metas cuando se abre el formulario de actividad
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const userGoals = await getUserGoals();
+        setGoals(userGoals);
+      } catch (error) {
+        console.error('Error al cargar metas:', error);
+      }
+    };
+
+    if (isActivityFormOpen) {
+      loadGoals();
+    }
+  }, [isActivityFormOpen]);
+
+  // Manejar el envío del formulario de actividad
+  const handleActivitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsActivityLoading(true);
+
+    try {
+      await createUserActivity({
+        goalId: activityFormData.goalId,
+        type: activityFormData.type,
+        description: activityFormData.description,
+      });
+
+      setActivityFormData({
+        description: '',
+        type: 'MANUAL',
+        goalId: ''
+      });
+      setIsActivityFormOpen(false);
+      
+      // Actualizar las estadísticas después de crear una actividad
+      const newStats = { ...stats };
+      newStats.pendingActivities = (stats.pendingActivities || 0) + 1;
+      setStats(newStats);
+    } catch (error) {
+      console.error('Error al crear actividad:', error);
+    } finally {
+      setIsActivityLoading(false);
+    }
+  };
+
+  const goalOptions = goals.map(goal => ({
+    value: goal.id,
+    label: goal.title
+  }));
+
   if (loading) {
     return (
       <div className="animate-pulse space-y-6">
@@ -185,12 +253,79 @@ export default function InicioPage() {
               Aquí tienes un resumen de tu actividad reciente
             </p>
           </div>
-          <button className="btn-primary">
+          <button 
+            className="btn-primary"
+            onClick={() => setIsActivityFormOpen(true)}
+          >
             <PlusIcon className="h-5 w-5 mr-2" />
             Nueva actividad
           </button>
         </div>
       </div>
+
+      {/* Formulario de nueva actividad */}
+      <Dialog
+        open={isActivityFormOpen}
+        onClose={() => setIsActivityFormOpen(false)}
+        title="Nueva Actividad"
+      >
+        <form onSubmit={handleActivitySubmit} className="space-y-4">
+          <div>
+            <Select
+              label="Meta"
+              value={activityFormData.goalId}
+              onChange={(e) => setActivityFormData({ ...activityFormData, goalId: e.target.value })}
+              options={goalOptions}
+              required
+            />
+          </div>
+
+          <div>
+            <Select
+              label="Tipo"
+              value={activityFormData.type}
+              onChange={(e) => setActivityFormData({ ...activityFormData, type: e.target.value })}
+              options={[
+                { value: 'MANUAL', label: 'Manual' },
+                { value: 'AUTOMATIC', label: 'Automática' }
+              ]}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Descripción
+            </label>
+            <Textarea
+              id="description"
+              value={activityFormData.description}
+              onChange={(e) => setActivityFormData({ ...activityFormData, description: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="mt-5 sm:mt-6 flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsActivityFormOpen(false)}
+              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isActivityLoading}
+              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              {isActivityLoading ? (
+                <Spinner size="sm" color="white" />
+              ) : (
+                'Crear Actividad'
+              )}
+            </button>
+          </div>
+        </form>
+      </Dialog>
 
       {/* Tarjetas de estadísticas */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">

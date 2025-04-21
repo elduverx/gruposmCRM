@@ -15,9 +15,10 @@ interface PropertyFormProps {
   onSubmit: (data: PropertyCreateInput) => void;
   initialData?: Partial<PropertyCreateInput>;
   onCancel?: () => void;
+  zones?: { id: string; name: string }[];
 }
 
-export default function PropertyForm({ onSubmit, initialData, onCancel }: PropertyFormProps) {
+export default function PropertyForm({ onSubmit, initialData, onCancel, zones }: PropertyFormProps) {
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: initialData?.address || '',
     population: initialData?.population || '',
@@ -112,6 +113,31 @@ export default function PropertyForm({ onSubmit, initialData, onCancel }: Proper
                 className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 required
               />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="zoneId" className="block text-sm font-medium text-gray-700">
+              Zona
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MapPinIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                id="zoneId"
+                name="zoneId"
+                value={formData.zoneId || ''}
+                onChange={handleInputChange}
+                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              >
+                <option value="">Seleccionar zona</option>
+                {zones?.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

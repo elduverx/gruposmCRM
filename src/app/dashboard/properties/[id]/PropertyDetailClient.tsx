@@ -12,6 +12,8 @@ import { AssignmentForm } from '../AssignmentForm';
 import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
 import PropertyForm from '@/components/PropertyForm';
+import { getZones } from '@/app/dashboard/zones/actions';
+import type { Zone } from '@/app/dashboard/zones/actions';
 
 interface PropertyDetailClientProps {
   propertyId: string;
@@ -42,6 +44,7 @@ export default function PropertyDetailClient({
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [zones, setZones] = useState<Zone[]>([]);
 
   // Cargar noticias al abrir la página
   useEffect(() => {
@@ -58,6 +61,18 @@ export default function PropertyDetailClient({
 
     loadNews();
   }, [propertyId]);
+
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        const zonesData = await getZones();
+        setZones(zonesData);
+      } catch (error) {
+        console.error('Error loading zones:', error);
+      }
+    };
+    loadZones();
+  }, []);
 
   const handleToggleLocated = async () => {
     if (!property || isUpdating) return;
@@ -759,6 +774,7 @@ export default function PropertyDetailClient({
                 }}
                 onSubmit={handlePropertyUpdate}
                 onCancel={() => setIsEditFormOpen(false)}
+                zones={zones}
               />
             </div>
           </Dialog.Panel>

@@ -149,34 +149,49 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
       throw new Error('Debes iniciar sesión para crear una meta');
     }
     
-    const newGoal = await prisma.$queryRaw<RawUserGoal[]>`
-      INSERT INTO UserGoal (
-        userId, title, description, targetCount, currentCount,
-        startDate, endDate, isCompleted, category
-      )
-      VALUES (
-        ${userId}, ${data.title}, ${data.description}, ${data.targetCount}, 0,
-        NOW(), ${data.endDate}, false, ${data.category}
-      )
-      RETURNING *
-    `;
+    console.log('Creando meta con datos:', {
+      userId,
+      title: data.title,
+      description: data.description,
+      targetCount: data.targetCount,
+      endDate: data.endDate,
+      category: data.category
+    });
     
-    const goal = Array.isArray(newGoal) && newGoal.length > 0 ? newGoal[0] : null;
-    if (!goal || !isRawUserGoal(goal)) throw new Error('Error al crear meta');
-
+    // Usar el cliente Prisma directamente
+    const newGoal = await prisma.userGoal.create({
+      data: {
+        userId,
+        title: data.title,
+        description: data.description,
+        targetCount: data.targetCount,
+        currentCount: 0,
+        startDate: new Date(),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        isCompleted: false,
+        category: data.category
+      }
+    });
+    
+    console.log('Meta creada:', newGoal);
+    
+    // Convertir a UserGoal
+    const goal: UserGoal = {
+      ...newGoal,
+      createdAt: new Date(newGoal.createdAt).toISOString(),
+      updatedAt: new Date(newGoal.updatedAt).toISOString(),
+      startDate: new Date(newGoal.startDate).toISOString(),
+      endDate: newGoal.endDate ? new Date(newGoal.endDate).toISOString() : null,
+      progress: calculateProgress(
+        Number(newGoal.currentCount),
+        Number(newGoal.targetCount)
+      ),
+      activities: []
+    };
+    
     revalidatePath('/dashboard/metas');
     
-    return {
-      ...goal,
-      createdAt: new Date(goal.createdAt).toISOString(),
-      updatedAt: new Date(goal.updatedAt).toISOString(), 
-      startDate: new Date(goal.startDate).toISOString(),
-      endDate: goal.endDate ? new Date(goal.endDate).toISOString() : null,
-      progress: calculateProgress(
-        Number(goal.currentCount), 
-        Number(goal.targetCount)
-      ),
-    } as UserGoal;
+    return goal;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al crear meta:', error);
@@ -194,22 +209,71 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
       throw new Error('Debes iniciar sesión para registrar una actividad');
     }
     
-    // Crear la actividad
-    const newActivity = await prisma.$queryRaw<RawUserActivity[]>`
-      INSERT INTO UserActivity (
-        userId, goalId, type, description, timestamp,
-        metadata, relatedId, relatedType, points
-      )
-      VALUES (
-        ${userId}, ${data.goalId}, ${data.type}, ${data.description}, NOW(),
-        ${data.metadata}, ${data.relatedId}, ${data.relatedType}, ${data.points}
-      )
-      RETURNING *
-    `;
+    console.log('Creando actividad con datos:', {
+      userId,
+      goalId: data.goalId,
+      type: data.type,
+      description: data.description,
+      relatedId: data.relatedId,
+      relatedType: data.relatedType,
+      points: data.points,
+      metadata: data.metadata
+    });
     
-    const activity = Array.isArray(newActivity) && newActivity.length > 0 ? newActivity[0] : null;
-    if (!activity || !isRawUserActivity(activity)) throw new Error('Error al crear actividad');
-
+    // Preparar los datos para la creación
+    const activityData: any = {
+      userId,
+      goalId: data.goalId,
+      type: data.type,
+      description: data.description,
+      timestamp: new Date(),
+      relatedId: data.relatedId,
+      relatedType: data.relatedType,
+      points: data.points || 0
+    };
+    
+    // Manejar el metadata correctamente
+    if (data.metadata !== undefined && data.metadata !== null) {
+      console.log('Tipo de metadata:', typeof data.metadata);
+      console.log('Valor de metadata:', data.metadata);
+      
+      if (typeof data.metadata === 'string') {
+        // Si ya es una cadena, verificar que sea JSON válido
+        try {
+          JSON.parse(data.metadata);
+          activityData.metadata = data.metadata;
+        } catch (e) {
+          console.error('Metadata no es JSON válido:', e);
+          activityData.metadata = null;
+        }
+      } else if (typeof data.metadata === 'object') {
+        try {
+          // Si es un objeto, convertirlo a JSON
+          const jsonString = JSON.stringify(data.metadata);
+          console.log('Metadata convertido a JSON:', jsonString);
+          activityData.metadata = jsonString;
+        } catch (e) {
+          console.error('Error al convertir metadata a JSON:', e);
+          activityData.metadata = null;
+        }
+      } else {
+        console.log('Metadata no es string ni objeto, estableciendo como null');
+        activityData.metadata = null;
+      }
+    } else {
+      console.log('Metadata es undefined o null, estableciendo como null');
+      activityData.metadata = null;
+    }
+    
+    console.log('Datos finales para crear actividad:', activityData);
+    
+    // Usar el cliente Prisma directamente
+    const newActivity = await prisma.userActivity.create({
+      data: activityData
+    });
+    
+    console.log('Actividad creada:', newActivity);
+    
     // Si está asociada a una meta, actualizar el contador de la meta
     if (data.goalId) {
       await updateGoalProgress(data.goalId);
@@ -217,7 +281,21 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
 
     revalidatePath('/dashboard/metas');
     
-    return mapActivityToDTO(activity);
+    // Convertir a UserActivity
+    const activity: UserActivity = {
+      id: newActivity.id,
+      userId: newActivity.userId,
+      goalId: newActivity.goalId,
+      type: newActivity.type,
+      description: newActivity.description,
+      timestamp: newActivity.timestamp.toISOString(),
+      metadata: newActivity.metadata ? JSON.parse(newActivity.metadata as string) : undefined,
+      relatedId: newActivity.relatedId,
+      relatedType: newActivity.relatedType,
+      points: newActivity.points
+    };
+    
+    return activity;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al registrar actividad:', error);
@@ -296,36 +374,46 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
 // Actualizar el progreso de una meta
 async function updateGoalProgress(goalId: string): Promise<void> {
   try {
-    // Contar actividades asociadas a esta meta
-    const countResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM UserActivity 
-      WHERE goalId = ${goalId}
-    `;
+    console.log('Actualizando progreso de meta:', goalId);
     
-    const count = Array.isArray(countResult) && countResult.length > 0 && typeof countResult[0] === 'object' && countResult[0] !== null
-      ? Number((countResult[0] as { count: number }).count) 
-      : 0;
+    // Contar actividades asociadas a esta meta
+    const count = await prisma.userActivity.count({
+      where: {
+        goalId: goalId
+      }
+    });
+    
+    console.log('Número de actividades encontradas:', count);
     
     // Obtener la meta actual
-    const goalResult = await prisma.$queryRaw<RawUserGoal[]>`
-      SELECT * FROM UserGoal WHERE id = ${goalId}
-    `;
+    const goal = await prisma.userGoal.findUnique({
+      where: {
+        id: goalId
+      }
+    });
     
-    const goal = Array.isArray(goalResult) && goalResult.length > 0 ? goalResult[0] : null;
-    
-    if (!goal || !isRawUserGoal(goal)) {
+    if (!goal) {
+      console.error('Meta no encontrada:', goalId);
       throw new Error('Meta no encontrada');
     }
     
+    console.log('Meta encontrada:', goal);
+    
     // Actualizar el contador y verificar si se completó
-    const isCompleted = count >= Number(goal.targetCount);
+    const isCompleted = count >= goal.targetCount;
     
-    await prisma.$executeRaw`
-      UPDATE UserGoal 
-      SET currentCount = ${count}, isCompleted = ${isCompleted ? 1 : 0}, updatedAt = NOW()
-      WHERE id = ${goalId}
-    `;
+    await prisma.userGoal.update({
+      where: {
+        id: goalId
+      },
+      data: {
+        currentCount: count,
+        isCompleted: isCompleted,
+        updatedAt: new Date()
+      }
+    });
     
+    console.log('Progreso actualizado correctamente');
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al actualizar progreso de meta:', error);
