@@ -249,47 +249,8 @@ export default function DynamicMap({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodingProgress, setGeocodingProgress] = useState(0);
   const [showGeocodingControls, setShowGeocodingControls] = useState(false);
-  const [polygonFilter, setPolygonFilter] = useState<L.LatLng[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedAction, setSelectedAction] = useState<string | null>(null);
-  const [isOccupiedFilter, setIsOccupiedFilter] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [geocodedAddresses, setGeocodedAddresses] = useState<Record<string, [number, number]>>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [showDrawTools, setShowDrawTools] = useState(false);
-  const [showLegend, setShowLegend] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [showZones, setShowZones] = useState(false);
-  const [showTypes, setShowTypes] = useState(false);
-  const [showStatus, setShowStatus] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const [showOccupied, setShowOccupied] = useState(false);
-  const [showCatastroToggle, setShowCatastroToggle] = useState(false);
-  const [showCatastroLegend, setShowCatastroLegend] = useState(false);
-  const [showCatastroFilters, setShowCatastroFilters] = useState(false);
-  const [catastroSearchQuery, setCatastroSearchQuery] = useState('');
-  const [catastroSelectedZone, setCatastroSelectedZone] = useState<string | null>(null);
-  const [catastroSelectedType, setCatastroSelectedType] = useState<string | null>(null);
-  const [catastroSelectedStatus, setCatastroSelectedStatus] = useState<string | null>(null);
-  const [catastroSelectedAction, setCatastroSelectedAction] = useState<string | null>(null);
-  const [catastroIsOccupiedFilter, setCatastroIsOccupiedFilter] = useState<boolean | null>(null);
-  const [catastroPolygonFilter, setCatastroPolygonFilter] = useState<L.LatLng[]>([]);
-  const [catastroShowDrawTools, setCatastroShowDrawTools] = useState(false);
-  const [catastroShowLegend, setCatastroShowLegend] = useState(false);
-  const [catastroShowSearch, setCatastroShowSearch] = useState(false);
-  const [catastroShowZones, setCatastroShowZones] = useState(false);
-  const [catastroShowTypes, setCatastroShowTypes] = useState(false);
-  const [catastroShowStatus, setCatastroShowStatus] = useState(false);
-  const [catastroShowActions, setCatastroShowActions] = useState(false);
-  const [catastroShowOccupied, setCatastroShowOccupied] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
-  const catastroFeatureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const catastroDrawControlRef = useRef<L.Control.Draw | null>(null);
   
   // Memoized data source based on props
   const dataSource = useMemo(() => {
@@ -585,7 +546,6 @@ export default function DynamicMap({
       // Si no hay resultados dentro del polígono, no mostramos nada
       if (filtered.length === 0) {
         setVisibleMarkers([]);
-        setUniqueFloors([]);
         return;
       }
       
@@ -596,8 +556,7 @@ export default function DynamicMap({
         .filter((value, index, self) => self.indexOf(value) === index)
         .sort();
       
-      setUniqueFloors(floors);
-      
+      return;
     } else if (currentZoom < 15) {
       // Si no hay polígono y el zoom es bajo, mostramos un número limitado
       // para evitar sobrecargar el mapa
