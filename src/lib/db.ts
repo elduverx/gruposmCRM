@@ -104,9 +104,13 @@ export const getUsers = (): User[] => {
   
   try {
     const data = fs.readFileSync(DB_PATH, 'utf8');
-    return JSON.parse(data) as User[];
+    const users = JSON.parse(data);
+    if (!Array.isArray(users)) {
+      console.error('El archivo users.json no contiene un array:', users);
+      return [];
+    }
+    return users as User[];
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error al leer usuarios:', error);
     return [];
   }
@@ -198,6 +202,15 @@ export const findUserByEmail = (email: string): User | undefined => {
 
 // Find a user by ID
 export const findUserById = (id: string): User | undefined => {
-  const users = getUsers();
-  return users.find(u => u.id === id);
+  try {
+    const users = getUsers();
+    if (!Array.isArray(users)) {
+      console.error('getUsers no devolvió un array:', users);
+      return undefined;
+    }
+    return users.find(u => u.id === id);
+  } catch (error) {
+    console.error('Error al buscar usuario por ID:', error);
+    return undefined;
+  }
 }; 

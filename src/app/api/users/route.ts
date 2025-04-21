@@ -18,8 +18,6 @@ export async function GET(request: Request) {
     // Verificar si el usuario está autenticado
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // eslint-disable-next-line no-console
-      console.error('No se encontró encabezado de autorización');
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
@@ -30,33 +28,32 @@ export async function GET(request: Request) {
     try {
       verifyToken(token);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Token inválido:', error);
       return NextResponse.json(
         { message: 'Token inválido o expirado' },
         { status: 401 }
       );
     }
 
+    // Intentar obtener usuarios de Prisma
     try {
-      // Usar la nueva función de Prisma
       const users = await getUsers();
       return NextResponse.json(users);
     } catch (prismaError) {
-      // eslint-disable-next-line no-console
       console.error('Error al obtener usuarios de Prisma:', prismaError);
       
-      // Fallback a la función original (JSON)
-      // eslint-disable-next-line no-console
-      console.log('Intentando obtener usuarios del JSON como fallback...');
-      const jsonUsers = getJsonUsers();
-      return NextResponse.json(jsonUsers);
+      // Si falla Prisma, intentar con JSON
+      try {
+        const jsonUsers = getJsonUsers();
+        return NextResponse.json(jsonUsers);
+      } catch (jsonError) {
+        console.error('Error al obtener usuarios de JSON:', jsonError);
+        throw jsonError;
+      }
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error general al obtener usuarios:', error);
     return NextResponse.json(
-      { message: 'Error al obtener usuarios', details: error instanceof Error ? error.message : 'Error desconocido' },
+      { message: 'Error al obtener usuarios' },
       { status: 500 }
     );
   }

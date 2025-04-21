@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { findUserById } from './db';
 import { findUserByEmail as findUserByEmailPrisma } from './prisma-users';
+import { getUserById } from './prisma-users';
 
 // Clave secreta para JWT
 export const JWT_SECRET = process.env.JWT_SECRET || 'gruposm_crm_secret_key_2024';
@@ -62,61 +63,36 @@ export const isAdmin = async (request: Request) => {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // eslint-disable-next-line no-console
-      console.log('No se encontró el encabezado de autorización o no es un token Bearer');
       return false;
     }
 
     const token = authHeader.split(' ')[1];
-    // eslint-disable-next-line no-console
-    console.log(`Token recibido: ${token.substring(0, 10)}...`);
-    
+    const decoded = verifyToken(token) as { userId: string };
+
+    // Intentar primero con Prisma
     try {
-      const decoded = verifyToken(token);
-      // eslint-disable-next-line no-console
-      console.log('Token verificado, userId:', decoded.userId, 'role:', decoded.role);
-      
-      // Primero verificar si el token incluye el rol
-      if (decoded.role === 'ADMIN') {
-        // eslint-disable-next-line no-console
-        console.log('Usuario es administrador según el token');
-        return true;
+      const prismaUser = await getUserById(decoded.userId);
+      if (prismaUser) {
+        return prismaUser.role === 'ADMIN';
       }
-      
-      try {
-        // Intentar verificar en Prisma primero
-        const prismaUser = await findUserByEmailPrisma(decoded.userId);
-        if (prismaUser) {
-          // eslint-disable-next-line no-console
-          console.log('Usuario encontrado en Prisma, rol:', prismaUser.role);
-          return prismaUser.role === 'ADMIN';
-        }
-      } catch (prismaError) {
-        // eslint-disable-next-line no-console
-        console.error('Error al verificar en Prisma, intentando con JSON:', prismaError);
-      }
-      
-      // Si no se encuentra en Prisma o hay error, verificar en JSON
-      const jsonUser = findUserById(decoded.userId);
-      if (!jsonUser) {
-        // eslint-disable-next-line no-console
-        console.log('Usuario no encontrado para el ID:', decoded.userId);
-        return false;
-      }
-      
-      const isAdminUser = jsonUser.role === 'ADMIN';
-      // eslint-disable-next-line no-console
-      console.log('¿Es administrador?:', isAdminUser, 'Rol del usuario:', jsonUser.role);
-      return isAdminUser;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al verificar token en isAdmin:', error);
-      throw error;
+    } catch (prismaError) {
+      console.error('Error al verificar en Prisma:', prismaError);
     }
+
+    // Si no se encuentra en Prisma, intentar con JSON
+    try {
+      const jsonUser = findUserById(decoded.userId);
+      if (jsonUser) {
+        return jsonUser.role === 'ADMIN';
+      }
+    } catch (jsonError) {
+      console.error('Error al verificar en JSON:', jsonError);
+    }
+
+    return false;
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error en isAdmin:', error);
-    throw error;
+    return false;
   }
 };
 
