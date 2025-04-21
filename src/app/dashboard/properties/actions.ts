@@ -5,6 +5,7 @@ import { Property, PropertyCreateInput, Activity, DPV, Assignment, PropertyType,
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
+import { logActivity } from '@/lib/activityLogger';
 
 // Type guards for database results
 interface RawProperty {
@@ -505,44 +506,34 @@ export async function getProperty(id: string): Promise<Property | null> {
   }
 }
 
-export async function createProperty(data: PropertyCreateInput): Promise<Property> {
+export async function createProperty(data: PropertyCreateInput): Promise<Property | null> {
   try {
-    // Ensure status is a valid OperationType enum value
-    const validStatus = data.status || OperationType.SALE;
-    
     const property = await prisma.property.create({
       data: {
-        address: data.address,
-        population: data.population,
-        status: validStatus,
-        action: data.action || PropertyAction.IR_A_DIRECCION,
-        ownerName: data.ownerName,
-        ownerPhone: data.ownerPhone,
-        responsibleId: data.responsibleId,
-        hasSimpleNote: data.hasSimpleNote || false,
-        isOccupied: data.isOccupied || false,
-        clientId: data.clientId,
-        zoneId: data.zoneId,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        occupiedBy: data.occupiedBy,
-        type: data.type || PropertyType.PISO,
-        isLocated: data.isLocated || false,
-        responsible: data.responsible,
-        habitaciones: data.habitaciones,
-        banos: data.banos,
-        metrosCuadrados: data.metrosCuadrados,
-        parking: data.parking || false,
-        ascensor: data.ascensor || false,
-        piscina: data.piscina || false,
+        ...data,
+        latitude: data.latitude ? Number(data.latitude) : null,
+        longitude: data.longitude ? Number(data.longitude) : null,
       },
     });
 
+    // Registrar la actividad
+    await logActivity({
+      type: 'PROPERTY_CREATED',
+      description: `Nueva propiedad creada: ${property.address}`,
+      relatedId: property.id,
+      relatedType: 'PROPERTY',
+      metadata: {
+        address: property.address,
+        type: property.type,
+        status: property.status
+      }
+    });
+
+    revalidatePath('/dashboard/properties');
     return property;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating property:', error instanceof Error ? error.message : 'Unknown error');
-    throw new Error('Error al crear la propiedad');
+    console.error('Error creating property:', error);
+    return null;
   }
 }
 
@@ -649,6 +640,20 @@ export async function updateProperty(id: string, data: {
       }
     });
 
+    // Registrar la actividad
+    await logActivity({
+      type: 'PROPERTY_UPDATED',
+      description: `Propiedad actualizada: ${property.address}`,
+      relatedId: property.id,
+      relatedType: 'PROPERTY',
+      metadata: {
+        address: property.address,
+        type: property.type,
+        status: property.status,
+        changes: data
+      }
+    });
+
     revalidatePath('/dashboard/properties');
     revalidatePath(`/dashboard/properties/${id}`);
     revalidatePath('/dashboard/zones');
@@ -673,74 +678,42 @@ export async function updateProperty(id: string, data: {
 
     return formattedProperty;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error updating property:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error updating property:', error);
     return null;
   }
 }
 
 export async function deleteProperty(id: string): Promise<boolean> {
   try {
-    // Primero eliminar registros relacionados
-    await prisma.$transaction(async (tx) => {
-      // Eliminar actividades
-      await tx.activity.deleteMany({
-        where: { propertyId: id }
-      });
-      
-      // Eliminar DPV
-      await tx.dPV.deleteMany({
-        where: { propertyId: id }
-      });
-      
-      // Eliminar noticias
-      await tx.propertyNews.deleteMany({
-        where: { propertyId: id }
-      });
-      
-      // Eliminar asignaciones
-      await tx.assignment.deleteMany({
-        where: { propertyId: id }
-      });
-      
-      // Eliminar referencias de clientes a la propiedad
-      // Primero obtener los clientes que tienen esta propiedad
-      const clientsWithProperty = await tx.client.findMany({
-        where: {
-          properties: {
-            some: {
-              id: id
-            }
-          }
-        }
-      });
-      
-      // Luego actualizar cada cliente individualmente
-      for (const client of clientsWithProperty) {
-        await tx.client.update({
-          where: { id: client.id },
-          data: {
-            properties: {
-              disconnect: {
-                id: id
-              }
-            }
-          }
-        });
-      }
-      
-      // Finalmente eliminar la propiedad
-      await tx.property.delete({
-        where: { id }
-      });
+    const property = await prisma.property.findUnique({
+      where: { id }
     });
-    
-    // eslint-disable-next-line no-console
-    console.log('Property and related records deleted:', id);
+
+    if (!property) {
+      return false;
+    }
+
+    await prisma.property.delete({
+      where: { id }
+    });
+
+    // Registrar la actividad
+    await logActivity({
+      type: 'PROPERTY_DELETED',
+      description: `Propiedad eliminada: ${property.address}`,
+      relatedId: property.id,
+      relatedType: 'PROPERTY',
+      metadata: {
+        address: property.address,
+        type: property.type,
+        status: property.status
+      }
+    });
+
+    revalidatePath('/dashboard/properties');
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error deleting property:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error deleting property:', error);
     return false;
   }
 }

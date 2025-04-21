@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { findUserById } from './db';
 import { findUserByEmail as findUserByEmailPrisma } from './prisma-users';
 import { getUserById } from './prisma-users';
+import { cookies } from 'next/headers';
 
 // Clave secreta para JWT
 export const JWT_SECRET = process.env.JWT_SECRET || 'gruposm_crm_secret_key_2024';
@@ -107,4 +108,25 @@ export const generateToken = (userId: string, role: string) => {
       expiresIn: '24h',
     }
   );
-}; 
+};
+
+// Obtener el ID del usuario actual basado en el token de autenticación
+export async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('auth_token')?.value;
+    
+    if (!token) {
+      return null;
+    }
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      return decoded.userId;
+    } catch (error) {
+      return null;
+    }
+  } catch (error) {
+    return null;
+  }
+} 

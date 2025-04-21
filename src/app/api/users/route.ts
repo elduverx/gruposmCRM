@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getUsers as getJsonUsers, addUser, User } from '@/lib/db';
 import { getUsers, createUser, findUserByEmail as findUserByEmailPrisma } from '@/lib/prisma-users';
 import bcrypt from 'bcryptjs';
-import { isAdmin, verifyToken } from '@/lib/auth';
+import { isAdmin, verifyToken, getCurrentUserId } from '@/lib/auth';
 import { Role } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 interface CreateUserRequest {
   name: string;
@@ -13,47 +14,48 @@ interface CreateUserRequest {
 }
 
 // GET /api/users - Obtener todos los usuarios
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Verificar si el usuario está autenticado
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const currentUserId = await getCurrentUserId();
+    
+    if (!currentUserId) {
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    const token = authHeader.split(' ')[1];
-    try {
-      verifyToken(token);
-    } catch (error) {
+    // Verificar si el usuario es administrador
+    const currentUser = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { role: true }
+    });
+
+    if (currentUser?.role !== 'ADMIN') {
       return NextResponse.json(
-        { message: 'Token inválido o expirado' },
+        { message: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    // Intentar obtener usuarios de Prisma
-    try {
-      const users = await getUsers();
-      return NextResponse.json(users);
-    } catch (prismaError) {
-      console.error('Error al obtener usuarios de Prisma:', prismaError);
-      
-      // Si falla Prisma, intentar con JSON
-      try {
-        const jsonUsers = getJsonUsers();
-        return NextResponse.json(jsonUsers);
-      } catch (jsonError) {
-        console.error('Error al obtener usuarios de JSON:', jsonError);
-        throw jsonError;
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true
+      },
+      orderBy: {
+        name: 'asc'
       }
-    }
+    });
+
+    return NextResponse.json(users);
   } catch (error) {
-    console.error('Error general al obtener usuarios:', error);
+    console.error('Error al obtener usuarios:', error);
     return NextResponse.json(
-      { message: 'Error al obtener usuarios' },
+      { message: 'Error interno del servidor' },
       { status: 500 }
     );
   }

@@ -6,6 +6,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { logActivity } from '@/lib/activityLogger';
 
 export type Zone = {
   id: string;
@@ -71,6 +72,19 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
       },
     });
 
+    // Registrar la actividad
+    await logActivity({
+      type: 'ZONE_CREATED',
+      description: `Nueva zona creada: ${zone.name}`,
+      relatedId: zone.id,
+      relatedType: 'ZONE',
+      metadata: {
+        name: zone.name,
+        description: zone.description,
+        coordinates: data.coordinates
+      }
+    });
+
     // Obtener todas las propiedades con coordenadas
     const properties = await prisma.property.findMany({
       where: {
@@ -94,6 +108,19 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
           await prisma.property.update({
             where: { id: property.id },
             data: { zoneId: zone.id }
+          });
+
+          // Registrar la actividad de asignación
+          await logActivity({
+            type: 'PROPERTY_ASSIGNED',
+            description: `Propiedad ${property.address} asignada a zona ${zone.name}`,
+            relatedId: property.id,
+            relatedType: 'PROPERTY',
+            metadata: {
+              propertyAddress: property.address,
+              zoneName: zone.name,
+              zoneId: zone.id
+            }
           });
         }
       }
@@ -128,21 +155,32 @@ function isPointInPolygon(point: [number, number], polygon: [number, number][]):
   return inside;
 }
 
-export async function updateZone(id: string, data: Partial<Omit<Zone, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Zone> {
+export async function updateZone(data: Zone): Promise<Zone> {
   try {
-    const updateData: Record<string, unknown> = { ...data };
-    
-    if (data.coordinates) {
-      updateData.coordinates = JSON.stringify(data.coordinates);
-    }
-    
     const zone = await prisma.zone.update({
-      where: { id },
-      data: updateData,
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        coordinates: JSON.stringify(data.coordinates)
+      },
     });
-    
+
+    // Registrar la actividad
+    await logActivity({
+      type: 'ZONE_UPDATED',
+      description: `Zona actualizada: ${zone.name}`,
+      relatedId: zone.id,
+      relatedType: 'ZONE',
+      metadata: {
+        name: zone.name,
+        description: zone.description,
+        coordinates: data.coordinates
+      }
+    });
+
     revalidatePath('/dashboard/zones');
-    
     return {
       ...zone,
       coordinates: JSON.parse(zone.coordinates as string),
@@ -153,16 +191,37 @@ export async function updateZone(id: string, data: Partial<Omit<Zone, 'id' | 'cr
   }
 }
 
-export async function deleteZone(id: string): Promise<void> {
+export async function deleteZone(id: string): Promise<boolean> {
   try {
-    await prisma.zone.delete({
-      where: { id },
+    const zone = await prisma.zone.findUnique({
+      where: { id }
     });
-    
+
+    if (!zone) {
+      return false;
+    }
+
+    await prisma.zone.delete({
+      where: { id }
+    });
+
+    // Registrar la actividad
+    await logActivity({
+      type: 'ZONE_DELETED',
+      description: `Zona eliminada: ${zone.name}`,
+      relatedId: zone.id,
+      relatedType: 'ZONE',
+      metadata: {
+        name: zone.name,
+        description: zone.description
+      }
+    });
+
     revalidatePath('/dashboard/zones');
+    return true;
   } catch (error) {
     console.error('Error deleting zone:', error);
-    throw new Error('Error al eliminar la zona');
+    return false;
   }
 }
 

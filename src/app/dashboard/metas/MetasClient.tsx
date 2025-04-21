@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { UserGoal, UserActivity, CreateUserGoalInput } from '@/types/user';
+import { useState, useEffect } from 'react';
+import { UserGoal, UserActivity, CreateUserGoalInput, User } from '@/types/user';
 import { createUserGoal, createUserActivity, deleteUserGoal } from './actions';
 import { Dialog } from '@headlessui/react';
 import { Spinner } from '@/components/ui/Spinner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   TrophyIcon, PlusIcon, StarIcon, 
   CheckIcon, ArrowPathIcon, ChartBarIcon,
-  TrashIcon
+  TrashIcon, UserIcon
 } from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface MetasClientProps {
   initialGoals: UserGoal[];
@@ -19,6 +22,9 @@ interface MetasClientProps {
 export default function MetasClient({ initialGoals, initialActivities }: MetasClientProps) {
   const [goals, setGoals] = useState<UserGoal[]>(initialGoals);
   const [activities, setActivities] = useState<UserActivity[]>(initialActivities);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
@@ -29,6 +35,55 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     targetCount: 5,
     category: 'GENERAL',
   });
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users', {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Error response:', {
+            status: response.status,
+            statusText: response.statusText,
+            data
+          });
+          throw new Error(data.message || 'Error al cargar usuarios');
+        }
+        
+        setUsers(data);
+      } catch (error) {
+        console.error('Error al cargar usuarios:', error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Cargar actividades del usuario seleccionado
+  useEffect(() => {
+    const fetchUserActivities = async () => {
+      if (!selectedUser) return;
+
+      try {
+        const response = await fetch(`/api/activities/user/${selectedUser}`);
+        if (!response.ok) throw new Error('Error al cargar actividades');
+        const data = await response.json();
+        setUserActivities(data);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    fetchUserActivities();
+  }, [selectedUser]);
 
   // Crear una nueva meta
   const handleCreateGoal = async (e: React.FormEvent) => {
@@ -162,200 +217,211 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     );
   };
 
-  // Determinar el ícono para un tipo de actividad
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'PROPERTY_CREATED':
-        return <PlusIcon className="h-5 w-5 text-blue-600" />;
-      case 'CLIENT_CREATED':
-        return <PlusIcon className="h-5 w-5 text-green-600" />;
-      case 'ASSIGNMENT_CREATED':
-        return <CheckIcon className="h-5 w-5 text-indigo-600" />;
-      case 'GOAL_COMPLETED':
-        return <StarIcon className="h-5 w-5 text-yellow-500" />;
-      case 'MANUAL':
-        return <ArrowPathIcon className="h-5 w-5 text-purple-600" />;
-      default:
-        return <ChartBarIcon className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Sección de progreso general */}
-      <div className="bg-white rounded-lg p-6 shadow">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Mi Progreso</h2>
-          <button
-            onClick={() => setIsNewGoalModalOpen(true)}
-            className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors flex items-center"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Nueva Meta
-          </button>
-        </div>
-        
-        {/* Estadísticas generales */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-indigo-50 p-4 rounded-lg flex items-center">
-            <div className="bg-indigo-100 p-3 rounded-full mr-4">
-              <TrophyIcon className="h-8 w-8 text-indigo-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-indigo-900">Metas</h3>
-              <p className="text-2xl font-bold text-indigo-600">{goals.length}</p>
-            </div>
-          </div>
-          
-          <div className="bg-green-50 p-4 rounded-lg flex items-center">
-            <div className="bg-green-100 p-3 rounded-full mr-4">
-              <CheckIcon className="h-8 w-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-green-900">Completadas</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {goals.filter(g => g.isCompleted).length}
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-blue-50 p-4 rounded-lg flex items-center">
-            <div className="bg-blue-100 p-3 rounded-full mr-4">
-              <ChartBarIcon className="h-8 w-8 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-blue-900">Actividades</h3>
-              <p className="text-2xl font-bold text-blue-600">{activities.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Sección de metas */}
-      <div className="bg-white rounded-lg p-6 shadow">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Mis Metas</h2>
-        
-        {goals.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">Aún no tienes metas creadas</p>
-            <button
-              onClick={() => setIsNewGoalModalOpen(true)}
-              className="mt-3 text-primary-600 font-medium hover:text-primary-700"
-            >
-              Crear una meta
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {goals.map(goal => (
-              <div 
-                key={goal.id}
-                className={`p-4 rounded-lg border ${
-                  goal.isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-medium text-gray-900">{goal.title}</h3>
-                  <div className="flex space-x-2">
-                    {goal.isCompleted && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Completado
-                      </span>
-                    )}
-                    <button
-                      onClick={() => confirmDeleteGoal(goal.id)}
-                      className="text-gray-400 hover:text-red-500"
-                      title="Eliminar meta"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
+    <div className="space-y-6">
+      <Tabs defaultValue="goals" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="goals">Metas</TabsTrigger>
+          <TabsTrigger value="activities">Actividades</TabsTrigger>
+          <TabsTrigger value="users">Usuarios</TabsTrigger>
+        </TabsList>
+        <TabsContent value="goals">
+          <div className="space-y-8">
+            {/* Sección de progreso general */}
+            <div className="bg-white rounded-lg p-6 shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Mi Progreso</h2>
+                <button
+                  onClick={() => setIsNewGoalModalOpen(true)}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors flex items-center"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Nueva Meta
+                </button>
+              </div>
+              
+              {/* Estadísticas generales */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-indigo-50 p-4 rounded-lg flex items-center">
+                  <div className="bg-indigo-100 p-3 rounded-full mr-4">
+                    <TrophyIcon className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-indigo-900">Metas</h3>
+                    <p className="text-2xl font-bold text-indigo-600">{goals.length}</p>
                   </div>
                 </div>
                 
-                {goal.description && (
-                  <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
-                )}
+                <div className="bg-green-50 p-4 rounded-lg flex items-center">
+                  <div className="bg-green-100 p-3 rounded-full mr-4">
+                    <CheckIcon className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-green-900">Completadas</h3>
+                    <p className="text-2xl font-bold text-green-600">
+                      {goals.filter(g => g.isCompleted).length}
+                    </p>
+                  </div>
+                </div>
                 
-                {renderProgressBar(goal)}
-                
-                <div className="mt-4 flex justify-between items-center">
-                  <button
-                    onClick={() => handleAddActivity(goal.id)}
-                    disabled={isLoading || goal.isCompleted}
-                    className={`inline-flex items-center text-sm px-3 py-1.5 rounded-md ${
-                      goal.isCompleted
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-                    }`}
-                  >
-                    {isLoading ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <>
-                        <PlusIcon className="h-4 w-4 mr-1" />
-                        Registrar actividad
-                      </>
-                    )}
-                  </button>
-                  
-                  <span className="text-xs text-gray-500">
-                    {new Date(goal.startDate).toLocaleDateString()}
-                  </span>
+                <div className="bg-blue-50 p-4 rounded-lg flex items-center">
+                  <div className="bg-blue-100 p-3 rounded-full mr-4">
+                    <ChartBarIcon className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-blue-900">Actividades</h3>
+                    <p className="text-2xl font-bold text-blue-600">{activities.length}</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Sección de actividades recientes */}
-      <div className="bg-white rounded-lg p-6 shadow">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Actividades Recientes</h2>
-        
-        {activities.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">No hay actividades registradas</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {activities.map(activity => (
-              <div key={activity.id} className="p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
-                <div className="flex items-center">
-                  <div className="mr-3">
-                    {getActivityIcon(activity.type)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {activity.description || `Actividad: ${activity.type}`}
-                    </p>
-                    <div className="flex mt-1 text-xs text-gray-500 items-center">
-                      <span>
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </span>
-                      {activity.goalId && (
-                        <>
-                          <span className="mx-1.5">•</span>
-                          <span className="text-primary-600">
-                            {goals.find(g => g.id === activity.goalId)?.title || 'Meta'}
-                          </span>
-                        </>
+            </div>
+            
+            {/* Sección de metas */}
+            <div className="bg-white rounded-lg p-6 shadow">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Mis Metas</h2>
+              
+              {goals.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">Aún no tienes metas creadas</p>
+                  <button
+                    onClick={() => setIsNewGoalModalOpen(true)}
+                    className="mt-3 text-primary-600 font-medium hover:text-primary-700"
+                  >
+                    Crear una meta
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {goals.map(goal => (
+                    <div 
+                      key={goal.id}
+                      className={`p-4 rounded-lg border ${
+                        goal.isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-lg font-medium text-gray-900">{goal.title}</h3>
+                        <div className="flex space-x-2">
+                          {goal.isCompleted && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Completado
+                            </span>
+                          )}
+                          <button
+                            onClick={() => confirmDeleteGoal(goal.id)}
+                            className="text-gray-400 hover:text-red-500"
+                            title="Eliminar meta"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {goal.description && (
+                        <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
                       )}
+                      
+                      {renderProgressBar(goal)}
+                      
+                      <div className="mt-4 flex justify-between items-center">
+                        <button
+                          onClick={() => handleAddActivity(goal.id)}
+                          disabled={isLoading || goal.isCompleted}
+                          className={`inline-flex items-center text-sm px-3 py-1.5 rounded-md ${
+                            goal.isCompleted
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                              : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+                          }`}
+                        >
+                          {isLoading ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <>
+                              <PlusIcon className="h-4 w-4 mr-1" />
+                              Registrar actividad
+                            </>
+                          )}
+                        </button>
+                        
+                        <span className="text-xs text-gray-500">
+                          {new Date(goal.startDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="activities">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Todas las Actividades</h2>
+            <div className="grid gap-4">
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{activity.description}</p>
+                    <p className="text-sm text-gray-500">
+                      {format(new Date(activity.timestamp), 'PPP', { locale: es })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">+{activity.points} puntos</p>
+                    <p className="text-sm text-gray-500">{activity.type}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="users">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Actividades por Usuario</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h3 className="font-medium">Seleccionar Usuario</h3>
+                <select
+                  className="w-full p-2 border rounded-lg"
+                  value={selectedUser || ''}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                >
+                  <option value="">Selecciona un usuario</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-4">
+                {selectedUser && userActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{activity.description}</p>
+                      <p className="text-sm text-gray-500">
+                        {format(new Date(activity.timestamp), 'PPP', { locale: es })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">+{activity.points} puntos</p>
+                      <p className="text-sm text-gray-500">{activity.type}</p>
                     </div>
                   </div>
-                  {activity.points > 0 && (
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-50 text-yellow-700 rounded-full">
-                      +{activity.points} pts
-                    </span>
-                  )}
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        )}
-      </div>
-      
+        </TabsContent>
+      </Tabs>
+
       {/* Modal para crear nueva meta */}
       <Dialog
         open={isNewGoalModalOpen}

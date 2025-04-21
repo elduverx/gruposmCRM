@@ -9,7 +9,8 @@ import {
   CalendarIcon, 
   ArrowUpIcon,
   ArrowDownIcon,
-  PlusIcon
+  PlusIcon,
+  TrophyIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -227,37 +228,38 @@ export default function InicioPage() {
           </div>
         </div>
 
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/assignments')}>
+        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/progreso')}>
+          <div className="flex items-center">
+            <div className="p-3 rounded-lg bg-success-50">
+              <TrophyIcon className="h-6 w-6 text-success-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Objetivos</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {Math.round((stats.completedObjectives || 0) / (stats.totalObjectives || 1) * 100)}%
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-gray-500">Completados</span>
+            <span className="ml-2 font-medium text-success-600">
+              {stats.completedObjectives || 0} / {stats.totalObjectives || 0}
+            </span>
+          </div>
+        </div>
+
+        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/progreso')}>
           <div className="flex items-center">
             <div className="p-3 rounded-lg bg-warning-50">
               <ClipboardDocumentListIcon className="h-6 w-6 text-warning-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Encargos</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.assignments}</p>
+              <p className="text-sm font-medium text-gray-500">Pendientes</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.pendingActivities || 0}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <ArrowDownIcon className="h-4 w-4 text-danger-500" />
-            <span className="ml-1 text-danger-600 font-medium">3%</span>
-            <span className="ml-2 text-gray-500">vs mes anterior</span>
-          </div>
-        </div>
-
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/news')}>
-            <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-success-50">
-              <NewspaperIcon className="h-6 w-6 text-success-600" />
-              </div>
-              <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Noticias</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.news}</p>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <ArrowUpIcon className="h-4 w-4 text-success-500" />
-            <span className="ml-1 text-success-600 font-medium">15%</span>
-            <span className="ml-2 text-gray-500">vs mes anterior</span>
+            <span className="text-gray-500">Actividades por completar</span>
           </div>
         </div>
       </div>

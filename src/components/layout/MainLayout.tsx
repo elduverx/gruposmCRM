@@ -15,7 +15,8 @@ import {
   UsersIcon,
   NewspaperIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -32,6 +33,7 @@ const commonNavigation = [
 const adminNavigation = [
   { name: 'Usuarios', href: '/dashboard/users', icon: UserGroupIcon },
   { name: 'Zonas', href: '/dashboard/zones', icon: MapIcon },
+  { name: 'Metas', href: '/dashboard/metas', icon: TrophyIcon },
 ];
 
 const AppName = "GrupoSM CRM";
