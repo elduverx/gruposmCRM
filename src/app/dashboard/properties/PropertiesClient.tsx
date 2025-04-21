@@ -26,6 +26,7 @@ export default function PropertiesClient() {
     action: '',
     isOccupied: null as boolean | null,
   });
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const router = useRouter();
 
   // Fetch properties, activities, and zones
@@ -260,11 +261,45 @@ export default function PropertiesClient() {
   }, []);
 
   const handleSearch = (searchTerm: string) => {
-    const filteredProperties = properties.filter((property) => {
-      const searchString = `${property.address} ${property.ownerName} ${property.ownerPhone}`.toLowerCase();
-      return searchString.includes(searchTerm.toLowerCase());
+    setSearchQuery(searchTerm);
+    setCurrentPage(1);
+    
+    const filtered = properties.filter(property => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Manejo seguro de propiedades que pueden ser null o undefined
+      const address = property.address?.toLowerCase() || '';
+      const ownerName = property.ownerName?.toLowerCase() || '';
+      const ownerPhone = property.ownerPhone?.toLowerCase() || '';
+      const ownerEmail = property.ownerEmail?.toLowerCase() || '';
+      const tenantName = property.tenantName?.toLowerCase() || '';
+      const tenantPhone = property.tenantPhone?.toLowerCase() || '';
+      const tenantEmail = property.tenantEmail?.toLowerCase() || '';
+      const notes = property.notes?.toLowerCase() || '';
+      const type = property.type?.toLowerCase() || '';
+      const status = property.status?.toLowerCase() || '';
+      const action = property.action?.toLowerCase() || '';
+      const zoneName = property.zone?.name?.toLowerCase() || '';
+      const description = property.description?.toLowerCase() || '';
+      
+      return (
+        address.includes(searchLower) ||
+        ownerName.includes(searchLower) ||
+        ownerPhone.includes(searchLower) ||
+        ownerEmail.includes(searchLower) ||
+        tenantName.includes(searchLower) ||
+        tenantPhone.includes(searchLower) ||
+        tenantEmail.includes(searchLower) ||
+        notes.includes(searchLower) ||
+        type.includes(searchLower) ||
+        status.includes(searchLower) ||
+        action.includes(searchLower) ||
+        zoneName.includes(searchLower) ||
+        description.includes(searchLower)
+      );
     });
-    return filteredProperties;
+    
+    setFilteredProperties(filtered);
   };
 
   return (

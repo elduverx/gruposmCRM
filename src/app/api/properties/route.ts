@@ -80,6 +80,9 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const properties = await prisma.property.findMany({
+      include: {
+        zone: true
+      },
       orderBy: {
         createdAt: 'desc',
       },

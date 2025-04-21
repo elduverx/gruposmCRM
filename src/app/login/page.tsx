@@ -42,10 +42,14 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json() as { token: string; user: User; message?: string };
+      const data = await response.json() as { token: string; user: User; message?: string; error?: string };
 
       if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
+        throw new Error(data.error || data.message || 'Error al iniciar sesión');
+      }
+
+      if (!data.token || !data.user) {
+        throw new Error('Respuesta incompleta del servidor');
       }
 
       await login(data.token, data.user);

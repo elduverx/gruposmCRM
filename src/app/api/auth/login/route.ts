@@ -49,7 +49,13 @@ export async function POST(request: Request) {
       { expiresIn: '1d' }
     );
 
-    return NextResponse.json({ token });
+    // Devolver tanto el token como los datos del usuario
+    const { password: _, ...userWithoutPassword } = user;
+    
+    return NextResponse.json({ 
+      token,
+      user: userWithoutPassword
+    });
   } catch (error) {
     return NextResponse.json(
       { error: 'Internal server error' },

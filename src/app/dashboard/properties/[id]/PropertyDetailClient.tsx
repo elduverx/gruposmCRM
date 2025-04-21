@@ -227,7 +227,9 @@ export default function PropertyDetailClient({
           
           <div>
             <label className="text-sm text-gray-700">Zona</label>
-            <p className="font-medium">{property.zone?.name || 'N/A'}</p>
+            <p className="font-medium">
+              {property.zoneId && property.zone ? property.zone.name : 'N/A'}
+            </p>
           </div>
           
           <div>
@@ -752,7 +754,8 @@ export default function PropertyDetailClient({
                   metrosCuadrados: property.metrosCuadrados,
                   parking: property.parking,
                   ascensor: property.ascensor,
-                  piscina: property.piscina
+                  piscina: property.piscina,
+                  zone: property.zone
                 }}
                 onSubmit={handlePropertyUpdate}
                 onCancel={() => setIsEditFormOpen(false)}

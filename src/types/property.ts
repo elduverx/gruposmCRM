@@ -169,6 +169,10 @@ export interface PropertyCreateInput {
   parking?: boolean;
   ascensor?: boolean;
   piscina?: boolean;
+  zone?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export type PropertyUpdateInput = Partial<PropertyCreateInput>;

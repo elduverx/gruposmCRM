@@ -155,7 +155,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('token', token);
     setUser(userData);
     setLoading(false);
-    router.push('/dashboard');
+    
+    // Usar setTimeout para asegurar que la redirección ocurra después de que el estado se haya actualizado
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 0);
   }, [router]);
 
   const value = {

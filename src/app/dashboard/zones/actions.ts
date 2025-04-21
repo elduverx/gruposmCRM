@@ -61,6 +61,7 @@ export async function getZoneById(id: string): Promise<Zone | null> {
 
 export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedAt'>): Promise<Zone> {
   try {
+    // Crear la zona
     const zone = await prisma.zone.create({
       data: {
         name: data.name,
@@ -69,6 +70,34 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
         coordinates: JSON.stringify(data.coordinates)
       },
     });
+
+    // Obtener todas las propiedades con coordenadas
+    const properties = await prisma.property.findMany({
+      where: {
+        AND: [
+          { latitude: { not: null } },
+          { longitude: { not: null } }
+        ]
+      }
+    });
+
+    // Para cada propiedad, verificar si está dentro de la zona
+    for (const property of properties) {
+      if (property.latitude && property.longitude) {
+        const isInZone = isPointInPolygon(
+          [property.latitude, property.longitude],
+          data.coordinates.map(coord => [coord.lat, coord.lng])
+        );
+
+        if (isInZone) {
+          // Asignar la propiedad a la zona
+          await prisma.property.update({
+            where: { id: property.id },
+            data: { zoneId: zone.id }
+          });
+        }
+      }
+    }
     
     revalidatePath('/dashboard/zones');
     
@@ -80,6 +109,23 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
     console.error('Error creating zone:', error);
     throw new Error('Error al crear la zona');
   }
+}
+
+// Función auxiliar para verificar si un punto está dentro de un polígono
+function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    
+    const intersect = ((yi > y) !== (yj > y))
+        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  
+  return inside;
 }
 
 export async function updateZone(id: string, data: Partial<Omit<Zone, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Zone> {
