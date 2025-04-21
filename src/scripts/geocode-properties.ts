@@ -2,55 +2,93 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Función para geocodificar una dirección
-async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+interface NominatimResponse {
+  lat: string;
+  lon: string;
+  display_name: string;
+}
+
+// Función para extraer dirección y número
+function extractAddressParts(fullAddress: string): { street: string; number: string } {
+  const parts = fullAddress.split(',').map(part => part.trim());
+  return {
+    street: parts[0],
+    number: parts[1] || ''
+  };
+}
+
+// Función para geocodificar
+async function geocodeAddress(street: string, number: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    // Añadir un delay aleatorio entre 1 y 2 segundos para evitar rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-    
+    // Añadir Catarroja a la búsqueda para mejorar la precisión
+    const searchAddress = `${street} ${number}, Catarroja`;
+    console.log(`Buscando: ${searchAddress}`);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', 46470 Catarroja, Valencia, España')}&limit=1`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1`,
       {
         headers: {
           'User-Agent': 'CRM-Property-Import/1.0'
         }
       }
     );
-    
+
     if (!response.ok) {
-      console.error(`Error en la respuesta de Nominatim: ${response.status}`);
+      console.error(`Error en la respuesta: ${response.status}`);
       return null;
     }
-    
-    const data = await response.json();
+
+    const data = await response.json() as NominatimResponse[];
     
     if (data && data.length > 0) {
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       
-      // Verificar que las coordenadas están dentro de un rango razonable para Catarroja
-      if (lat >= 39.38 && lat <= 39.42 && lng >= -0.41 && lng <= -0.39) {
+      // Ajustar el rango de coordenadas para Catarroja
+      if (lat >= 39.35 && lat <= 39.45 && lng >= -0.45 && lng <= -0.35) {
+        console.log(`Coordenadas encontradas: ${lat}, ${lng}`);
         return { lat, lng };
       } else {
-        console.log(`Coordenadas fuera de rango para ${address}: ${lat}, ${lng}`);
-        return null;
+        console.log(`Coordenadas fuera de rango: ${lat}, ${lng}`);
       }
+    } else {
+      console.log('No se encontraron resultados');
     }
+    
     return null;
   } catch (error) {
-    console.error('Error geocodificando dirección:', error);
+    console.error('Error en geocodificación:', error);
     return null;
   }
 }
 
-async function geocodeProperties() {
+async function updateCoordinates() {
   try {
-    // Obtener propiedades sin coordenadas
+    // Primero, verificar cuántas propiedades necesitan actualización
+    const count = await prisma.property.count({
+      where: {
+        OR: [
+          { latitude: null },
+          { longitude: null }
+        ]
+      }
+    });
+
+    console.log(`Propiedades que necesitan actualización: ${count}`);
+
+    if (count === 0) {
+      console.log('No hay propiedades que necesiten actualización');
+      return;
+    }
+
     const properties = await prisma.property.findMany({
       where: {
-        isLocated: false,
-        latitude: null,
-        longitude: null
+        OR: [
+          { latitude: null },
+          { longitude: null }
+        ]
       },
       select: {
         id: true,
@@ -58,64 +96,62 @@ async function geocodeProperties() {
       }
     });
 
-    console.log(`Encontradas ${properties.length} propiedades para geocodificar`);
-
-    let geocoded = 0;
+    console.log(`Procesando ${properties.length} propiedades...`);
+    let updated = 0;
     let failed = 0;
 
-    // Procesar propiedades en lotes de 100
-    const batchSize = 100;
-    for (let i = 0; i < properties.length; i += batchSize) {
-      const batch = properties.slice(i, i + batchSize);
-      
-      for (const property of batch) {
-        try {
-          const coordinates = await geocodeAddress(property.address);
-          
-          if (coordinates) {
-            await prisma.property.update({
-              where: { id: property.id },
-              data: {
-                latitude: coordinates.lat,
-                longitude: coordinates.lng,
-                isLocated: true
-              }
-            });
-            geocoded++;
-          } else {
-            failed++;
-          }
+    for (const property of properties) {
+      try {
+        console.log(`\nProcesando propiedad ID: ${property.id}`);
+        console.log(`Dirección: ${property.address}`);
 
-          // Mostrar progreso cada 10 propiedades
-          if ((geocoded + failed) % 10 === 0) {
-            console.log(`Procesadas ${geocoded + failed} propiedades... (${geocoded} geocodificadas)`);
-          }
-        } catch (error) {
-          console.error(`Error al geocodificar propiedad ${property.id}:`, error);
+        const { street, number } = extractAddressParts(property.address);
+        console.log(`Calle: ${street}, Número: ${number}`);
+
+        const coordinates = await geocodeAddress(street, number);
+
+        if (coordinates) {
+          console.log(`Actualizando propiedad ${property.id} con coordenadas: ${coordinates.lat}, ${coordinates.lng}`);
+          
+          const result = await prisma.property.update({
+            where: { id: property.id },
+            data: {
+              latitude: coordinates.lat,
+              longitude: coordinates.lng
+            }
+          });
+
+          console.log(`Propiedad actualizada: ${result.id}`);
+          updated++;
+        } else {
+          console.log(`No se pudieron obtener coordenadas para: ${property.address}`);
           failed++;
         }
-      }
 
-      // Pausa entre lotes para evitar sobrecarga
-      if (i + batchSize < properties.length) {
-        console.log('Pausa de 5 segundos entre lotes...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        if ((updated + failed) % 5 === 0) {
+          console.log(`\nProgreso: ${updated + failed}/${properties.length}`);
+          console.log(`Actualizadas: ${updated}, Fallidas: ${failed}`);
+        }
+      } catch (error) {
+        console.error(`Error procesando propiedad ${property.id}:`, error);
+        failed++;
       }
     }
 
     console.log(`
-Geocodificación completada:
-- Total propiedades procesadas: ${properties.length}
-- Propiedades geocodificadas: ${geocoded}
-- Propiedades fallidas: ${failed}
+\nFinalizado:
+- Total propiedades: ${properties.length}
+- Actualizadas: ${updated}
+- Fallidas: ${failed}
     `);
 
   } catch (error) {
-    console.error('Error durante la geocodificación:', error);
+    console.error('Error general:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-// Ejecutar la geocodificación
-geocodeProperties(); 
+// Ejecutar el script
+console.log('Iniciando actualización de coordenadas...');
+updateCoordinates(); 

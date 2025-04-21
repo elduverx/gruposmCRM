@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { findUserByEmail } from '@/lib/prisma-users';
-import { generateToken } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 
 interface LoginRequest {
@@ -21,54 +21,38 @@ interface User {
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json() as LoginRequest;
+    const { email, password } = await request.json();
 
-    // Validaciones básicas
-    if (!email || !password) {
-      console.log('Faltan email o password');
-      return NextResponse.json(
-        { message: 'Correo electrónico y contraseña son requeridos' },
-        { status: 400 }
-      );
-    }
-
-    // Buscar usuario en la base de datos
-    const user = await findUserByEmail(email);
-    
-    if (!user) {
-      console.log('Usuario no encontrado');
-      return NextResponse.json(
-        { message: 'Credenciales inválidas' },
-        { status: 401 }
-      );
-    }
-
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      console.log('Contraseña inválida');
-      return NextResponse.json(
-        { message: 'Credenciales inválidas' },
-        { status: 401 }
-      );
-    }
-
-    // Generar token JWT
-    const token = generateToken(user.id, String(user.role));
-
-    // Devolver el token y los datos del usuario (sin la contraseña)
-    const { password: _unused, ...userWithoutPassword } = user;
-    
-    console.log('Login exitoso, devolviendo token y datos de usuario');
-    
-    return NextResponse.json({
-      token,
-      user: userWithoutPassword,
+    const user = await prisma.user.findUnique({
+      where: { email }
     });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
+    const isValidPassword = await compare(password, user.password);
+
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
+    const token = sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '1d' }
+    );
+
+    return NextResponse.json({ token });
   } catch (error) {
-    console.error('Error general en login:', error);
     return NextResponse.json(
-      { message: 'Error en el servidor' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

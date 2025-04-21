@@ -251,6 +251,7 @@ export default function DynamicMap({
   const [showGeocodingControls, setShowGeocodingControls] = useState(false);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const [floors, setFloors] = useState<string[]>([]);
   
   // Memoized data source based on props
   const dataSource = useMemo(() => {

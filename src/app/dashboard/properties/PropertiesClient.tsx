@@ -259,6 +259,14 @@ export default function PropertiesClient() {
     setCurrentPage(page);
   }, []);
 
+  const handleSearch = (searchTerm: string) => {
+    const filteredProperties = properties.filter((property) => {
+      const searchString = `${property.address} ${property.ownerName} ${property.ownerPhone}`.toLowerCase();
+      return searchString.includes(searchTerm.toLowerCase());
+    });
+    return filteredProperties;
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-6">Propiedades</h1>

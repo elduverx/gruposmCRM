@@ -41,8 +41,8 @@ async function importProperties() {
     console.log(`Encontradas ${records.length} propiedades para importar`);
 
     // Procesar cada registro
+    const skipped = 0;
     let imported = 0;
-    let skipped = 0;
 
     for (const record of records) {
       try {
