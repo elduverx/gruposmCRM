@@ -1,38 +1,35 @@
-services:
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-b82a1ab5}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-databasesm}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-b82a1ab5}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+version: '3.8'
 
+services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=mysql://root:${MYSQL_ROOT_PASSWORD:-b82a1ab5}@db:3306/${MYSQL_DATABASE:-databasesm}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-here}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
-      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - DATABASE_URL=mysql://root:password@db:3306/railway
+      - NEXTAUTH_SECRET=5c73ef67b9d0e6a8f4b2c1d5a8e7f3b2c9d6a3f5b8e2c1d4a7f9b2e5c8d3a6f1
+      - NEXTAUTH_URL=http://localhost:3000
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=admin123
+      - JWT_SECRET=5c73ef67b9d0e6a8f4b2c1d5a8e7f3b2c9d6a3f5b8e2c1d4a7f9b2e5c8d3a6f1
+    volumes:
+      - .:/app
+      - /app/node_modules
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=railway
+    volumes:
+      - mysql-data:/var/lib/mysql
 
 volumes:
-  mysql_data: 
+  mysql-data: 
