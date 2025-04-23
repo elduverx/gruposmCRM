@@ -10,6 +10,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import { useUsers } from '@/hooks/useUsers';
 
 interface PropertyFormProps {
   onSubmit: (data: PropertyCreateInput) => void;
@@ -19,6 +20,7 @@ interface PropertyFormProps {
 }
 
 export default function PropertyForm({ onSubmit, initialData, onCancel, zones }: PropertyFormProps) {
+  const { users } = useUsers();
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: initialData?.address || '',
     population: initialData?.population || '',
@@ -37,7 +39,7 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
     longitude: initialData?.longitude || null,
     occupiedBy: initialData?.occupiedBy || null,
     isLocated: initialData?.isLocated || false,
-    responsible: initialData?.responsible || null,
+    responsible: initialData?.responsible || '',
     habitaciones: initialData?.habitaciones || null,
     banos: initialData?.banos || null,
     metrosCuadrados: initialData?.metrosCuadrados || null,
@@ -260,6 +262,32 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
                 onChange={handleInputChange}
                 className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
+              Responsable
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <UserIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              {/* @ts-ignore - Suprimir error de tipo para el select de responsable */}
+              <select
+                id="responsible"
+                name="responsible"
+                value={typeof formData.responsible === 'string' ? formData.responsible : ''}
+                onChange={handleInputChange}
+                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              >
+                <option value="">Sin responsable asignado</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.name || ''}>
+                    {user.name || 'Sin nombre'}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

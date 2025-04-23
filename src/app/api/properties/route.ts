@@ -79,9 +79,18 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Obtener parámetros de consulta
+    const url = new URL(request.url);
+    const zoneId = url.searchParams.get('zoneId');
+    
+    // Construir la consulta
+    const where = zoneId ? { zoneId } : {};
+    
+    // Ejecutar la consulta con filtros si existen
     const properties = await prisma.property.findMany({
+      where,
       include: {
         zone: true
       },
@@ -89,6 +98,7 @@ export async function GET() {
         createdAt: 'desc',
       },
     });
+    
     return NextResponse.json(properties);
   } catch (error) {
     return NextResponse.json(

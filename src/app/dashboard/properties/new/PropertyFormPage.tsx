@@ -9,6 +9,7 @@ import { getAddressFromCoordinates } from '@/utils/geocoding';
 import { createProperty, updateProperty, getProperty } from '../actions';
 import { PropertyType, PropertyCreateInput } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
+import { getUsersForSelect } from '../../users/actions';
 import { toast } from 'sonner';
 
 // Coordenadas de Camí Real 87, Catarroja
@@ -153,6 +154,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
+  const [users, setUsers] = useState<{id: string; name: string}[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: '',
@@ -163,6 +165,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     latitude: CATARROJA_COORDS.lat,
     longitude: CATARROJA_COORDS.lng,
     zoneId: null,
+    responsibleId: null
   });
 
   // Función para determinar si un punto está dentro de un polígono
@@ -200,18 +203,35 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         const zonesData = await getZones();
         setZones(zonesData);
       } catch (error) {
-        if (error instanceof Error) {
-          // Handle error appropriately
-        }
+        // eslint-disable-next-line no-console
+        console.error('Error loading zones:', error);
       }
     };
-
+    
+    // Cargar los usuarios para el selector de responsables
+    const fetchUsers = async () => {
+      try {
+        const usersData = await getUsersForSelect();
+        setUsers(usersData);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading users:', error);
+      }
+    };
+    
+    setIsClient(true);
     fetchZones();
-  }, []);
-
-  useEffect(() => {
+    fetchUsers();
+    
+    // Si hay un ID de propiedad, estamos editando
     if (propertyId) {
       setIsEditing(true);
+    }
+  }, []);
+
+  // Cargar datos de la propiedad si estamos editando
+  useEffect(() => {
+    if (propertyId) {
       const fetchProperty = async () => {
         try {
           const propertyData = await getProperty(propertyId);
@@ -219,14 +239,15 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             setFormData({
               address: propertyData.address,
               population: propertyData.population,
-              type: propertyData.type as PropertyType,
-              ownerName: propertyData.ownerName,
-              ownerPhone: propertyData.ownerPhone,
+              type: propertyData.type,
+              ownerName: propertyData.ownerName || '',
+              ownerPhone: propertyData.ownerPhone || '',
               latitude: propertyData.latitude || null,
               longitude: propertyData.longitude || null,
               zoneId: propertyData.zoneId || null,
+              responsibleId: propertyData.responsibleId || null
             });
-            
+
             if (propertyData.latitude && propertyData.longitude) {
               setSelectedLocation({
                 lat: propertyData.latitude,
@@ -235,19 +256,15 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             }
           }
         } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('Error fetching property:', error);
-          alert('Error al cargar el inmueble');
+          if (error instanceof Error) {
+            // Handle error appropriately
+          }
         }
       };
       
       fetchProperty();
     }
   }, [propertyId]);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleLocationSelect = async (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
@@ -452,6 +469,27 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
                   {Object.entries(PropertyType).map(([key, value]) => (
                     <option key={key} value={key}>
                       {value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Responsable */}
+              <div>
+                <label htmlFor="responsibleId" className="block text-sm font-medium text-gray-700">
+                  Responsable
+                </label>
+                <select
+                  id="responsibleId"
+                  name="responsibleId"
+                  value={formData.responsibleId || ''}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Sin responsable asignado</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
                     </option>
                   ))}
                 </select>

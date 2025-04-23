@@ -25,6 +25,7 @@ export default function PropertiesClient() {
     status: '',
     action: '',
     isOccupied: null as boolean | null,
+    zoneId: '',
   });
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const router = useRouter();
@@ -41,6 +42,16 @@ export default function PropertiesClient() {
           throw new Error('Failed to fetch properties');
         }
         const propertiesData = await propertiesResponse.json() as Property[];
+        
+        // Log para depuración
+        console.log('Propiedades cargadas:', propertiesData.length);
+        console.log('Muestra de propiedad:', propertiesData.length > 0 ? {
+          id: propertiesData[0].id,
+          zoneId: propertiesData[0].zoneId,
+          zone: propertiesData[0].zone,
+          address: propertiesData[0].address
+        } : 'No hay propiedades');
+        
         setProperties(propertiesData);
         
         // Fetch activities
@@ -109,11 +120,6 @@ export default function PropertiesClient() {
     }
 
     router.push(`/dashboard/properties/${property.id}`);
-  }, [router]);
-
-  // Handle edit property
-  const handleEditProperty = useCallback((property: Property) => {
-    router.push(`/dashboard/properties/${property.id}/edit`);
   }, [router]);
 
   // Handle delete property
@@ -195,10 +201,51 @@ export default function PropertiesClient() {
       [filterType]: value
     }));
     setCurrentPage(1); // Reset to first page when filters change
+    
+    // Si es un cambio de zona, podemos realizar una carga específica
+    if (filterType === 'zoneId' && typeof value === 'string' && value !== '') {
+      console.log('Cargando propiedades específicamente para la zona:', value);
+      setIsLoading(true);
+      
+      // Función para cargar propiedades por zona
+      const fetchPropertiesByZone = async (zoneId: string) => {
+        try {
+          // Construir URL con parámetro de zona
+          const url = `/api/properties?zoneId=${zoneId}`;
+          const response = await fetch(url);
+          
+          if (!response.ok) {
+            throw new Error('Error al cargar propiedades por zona');
+          }
+          
+          const data = await response.json();
+          console.log(`Cargadas ${data.length} propiedades para la zona ${zoneId}`);
+          
+          // Actualizar solo si hay respuesta
+          if (Array.isArray(data) && data.length > 0) {
+            setProperties(data);
+          }
+        } catch (error) {
+          console.error('Error al cargar propiedades por zona:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      // Ejecutar la función de carga
+      fetchPropertiesByZone(value);
+    }
   }, []);
 
   // Memoized filtered and sorted properties
   const filteredAndSortedProperties = useMemo(() => {
+    // Log para depuración
+    console.log('Total de propiedades:', properties.length);
+    if (filters.zoneId) {
+      console.log('Filtrando por zoneId:', filters.zoneId);
+      console.log('Propiedades con esta zona:', properties.filter(p => p.zoneId === filters.zoneId).length);
+    }
+    
     // First apply filters
     const filtered = properties.filter(property => {
       // Apply search query filter
@@ -221,9 +268,17 @@ export default function PropertiesClient() {
       const matchesOccupied = filters.isOccupied === null || 
         property.isOccupied === filters.isOccupied;
       
+      // Apply zone filter - Fix para manejar tanto zoneId como zone.id
+      const matchesZone = filters.zoneId === '' || 
+                         property.zoneId === filters.zoneId || 
+                         (property.zone && property.zone.id === filters.zoneId);
+      
       return matchesSearch && matchesType && matchesStatus && 
-             matchesAction && matchesOccupied;
+             matchesAction && matchesOccupied && matchesZone;
     });
+    
+    // También logueamos el resultado del filtrado
+    console.log('Propiedades filtradas:', filtered.length);
     
     // Then apply sorting
     return filtered.sort((a, b) => {
@@ -320,7 +375,7 @@ export default function PropertiesClient() {
         </div>
         
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Type Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -396,6 +451,25 @@ export default function PropertiesClient() {
               <option value="false">Desocupado</option>
             </select>
           </div>
+          
+          {/* Zone Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Zona
+            </label>
+            <select
+              value={filters.zoneId}
+              onChange={(e) => handleFilterChange('zoneId', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todas</option>
+              {zones.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
       
@@ -410,7 +484,6 @@ export default function PropertiesClient() {
         activitiesMap={activitiesMap}
         zones={zones}
         onPropertyClick={handlePropertyClick}
-        onEditProperty={handleEditProperty}
         onDeleteProperty={handleDeleteProperty}
         onToggleLocated={handleToggleLocated}
         isDeleting={isDeleting}

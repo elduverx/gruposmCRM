@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Button from '@/components/ui/button';
+import { useUsers } from '@/hooks/useUsers';
 
 interface NewsFormProps {
   propertyId: string;
@@ -12,6 +13,7 @@ interface NewsFormProps {
 }
 
 export function NewsForm({ propertyId, dpvValue, onSubmit, isLoading }: NewsFormProps) {
+  const { users } = useUsers();
   const [formData, setFormData] = useState({
     type: 'DPV', // DPV o PVA
     action: 'SALE', // SALE o RENT
@@ -98,14 +100,20 @@ export function NewsForm({ propertyId, dpvValue, onSubmit, isLoading }: NewsForm
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700">Responsable</label>
-          <input
-            type="text"
+          <select
             name="responsible"
             value={formData.responsible}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             required
-          />
+          >
+            <option value="">Seleccionar responsable</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.name}>
+                {user.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

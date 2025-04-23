@@ -6,6 +6,7 @@ import { getProperties } from '@/app/dashboard/properties/actions';
 import { createPropertyNews } from '@/app/dashboard/properties/actions';
 import { toast } from 'react-hot-toast';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useUsers } from '@/hooks/useUsers';
 
 interface CreateNewsFormProps {
   onClose: () => void;
@@ -26,7 +27,10 @@ interface NewsFormData {
 
 export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormProps) {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const { users } = useUsers();
   const [formData, setFormData] = useState<NewsFormData>({
     propertyId: '',
     type: 'DPV',
@@ -44,6 +48,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
       try {
         const propertiesData = await getProperties();
         setProperties(propertiesData.properties);
+        setFilteredProperties(propertiesData.properties);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error fetching properties:', error);
@@ -53,6 +58,30 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
 
     fetchProperties();
   }, []);
+
+  // Filtrar propiedades basado en el término de búsqueda
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredProperties(properties);
+      return;
+    }
+    
+    const term = searchTerm.toLowerCase().trim();
+    const filtered = properties.filter(property => {
+      return (
+        property.address.toLowerCase().includes(term) ||
+        (property.population && property.population.toLowerCase().includes(term)) ||
+        (property.ownerName && property.ownerName.toLowerCase().includes(term)) ||
+        (property.responsible && property.responsible.toLowerCase().includes(term))
+      );
+    });
+    
+    setFilteredProperties(filtered);
+  }, [searchTerm, properties]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -130,8 +159,20 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-1 md:col-span-2">
+                <label htmlFor="searchProperty" className="block text-sm font-medium text-gray-700 mb-1">
+                  Buscar Inmueble
+                </label>
+                <input
+                  type="text"
+                  id="searchProperty"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm mb-2"
+                  placeholder="Buscar por dirección, población, propietario o responsable..."
+                />
+                
                 <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700 mb-1">
-                  Inmueble
+                  Inmueble ({filteredProperties.length} de {properties.length})
                 </label>
                 <select
                   name="propertyId"
@@ -142,7 +183,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                   required
                 >
                   <option value="">Seleccionar inmueble</option>
-                  {properties.map((property) => (
+                  {filteredProperties.map((property) => (
                     <option key={property.id} value={property.id}>
                       {property.address} - {property.population}
                     </option>
@@ -206,15 +247,21 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                 <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 mb-1">
                   Responsable
                 </label>
-                <input
-                  type="text"
-                  name="responsible"
+                <select
                   id="responsible"
+                  name="responsible"
                   value={formData.responsible}
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Nombre del responsable"
-                />
+                  required
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.name || ''}>
+                      {user.name || 'Sin nombre'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Property } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { TrashIcon } from '@heroicons/react/24/outline';
 import { Activity } from '@/types/property';
 import { Zone } from '@/types/zone';
 
@@ -10,7 +10,6 @@ interface PropertyTableProps {
   activitiesMap: Record<string, Activity[]>;
   zones: Zone[];
   onPropertyClick: (property: Property) => void;
-  onEditProperty: (property: Property) => void;
   onDeleteProperty: (id: string) => void;
   onToggleLocated: (property: Property) => void;
   isDeleting: string | null;
@@ -26,7 +25,6 @@ export default function PropertyTable({
   activitiesMap,
   zones,
   onPropertyClick,
-  onEditProperty,
   onDeleteProperty,
   onToggleLocated,
   isDeleting,
@@ -156,13 +154,6 @@ export default function PropertyTable({
               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
               <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                 <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => onEditProperty(property)}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    <PencilIcon className="h-5 w-5" />
-                    <span className="sr-only">Editar {property.address}</span>
-                  </button>
                   <button
                     onClick={() => onDeleteProperty(property.id)}
                     disabled={isDeleting === property.id}

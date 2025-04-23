@@ -5,6 +5,7 @@ import { PropertyNews } from '@/types/property';
 import { updatePropertyNews } from './actions';
 import { toast } from 'react-hot-toast';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useUsers } from '@/hooks/useUsers';
 
 interface EditNewsFormProps {
   news: PropertyNews;
@@ -25,6 +26,7 @@ interface NewsFormData {
 
 export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormProps) {
   const [loading, setLoading] = useState(false);
+  const { users } = useUsers();
   const [formData, setFormData] = useState<NewsFormData>({
     type: news.type,
     action: news.action,
@@ -153,15 +155,20 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
                 <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 mb-1">
                   Responsable
                 </label>
-                <input
-                  type="text"
-                  name="responsible"
+                <select
                   id="responsible"
+                  name="responsible"
                   value={formData.responsible}
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Nombre del responsable"
-                />
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.name || ''}>
+                      {user.name || 'Sin nombre'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

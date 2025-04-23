@@ -238,18 +238,20 @@ function mapProperty(property: unknown): Property {
     return {
       id: '',
       address: '',
-      population: null,
-      type: PropertyType.PISO,
-      ownerName: null,
-      ownerPhone: null,
-      zoneId: null,
-      status: OperationType.SALE,
-      action: PropertyAction.IR_A_DIRECCION,
+      population: '',
+      type: 'CASA',
+      ownerName: '',
+      ownerPhone: '',
+      status: 'SALE',
+      action: 'IR_A_DIRECCION',
       captureDate: new Date().toISOString(),
       responsibleId: null,
       hasSimpleNote: false,
       isOccupied: false,
       clientId: null,
+      zoneId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       latitude: null,
       longitude: null,
       occupiedBy: null,
@@ -261,14 +263,22 @@ function mapProperty(property: unknown): Property {
       parking: false,
       ascensor: false,
       piscina: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       activities: [],
+      zone: null,
       assignments: [],
       clients: [],
-      zone: null,
       dpv: null,
-      responsibleUser: null
+      responsibleUser: null,
+      // Propiedades adicionales requeridas
+      price: '',
+      description: '',
+      yearBuilt: '',
+      isFurnished: false,
+      ownerEmail: '',
+      tenantName: '',
+      tenantPhone: '',
+      tenantEmail: '',
+      notes: '',
     };
   }
   
@@ -277,12 +287,24 @@ function mapProperty(property: unknown): Property {
     captureDate: safeToISOString(property.captureDate),
     createdAt: safeToISOString(property.createdAt),
     updatedAt: safeToISOString(property.updatedAt),
-    activities: mapActivities(property.activities || []),
-    assignments: mapAssignments(property.assignments || []),
-    clients: mapClients(property.clients || []),
-    zone: mapZone(property.zone),
-    dpv: mapDPV(property.dpv),
-    responsibleUser: mapResponsibleUser(property.responsibleUser)
+    activities: property.activities ? mapActivities(property.activities) : [],
+    zone: property.zone || null,
+    assignments: property.assignments ? mapAssignments(property.assignments) : [],
+    clients: property.clients ? mapClients(property.clients) : [],
+    dpv: property.dpv ? mapDPV(property.dpv) : null,
+    responsibleUser: mapResponsibleUser(property.responsibleUser),
+    // Si tenemos un usuario responsable, utilizar su nombre como valor de responsible
+    responsible: property.responsibleUser?.name || property.responsible || null,
+    // Propiedades adicionales requeridas con valores por defecto
+    price: '',
+    description: '',
+    yearBuilt: '',
+    isFurnished: false,
+    ownerEmail: '',
+    tenantName: '',
+    tenantPhone: '',
+    tenantEmail: '',
+    notes: '',
   };
 }
 
@@ -555,88 +577,86 @@ export async function updateProperty(id: string, data: {
   longitude?: number | null;
   occupiedBy?: string | null;
   isLocated?: boolean;
-  responsible?: string | null;
   habitaciones?: number | null;
   banos?: number | null;
   metrosCuadrados?: number | null;
   parking?: boolean;
   ascensor?: boolean;
   piscina?: boolean;
+  responsible?: string | null;
 }): Promise<Property | null> {
   try {
-    // Obtener la propiedad actual para preservar valores no proporcionados
-    const currentProperty = await prisma.property.findUnique({
-      where: { id }
-    });
-
-    if (!currentProperty) {
-      throw new Error('La propiedad no existe');
-    }
-
-    // Si se proporciona un zoneId, verificar que la zona existe
-    if (data.zoneId !== undefined) {
-      if (data.zoneId) {
-        const zone = await prisma.zone.findUnique({
-          where: { id: data.zoneId }
-        });
-        if (!zone) {
-          throw new Error('La zona especificada no existe');
-        }
-      }
-    } else {
-      // Si no se proporciona zoneId, mantener el valor actual
-      data.zoneId = currentProperty.zoneId;
-    }
-
+    // eslint-disable-next-line no-console
+    console.log('Updating property with data:', data);
+    
     // Si se proporciona un responsibleId, verificar que el usuario existe
     if (data.responsibleId) {
       const user = await prisma.user.findUnique({
         where: { id: data.responsibleId }
       });
+      
       if (!user) {
-        throw new Error('El usuario responsable especificado no existe');
+        throw new Error(`Usuario responsable con ID ${data.responsibleId} no encontrado`);
       }
     }
-
-    // Convertir la fecha de captura a objeto Date si es necesario
-    const captureDate = data.captureDate ? new Date(data.captureDate) : undefined;
-
-    // Preparar los datos para la actualización
+    
+    // Estructura base para los datos a actualizar
     const updateData: Record<string, unknown> = {
       address: data.address,
       population: data.population,
       type: data.type,
       ownerName: data.ownerName,
       ownerPhone: data.ownerPhone,
-      zoneId: data.zoneId,
-      status: data.status,
       action: data.action,
-      captureDate: captureDate,
-      hasSimpleNote: data.hasSimpleNote,
+      status: data.status,
       isOccupied: data.isOccupied,
-      clientId: data.clientId,
-      latitude: data.latitude,
-      longitude: data.longitude,
       occupiedBy: data.occupiedBy,
       isLocated: data.isLocated,
-      responsible: data.responsible,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      zoneId: data.zoneId,
       habitaciones: data.habitaciones,
       banos: data.banos,
       metrosCuadrados: data.metrosCuadrados,
       parking: data.parking,
       ascensor: data.ascensor,
-      piscina: data.piscina
+      piscina: data.piscina,
+      responsible: data.responsible,
     };
-
+    
+    // Remover campos undefined para no sobrescribir con null
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+    
     // Solo incluir responsibleId si está definido
     if (data.responsibleId !== undefined) {
       updateData.responsibleId = data.responsibleId;
     }
-
-    const property = await prisma.property.update({
+    
+    // Solo incluir clientId si está definido
+    if (data.clientId !== undefined) {
+      updateData.clientId = data.clientId;
+    }
+    
+    // Solo incluir hasSimpleNote si está definido
+    if (data.hasSimpleNote !== undefined) {
+      updateData.hasSimpleNote = data.hasSimpleNote;
+    }
+    
+    // Si hay una fecha de captura, convertirla a Date
+    if (data.captureDate) {
+      updateData.captureDate = new Date(data.captureDate);
+    }
+    
+    const updatedProperty = await prisma.property.update({
       where: { id },
       data: updateData,
       include: {
+        zone: true,
+        activities: true,
         responsibleUser: {
           select: {
             id: true,
@@ -644,55 +664,39 @@ export async function updateProperty(id: string, data: {
             email: true
           }
         },
-        activities: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 5
-        },
-        zone: true
+        assignments: true,
+        dpv: true,
+        clients: true
       }
     });
-
-    // Registrar la actividad
-    await logActivity({
-      type: 'PROPERTY_UPDATED',
-      description: `Propiedad actualizada: ${property.address}`,
-      relatedId: property.id,
-      relatedType: 'PROPERTY',
-      metadata: {
-        address: property.address,
-        type: property.type,
-        status: property.status,
-        changes: data
-      }
-    });
-
+    
+    // Si se actualizó el campo responsible, actualizar todas las noticias relacionadas
+    if (data.responsible !== undefined) {
+      await prisma.propertyNews.updateMany({
+        where: { propertyId: id },
+        data: { responsible: data.responsible }
+      });
+      
+      // Revalidar la ruta de noticias
+      revalidatePath('/noticia');
+    }
+    
+    // Revalidar rutas para refrescar la cache
     revalidatePath('/dashboard/properties');
     revalidatePath(`/dashboard/properties/${id}`);
-    revalidatePath('/dashboard/zones');
-
-    if (!property) {
-      return null;
-    }
-
-    // Asegurarse de que las propiedades existan antes de acceder a ellas
-    const formattedProperty = {
-      ...property,
-      createdAt: property.createdAt ? new Date(property.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: property.updatedAt ? new Date(property.updatedAt).toISOString() : new Date().toISOString(),
-      activities: Array.isArray(property.activities) 
-        ? property.activities.map(activity => ({
-            ...activity,
-            createdAt: activity.createdAt ? new Date(activity.createdAt).toISOString() : new Date().toISOString(),
-            updatedAt: activity.updatedAt ? new Date(activity.updatedAt).toISOString() : new Date().toISOString()
-          }))
-        : []
-    };
-
-    return formattedProperty;
+    
+    await logActivity({
+      type: 'PROPERTY',
+      description: `Propiedad actualizada: ${updatedProperty.address}`,
+      relatedId: id,
+      relatedType: 'property'
+    });
+    
+    // Mapear la propiedad actualizada al tipo correcto
+    return mapProperty(updatedProperty);
   } catch (error) {
-    console.error('Error updating property:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error updating property:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }

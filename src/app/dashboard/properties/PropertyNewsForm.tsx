@@ -5,6 +5,7 @@ import Button from '@/components/ui/button';
 import { createPropertyNews, getPropertyNews } from './actions';
 import { PropertyNews } from '@/types/property';
 import { useRouter } from 'next/navigation';
+import { useUsers } from '@/hooks/useUsers';
 
 interface PropertyNewsFormProps {
   propertyId: string;
@@ -27,6 +28,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [existingNews, setExistingNews] = useState<boolean>(false);
+  const { users } = useUsers();
   const [formData, setFormData] = useState<NewsFormData>({
     type: 'DPV',
     action: 'Venta',
@@ -198,14 +200,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Responsable</label>
-              <input
-                type="text"
+              <select
                 name="responsible"
                 value={formData.responsible}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
-              />
+              >
+                <option value="">Seleccionar responsable</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.name || ''}>
+                    {user.name || 'Sin nombre'}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -357,14 +365,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Responsable</label>
-          <input
-            type="text"
+          <select
             name="responsible"
             value={formData.responsible}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
-          />
+          >
+            <option value="">Seleccionar responsable</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.name || ''}>
+                {user.name || 'Sin nombre'}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
