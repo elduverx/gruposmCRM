@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Assignment } from '@/types/property';
-import { Client } from '@/types/client';
 import { getAssignments } from '../properties/actions';
 import { markPropertyAsSold, getSoldProperties, revertPropertySale } from './actions';
 import { 

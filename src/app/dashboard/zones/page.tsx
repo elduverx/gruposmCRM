@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { getProperties } from '../properties/actions';
 import { getZones, createZone, Zone, updateZone, deleteZone, getPropertiesInZone, getZoneNewsAndAssignments } from './actions';
 import { updateProperty } from '../properties/actions';
@@ -184,7 +184,64 @@ export default function ZonesPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const propertiesPerPage = 1000;
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false);
+  const [loadingZones, setLoadingZones] = useState(false);
+  const propertiesPerPage = 100;
+  const [totalProperties, setTotalProperties] = useState(0);
+
+  // Función para cargar propiedades de forma paginada
+  const loadProperties = useCallback(async (page = 1, searchTerm = '', zoneId?: string, loadAll = false) => {
+    try {
+      setIsLoadingProperties(true);
+      
+      // Si se solicita cargar todas las propiedades de una zona específica
+      if (loadAll && zoneId) {
+        const data = await getProperties(1, 10000, searchTerm, 'updatedAt', 'desc', zoneId);
+        setProperties(data.properties);
+        setVisibleProperties(data.properties);
+        setTotalProperties(data.total);
+        setHasMore(false); // No hay más para cargar si ya tenemos todas
+        setCurrentPage(1);
+        return data;
+      }
+      
+      // Caso normal con paginación
+      const data = await getProperties(page, propertiesPerPage, searchTerm, 'updatedAt', 'desc', zoneId);
+      
+      if (page === 1) {
+        // Si es la primera página, reemplazar las propiedades
+        setProperties(data.properties);
+        setVisibleProperties(data.properties);
+      } else {
+        // Si es paginación, añadir a las propiedades existentes
+        setProperties(prev => [...prev, ...data.properties]);
+        setVisibleProperties(prev => [...prev, ...data.properties]);
+      }
+      
+      setTotalProperties(data.total);
+      setHasMore(data.properties.length === propertiesPerPage && page * propertiesPerPage < data.total);
+      setCurrentPage(page);
+      return data;
+    } catch (error) {
+      console.error('Error loading properties:', error);
+      toast.error('Error al cargar las propiedades');
+      return null;
+    } finally {
+      setIsLoadingProperties(false);
+    }
+  }, [propertiesPerPage]);
+
+  // Cargar más propiedades cuando el usuario hace scroll
+  const loadMoreProperties = async () => {
+    if (isLoadingMore || !hasMore) return;
+    
+    try {
+      setIsLoadingMore(true);
+      await loadProperties(currentPage + 1, searchTerm, selectedZoneId || undefined);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Efecto para cargar datos cuando el componente se monta o cuando el usuario regresa a la página
   useEffect(() => {
@@ -192,29 +249,33 @@ export default function ZonesPage() {
       try {
         setLoading(true);
         
-        // Primero obtener todas las zonas
+        // Cargar zonas
+        setLoadingZones(true);
         const zonesData = await getZones();
         setZones(zonesData);
+        setLoadingZones(false);
         
-        // Obtener todas las propiedades sin límite
-        const propertiesData = await getProperties(1, 12000, '', 'updatedAt', 'desc');
-        setPropertiesData(propertiesData);
-        setProperties(propertiesData.properties);
+        // Cargar propiedades paginadas
+        const propertiesData = await loadProperties(1);
         
         // Cargar noticias de todas las zonas
+        setIsLoadingNews(true);
         const allNews = await Promise.all(
           zonesData.map(zone => getZoneNewsAndAssignments(zone.id))
         );
         const flattenedNews = allNews.flatMap(result => result.news);
         setZoneNews(flattenedNews);
+        setIsLoadingNews(false);
         
         // Si hay una zona seleccionada, actualizar sus datos
         if (selectedZoneId) {
           const selectedZone = zonesData.find(zone => zone.id === selectedZoneId);
           if (selectedZone) {
+            setIsLoadingNews(true);
             const { news, assignments } = await getZoneNewsAndAssignments(selectedZoneId);
             setZoneNews(news);
             setZoneAssignments(assignments);
+            setIsLoadingNews(false);
             
             // Actualizar las propiedades localizadas
             const localizedProps = getLocalizedPropertiesInSelectedZone();
@@ -230,7 +291,23 @@ export default function ZonesPage() {
     };
 
     fetchData();
-  }, [pathname]); // Se ejecuta cuando cambia la ruta
+  }, [pathname, loadProperties]); // Dependencias actualizadas
+
+  // Al cambiar la búsqueda, reiniciar la paginación
+  useEffect(() => {
+    if (searchTerm.trim() !== '') {
+      setCurrentPage(1);
+      loadProperties(1, searchTerm);
+    }
+  }, [searchTerm, loadProperties]);
+
+  // Al seleccionar una zona, cargar todas sus propiedades específicas
+  useEffect(() => {
+    if (selectedZoneId) {
+      setCurrentPage(1);
+      loadProperties(1, '', selectedZoneId, true); // Cargar todas las propiedades de la zona
+    }
+  }, [selectedZoneId, loadProperties]);
 
   const handleZoneCreated = (coordinates: { lat: number; lng: number }[]) => {
     setZoneCoordinates(coordinates);
@@ -247,57 +324,202 @@ export default function ZonesPage() {
           coordinates: zoneCoordinates.length > 0 ? zoneCoordinates : editingZone.coordinates
         });
         setZones(prev => prev.map(zone => zone.id === updatedZone.id ? updatedZone : zone));
+        
+        // Cerrar el formulario y limpiar los estados inmediatamente después de la actualización
+        setShowZoneForm(false);
+        setEditingZone(null);
+        setZoneCoordinates([]);
+        toast.success('Zona actualizada correctamente');
       } else {
         if (!data.name || !data.color || zoneCoordinates.length === 0) {
           alert('Por favor, completa todos los campos requeridos');
           return;
         }
         
-        // Crear la nueva zona
-        const newZone = await createZone({
-          name: data.name,
-          description: data.description || '',
-          color: data.color,
-          coordinates: zoneCoordinates
+        // Cerrar el formulario inmediatamente
+        setShowZoneForm(false);
+        setEditingZone(null);
+        setZoneCoordinates([]);
+        
+        // Mostrar un toast de carga explícito con mayor duración
+        toast.success('Creando zona...', {
+          duration: 3000,
         });
         
-        // Actualizar el estado local con la nueva zona
-        setZones(prev => [...prev, newZone]);
-
-        // Esperar un momento para asegurar que la zona se haya creado correctamente en la base de datos
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Actualizar las propiedades que estén dentro de la nueva zona
-        const propertiesToUpdate = properties.filter(property => 
-          property.latitude && 
-          property.longitude && 
-          isPropertyInZone(property, zoneCoordinates)
-        );
-
-        // Actualizar cada propiedad encontrada
-        for (const property of propertiesToUpdate) {
-          try {
-            // Usar la función assignPropertyToZone en lugar de updateProperty directamente
-            await assignPropertyToZone(property.id, newZone.id);
-          } catch (error) {
-            console.error(`Error actualizando propiedad ${property.id}:`, error);
+        // Crear la zona y gestionar errores específicos
+        try {
+          await createZone({
+            name: data.name,
+            description: data.description || '',
+            color: data.color,
+            coordinates: zoneCoordinates
+          });
+          
+          // Si llegamos aquí, la zona se creó correctamente
+          toast.success('¡Zona creada! Actualizando vista...', {
+            duration: 3000,
+          });
+          
+          // Forzar redirección garantizada con un hash único para evitar caché de cualquier tipo
+          setTimeout(() => {
+            const timestamp = new Date().getTime();
+            const randomStr = Math.random().toString(36).substring(7);
+            window.location.href = `/dashboard/zones?reload=${timestamp}&uid=${randomStr}`;
+          }, 1500);
+        } catch (error) {
+          console.error('Error creating zone:', error);
+          
+          // Verificar si el error es de clave foránea pero la zona se creó de todas formas
+          const errorStr = String(error);
+          if (errorStr.includes('Foreign key constraint violated') || 
+              errorStr.includes('zoneId') || 
+              errorStr.includes('P2003')) {
+            
+            // La zona se creó pero hubo error al asignar propiedades
+            toast.success('¡Zona creada correctamente! Actualizando vista...', {
+              duration: 3000,
+            });
+            
+            // Forzar redirección total con parámetros únicos
+            setTimeout(() => {
+              const timestamp = new Date().getTime();
+              const randomStr = Math.random().toString(36).substring(7);
+              window.location.href = `/dashboard/zones?reload=${timestamp}&uid=${randomStr}`;
+            }, 1500);
+          } else {
+            // Otro tipo de error
+            toast.error('Error al crear la zona. Intentando recargar...');
+            
+            // Intentar recargar de todas formas por si la zona se creó
+            setTimeout(() => {
+              const timestamp = new Date().getTime();
+              const randomStr = Math.random().toString(36).substring(7);
+              window.location.href = `/dashboard/zones?reload=${timestamp}&uid=${randomStr}`;
+            }, 1500);
           }
         }
-
-        // Actualizar el estado local de las propiedades
-        setProperties(prev => prev.map(property => {
-          if (propertiesToUpdate.some(p => p.id === property.id)) {
-            return { ...property, zoneId: newZone.id };
-          }
-          return property;
-        }));
       }
-      setShowZoneForm(false);
-      setEditingZone(null);
-      setZoneCoordinates([]);
     } catch (error) {
-      console.error('Error saving zone:', error);
-      alert('Error al guardar la zona');
+      console.error('Error in form submission:', error);
+      toast.error('Error en el formulario');
+    }
+  };
+
+  // Efectos especiales para detectar la recarga desde una creación de zona
+  useEffect(() => {
+    // Verificar si venimos de una creación/recarga de zona
+    const urlParams = new URLSearchParams(window.location.search);
+    const reloadParam = urlParams.get('reload');
+    
+    if (reloadParam) {
+      // Limpiar la URL para evitar recargas repetidas
+      window.history.replaceState({}, document.title, '/dashboard/zones');
+      
+      // Mostrar notificación de éxito (solo si no hay una ya visible)
+      const toastId = toast.success('¡Zona creada correctamente!');
+      
+      // Forzar una recarga completa de los datos
+      const loadFreshData = async () => {
+        setLoadingZones(true);
+        try {
+          // Obtener las zonas más recientes directamente del servidor
+          const freshZones = await getZones();
+          setZones(freshZones);
+          
+          // Cargar las propiedades - Aumentar significativamente el límite para ver más propiedades
+          const data = await getProperties(1, 1000, '', 'updatedAt', 'desc', null);
+          if (data) {
+            setProperties(data.properties);
+            setVisibleProperties(data.properties);
+            setTotalProperties(data.total);
+            setHasMore(data.properties.length < data.total);
+            setCurrentPage(1);
+          }
+          
+          // Si hay zonas, centrar el mapa en la más reciente (primera de la lista)
+          if (freshZones.length > 0) {
+            const newestZone = freshZones[0];
+            if (newestZone.coordinates && newestZone.coordinates.length > 0) {
+              const lats = newestZone.coordinates.map(coord => coord.lat);
+              const lngs = newestZone.coordinates.map(coord => coord.lng);
+              const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+              const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+              
+              setMapCenter([centerLat, centerLng]);
+              setMapZoom(15);
+              
+              if (mapRef.current) {
+                // Dar tiempo para que el mapa se renderice completamente
+                setTimeout(() => {
+                  mapRef.current.invalidateSize();
+                  mapRef.current.setView([centerLat, centerLng], 15);
+                }, 300);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error cargando datos frescos:', err);
+          toast.error('Error al cargar los datos actualizados');
+        } finally {
+          setLoadingZones(false);
+        }
+      };
+      
+      loadFreshData();
+    }
+  }, [loadProperties]);
+
+  // Función para refrescar todos los datos
+  const refreshData = async () => {
+    setLoading(true);
+    try {
+      // Recargar zonas
+      const freshZones = await getZones();
+      setZones(freshZones);
+      
+      // Recargar propiedades con límite mucho mayor
+      const data = await getProperties(1, 1000, '', 'updatedAt', 'desc', null);
+      if (data) {
+        setProperties(data.properties);
+        setVisibleProperties(data.properties);
+        setTotalProperties(data.total);
+        setHasMore(data.properties.length < data.total);
+        setCurrentPage(1);
+      }
+      
+      // Recargar noticias
+      const allNews = await Promise.all(
+        freshZones.map(zone => getZoneNewsAndAssignments(zone.id))
+      );
+      const flattenedNews = allNews.flatMap(result => result.news);
+      setZoneNews(flattenedNews);
+      
+      // Centrar el mapa en la zona más reciente
+      if (freshZones.length > 0) {
+        const newestZone = freshZones[0]; // La primera zona debería ser la más reciente
+        if (newestZone.coordinates && newestZone.coordinates.length > 0) {
+          const lats = newestZone.coordinates.map(coord => coord.lat);
+          const lngs = newestZone.coordinates.map(coord => coord.lng);
+          const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+          const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+          
+          setMapCenter([centerLat, centerLng]);
+          
+          if (mapRef.current) {
+            setTimeout(() => {
+              mapRef.current.invalidateSize();
+              mapRef.current.setView([centerLat, centerLng], 15);
+            }, 100);
+          }
+        }
+      }
+      
+      toast.success('Datos actualizados correctamente');
+    } catch (error) {
+      console.error('Error refrescando datos:', error);
+      toast.error('Error al actualizar la información');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -349,7 +571,11 @@ export default function ZonesPage() {
 
   const handleZoneClick = (zone: Zone) => {
     setSelectedZoneId(zone.id);
-    setEditingZone(zone);
+    // Eliminar la asignación a editingZone para evitar que se active el modo de edición
+    // setEditingZone(zone); - Comentado para prevenir que el formulario se abra en modo de edición
+    
+    // Cargar todas las propiedades de la zona seleccionada
+    loadProperties(1, '', zone.id, true);
     
     // Cargar las noticias de la zona seleccionada
     setIsLoadingNews(true);
@@ -358,17 +584,19 @@ export default function ZonesPage() {
         setZoneNews(news);
         setZoneAssignments(assignments);
         
-        // Actualizar las propiedades localizadas
-        const localizedProps = getLocalizedPropertiesInSelectedZone();
-        
-        // Asegurarse de que las propiedades localizadas tengan todos los datos necesarios
-        const localizedPropsWithDetails = localizedProps.map(prop => {
-          // Buscar la propiedad completa en el array de propiedades
-          const fullProperty = properties.find(p => p.id === prop.id);
-          return fullProperty || prop;
-        });
-        
-        setZoneLocalizedProperties(localizedPropsWithDetails);
+        // Actualizar las propiedades localizadas una vez cargadas todas las propiedades
+        setTimeout(() => {
+          const localizedProps = getLocalizedPropertiesInSelectedZone();
+          
+          // Asegurarse de que las propiedades localizadas tengan todos los datos necesarios
+          const localizedPropsWithDetails = localizedProps.map(prop => {
+            // Buscar la propiedad completa en el array de propiedades
+            const fullProperty = properties.find(p => p.id === prop.id);
+            return fullProperty || prop;
+          });
+          
+          setZoneLocalizedProperties(localizedPropsWithDetails);
+        }, 500); // Esperar a que las propiedades se carguen
       })
       .catch(error => {
         console.error('Error loading zone news and assignments:', error);
@@ -752,13 +980,20 @@ export default function ZonesPage() {
           </div>
         </div>
         <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
+          {loadingZones && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Cargando zonas...</p>
+              </div>
+            </div>
+          )}
           <ZonesMap
             zones={filteredZones} 
             properties={properties}
             onZoneCreated={handleZoneCreated}
             onPropertyClick={onPropertyClick}
             onZoneClick={handleZoneClick}
-            onEditZone={handleEditZone}
             onDeleteZone={handleDeleteZone}
             selectedPropertyId={selectedPropertyId}
             setSelectedPropertyId={setSelectedPropertyId}
@@ -901,17 +1136,6 @@ export default function ZonesPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEditZone(zone);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
                             handleDeleteZone(zone);
                           }}
                           className="text-red-600 hover:text-red-800 transition-colors duration-200"
@@ -928,80 +1152,118 @@ export default function ZonesPage() {
             )}
           </div>
 
-          {/* Propiedades en formato de tarjetas */}
+          {/* Propiedades en formato de tarjetas con paginación */}
           <div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
-              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
-                {selectedZoneId ? getPropertiesInSelectedZone().length : filteredProperties.length}
-              </span>
-              {selectedZoneId 
-                ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
-                : 'Todas las Propiedades'}
-              {selectedZoneId && (
-                <button
-                  onClick={() => setSelectedZoneId(null)}
-                  className="ml-auto text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Ver todas
-                </button>
-              )}
-            </h2>
-            {selectedZoneId && getPropertiesInSelectedZone().length === 0 ? (
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold flex items-center">
+                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
+                  {selectedZoneId ? getPropertiesInSelectedZone().length : properties.length}
+                </span>
+                {selectedZoneId 
+                  ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
+                  : 'Propiedades'}
+                {selectedZoneId && (
+                  <button
+                    onClick={() => {
+                      setSelectedZoneId(null);
+                      loadProperties(1);
+                    }}
+                    className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Ver todas
+                  </button>
+                )}
+              </h2>
+              <div className="text-sm text-gray-500">
+                Mostrando {properties.length} de {totalProperties} propiedades
+              </div>
+            </div>
+            
+            {isLoadingProperties ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <span className="ml-2 text-gray-600">Cargando propiedades...</span>
+              </div>
+            ) : selectedZoneId && getPropertiesInSelectedZone().length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No hay propiedades dentro de esta zona.
               </div>
-            ) : filteredProperties.length === 0 ? (
+            ) : properties.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 {searchTerm ? 'No se encontraron propiedades que coincidan con la búsqueda.' : 'No hay propiedades asignadas a zonas.'}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {(selectedZoneId ? getPropertiesInSelectedZone() : filteredProperties).map((property) => (
-                  <div 
-                    key={property.id} 
-                    className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
-                  >
-                    <div className="p-4">
-                      <h3 className="font-medium text-lg line-clamp-1">{property.address}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{property.population}</p>
-                      
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {property.status && (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
-                            property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {property.status === 'SALE' ? 'Venta' : 
-                             property.status === 'RENT' ? 'Alquiler' : 
-                             'No especificado'}
-                          </span>
-                        )}
-                        {(property.isLocated === true || property.isLocated === "true") && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                            Localizado
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="mt-3 flex justify-between items-center">
-                        <button
-                          onClick={() => onPropertyClick(property)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
-                        >
-                          Ver en mapa
-                        </button>
-                        <button
-                          onClick={() => navigateToProperty(property.id)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
-                        >
-                          Ver detalles
-                        </button>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {(selectedZoneId ? getPropertiesInSelectedZone() : properties).map((property) => (
+                    <div 
+                      key={property.id} 
+                      className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
+                    >
+                      <div className="p-4">
+                        <h3 className="font-medium text-lg line-clamp-1">{property.address}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{property.population}</p>
+                        
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {property.status && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
+                              property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {property.status === 'SALE' ? 'Venta' : 
+                               property.status === 'RENT' ? 'Alquiler' : 
+                               'No especificado'}
+                            </span>
+                          )}
+                          {(property.isLocated === true || property.isLocated === "true") && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                              Localizado
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="mt-3 flex justify-between items-center">
+                          <button
+                            onClick={() => onPropertyClick(property)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
+                          >
+                            Ver en mapa
+                          </button>
+                          <button
+                            onClick={() => navigateToProperty(property.id)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
+                          >
+                            Ver detalles
+                          </button>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+                
+                {hasMore && (
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={loadMoreProperties}
+                      disabled={isLoadingMore}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Cargando...
+                        </>
+                      ) : (
+                        'Cargar más propiedades'
+                      )}
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1070,6 +1332,7 @@ export default function ZonesPage() {
             {isLoadingNews ? (
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <span className="ml-2 text-gray-600">Cargando información de la zona...</span>
               </div>
             ) : (
               <div className="space-y-6">
