@@ -38,8 +38,9 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     targetCount: 5,
     category: 'GENERAL',
   });
+  const [userActivityCounts, setUserActivityCounts] = useState<{[key: string]: number}>({});
 
-  // Cargar usuarios al montar el componente
+  // Cargar usuarios y contar actividades por usuario
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -62,13 +63,23 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
         }
         
         setUsers(data);
+
+        // Contar actividades por usuario después de cargar usuarios
+        const counts: {[key: string]: number} = {};
+        activities.forEach(activity => {
+          if (!counts[activity.userId]) {
+            counts[activity.userId] = 0;
+          }
+          counts[activity.userId]++;
+        });
+        setUserActivityCounts(counts);
       } catch (error) {
         console.error('Error al cargar usuarios:', error);
       }
     };
 
     fetchUsers();
-  }, []);
+  }, [activities]);
 
   // Cargar actividades del usuario seleccionado
   useEffect(() => {
@@ -585,6 +596,28 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
                   </option>
                 ))}
               </select>
+
+              {/* Lista de usuarios con contador de actividades */}
+              <div className="mt-4 space-y-3">
+                <h3 className="font-medium">Contadores de Actividades</h3>
+                {users.map((user) => (
+                  <div key={user.id} className="flex justify-between items-center p-3 border rounded-lg bg-white">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                        {user.name?.charAt(0) || 'U'}
+                      </div>
+                      <span>{user.name}</span>
+                    </div>
+                    <div 
+                      className="bg-blue-100 px-3 py-1 rounded-full text-blue-800 font-medium cursor-pointer hover:bg-blue-200 transition-colors"
+                      onClick={() => setSelectedUser(user.id)}
+                      title="Ver actividades de este usuario"
+                    >
+                      {userActivityCounts[user.id] || 0} actividades
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="space-y-4">
               {selectedUser && userActivities.map((activity) => (

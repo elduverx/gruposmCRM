@@ -10,7 +10,8 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   PlusIcon,
-  TrophyIcon
+  TrophyIcon,
+  CheckIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -21,8 +22,10 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
-import { createUserActivity, getUserGoals } from './metas/actions';
-import { UserGoal } from '@/types/user';
+import { createUserActivity, getUserGoals, getUserActivities } from './metas/actions';
+import { UserGoal, UserActivity } from '@/types/user';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface InicioStats {
   properties: number;
@@ -69,13 +72,13 @@ export default function InicioPage() {
   });
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [date, setDate] = useState<Date>(new Date());
   
   // Estados para el formulario de nueva actividad
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
-  const [isActivityLoading, setIsActivityLoading] = useState(false);
-  const [goals, setGoals] = useState<UserGoal[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [activityFormData, setActivityFormData] = useState({
     description: '',
     type: 'MANUAL',
@@ -124,26 +127,19 @@ export default function InicioPage() {
           newStats.users = users.count;
         }
 
-        // Simular datos de actividades pendientes (en un sistema real, esto vendría de una API)
-        const mockActivities: Activity[] = [
-          { id: '1', title: 'Reunión con cliente', date: '2023-06-15', completed: false },
-          { id: '2', title: 'Visita a propiedad', date: '2023-06-18', completed: false },
-          { id: '3', title: 'Llamada de seguimiento', date: '2023-06-20', completed: false },
-          { id: '4', title: 'Envío de documentación', date: '2023-06-22', completed: false },
-          { id: '5', title: 'Actualización de base de datos', date: '2023-06-25', completed: false }
-        ];
-        setActivities(mockActivities);
-        newStats.pendingActivities = mockActivities.filter(a => !a.completed).length;
+        // Obtener las metas y actividades reales del usuario
+        const goals = await getUserGoals();
+        const recentActivities = await getUserActivities(10);
+        setUserGoals(goals);
+        setUserActivities(recentActivities);
 
-        // Simular datos de objetivos (en un sistema real, esto vendría de una API)
-        const mockObjectives: Objective[] = [
-          { id: '1', title: 'Inmuebles visitados', target: 20, current: 15, unit: 'inmuebles' },
-          { id: '2', title: 'Clientes nuevos', target: 10, current: 7, unit: 'clientes' },
-          { id: '3', title: 'Encargos completados', target: 30, current: 22, unit: 'encargos' }
-        ];
-        setObjectives(mockObjectives);
-        newStats.completedObjectives = mockObjectives.filter(o => o.current >= o.target).length;
-        newStats.totalObjectives = mockObjectives.length;
+        // Actualizar estadísticas de objetivos
+        const completedGoals = goals.filter(g => g.isCompleted).length;
+        newStats.completedObjectives = completedGoals;
+        newStats.totalObjectives = goals.length;
+
+        // Actualizar estadísticas de actividades pendientes
+        newStats.pendingActivities = recentActivities.length;
 
         setStats(newStats);
       } catch (error) {
@@ -157,26 +153,10 @@ export default function InicioPage() {
     fetchData();
   }, [user, authLoading, router]);
 
-  // Cargar metas cuando se abre el formulario de actividad
-  useEffect(() => {
-    const loadGoals = async () => {
-      try {
-        const userGoals = await getUserGoals();
-        setGoals(userGoals);
-      } catch (error) {
-        console.error('Error al cargar metas:', error);
-      }
-    };
-
-    if (isActivityFormOpen) {
-      loadGoals();
-    }
-  }, [isActivityFormOpen]);
-
   // Manejar el envío del formulario de actividad
   const handleActivitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsActivityLoading(true);
+    setIsLoading(true);
 
     try {
       await createUserActivity({
@@ -199,11 +179,73 @@ export default function InicioPage() {
     } catch (error) {
       console.error('Error al crear actividad:', error);
     } finally {
-      setIsActivityLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const goalOptions = goals.map(goal => ({
+  // Manejar la adición de actividad a una meta
+  const handleAddActivityToGoal = async (goalId: string) => {
+    if (!goalId) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const goalTitle = userGoals.find(g => g.id === goalId)?.title || 'Meta';
+      
+      const newActivity = await createUserActivity({
+        goalId,
+        type: 'MANUAL',
+        description: `Actividad manual para: ${goalTitle}`,
+      });
+      
+      // Actualizar la lista de actividades
+      setUserActivities([newActivity, ...userActivities]);
+      
+      // Actualizar el progreso de la meta
+      setUserGoals(userGoals.map(goal => {
+        if (goal.id === goalId) {
+          const newCount = goal.currentCount + 1;
+          const isCompleted = newCount >= goal.targetCount;
+          return {
+            ...goal,
+            currentCount: newCount,
+            isCompleted,
+            progress: Math.min(Math.floor((newCount / goal.targetCount) * 100), 100),
+          };
+        }
+        return goal;
+      }));
+
+      // Actualizar estadísticas
+      const updatedGoals = userGoals.map(goal => {
+        if (goal.id === goalId) {
+          const newCount = goal.currentCount + 1;
+          const isCompleted = newCount >= goal.targetCount;
+          return {
+            ...goal,
+            currentCount: newCount,
+            isCompleted,
+          };
+        }
+        return goal;
+      });
+      
+      const completedGoals = updatedGoals.filter(g => g.isCompleted).length;
+      setStats({
+        ...stats,
+        completedObjectives: completedGoals,
+      });
+      
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error al registrar actividad:', error);
+      alert('Error al registrar la actividad. Por favor intenta de nuevo.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const goalOptions = userGoals.map(goal => ({
     value: goal.id,
     label: goal.title
   }));
@@ -314,10 +356,10 @@ export default function InicioPage() {
             </button>
             <button
               type="submit"
-              disabled={isActivityLoading}
+              disabled={isLoading}
               className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              {isActivityLoading ? (
+              {isLoading ? (
                 <Spinner size="sm" color="white" />
               ) : (
                 'Crear Actividad'
@@ -383,7 +425,7 @@ export default function InicioPage() {
           </div>
         </div>
 
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/progreso')}>
+        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/metas')}>
           <div className="flex items-center">
             <div className="p-3 rounded-lg bg-warning-50">
               <ClipboardDocumentListIcon className="h-6 w-6 text-warning-600" />
@@ -394,7 +436,7 @@ export default function InicioPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-gray-500">Actividades por completar</span>
+            <span className="text-gray-500">Actividades registradas</span>
           </div>
         </div>
       </div>
@@ -430,9 +472,9 @@ export default function InicioPage() {
                 value={date}
                 className="w-full border-0 custom-calendar"
                 tileClassName={({ date: tileDate }) => {
-                  // Añadir clase para días con eventos (simulado)
-                  const hasEvent = activities.some(activity => {
-                    const activityDate = new Date(activity.date);
+                  // Añadir clase para días con eventos usando actividades reales
+                  const hasEvent = userActivities.some(activity => {
+                    const activityDate = new Date(activity.timestamp);
                     return (
                       tileDate.getDate() === activityDate.getDate() &&
                       tileDate.getMonth() === activityDate.getMonth() &&
@@ -443,9 +485,9 @@ export default function InicioPage() {
                   return hasEvent ? 'event-day' : '';
                 }}
                 tileContent={({ date: tileDate }) => {
-                  // Mostrar indicador de eventos (simulado)
-                  const dayEvents = activities.filter(activity => {
-                    const activityDate = new Date(activity.date);
+                  // Mostrar indicador de eventos usando actividades reales
+                  const dayEvents = userActivities.filter(activity => {
+                    const activityDate = new Date(activity.timestamp);
                     return (
                       tileDate.getDate() === activityDate.getDate() &&
                       tileDate.getMonth() === activityDate.getMonth() &&
@@ -466,37 +508,60 @@ export default function InicioPage() {
           {/* Actividades Pendientes */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Actividades Pendientes</h3>
-              <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+              <h3 className="text-lg font-semibold text-gray-900">Actividades Recientes</h3>
+              <button 
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                onClick={() => router.push('/dashboard/metas')}
+              >
                 Ver todas
               </button>
             </div>
             <div className="space-y-4">
-              {activities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <div className="flex items-center">
-                    <div className={`h-2 w-2 rounded-full ${
-                      activity.completed ? 'bg-success-500' : 'bg-warning-500'
-                    }`} />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                      <p className="text-sm text-gray-500">{activity.date}</p>
-                    </div>
-                  </div>
+              {userActivities.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No hay actividades recientes</p>
                   <button
-                    className={`px-3 py-1 text-sm font-medium rounded-full ${
-                      activity.completed
-                        ? 'bg-success-100 text-success-700'
-                        : 'bg-warning-100 text-warning-700'
-                    }`}
+                    onClick={() => setIsActivityFormOpen(true)}
+                    className="mt-3 text-primary-600 font-medium hover:text-primary-700"
                   >
-                    {activity.completed ? 'Completada' : 'Pendiente'}
+                    Registrar una actividad
                   </button>
                 </div>
-              ))}
+              ) : (
+                userActivities.slice(0, 5).map((activity) => {
+                  const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title || 'Meta desconocida';
+                  const isCompleted = Boolean(userGoals.find(g => g.id === activity.goalId)?.isCompleted);
+                  
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <div className="flex items-center">
+                        <div className={`h-2 w-2 rounded-full ${
+                          isCompleted ? 'bg-success-500' : 'bg-primary-500'
+                        }`} />
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                          <p className="text-sm text-gray-500">
+                            Meta: {goalTitle} · {format(new Date(activity.timestamp), 'dd/MM/yyyy', { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className={`px-3 py-1 text-sm font-medium rounded-full ${
+                          isCompleted
+                            ? 'bg-success-100 text-success-700'
+                            : 'bg-primary-100 text-primary-700'
+                        }`}
+                      >
+                        {activity.type}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -507,7 +572,7 @@ export default function InicioPage() {
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Objetivos</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Progreso de tus objetivos del mes
+                Progreso de tus metas personales
               </p>
             </div>
             <div className="flex items-center text-sm">
@@ -517,24 +582,66 @@ export default function InicioPage() {
               </span>
             </div>
           </div>
-          <div className="space-y-4">
-            {objectives.map((objective) => (
-              <div key={objective.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">{objective.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {objective.current} / {objective.target} {objective.unit}
-                  </p>
+          
+          {userGoals.length === 0 ? (
+            <div className="text-center py-6 bg-gray-50 rounded-lg">
+              <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">Aún no tienes metas creadas</p>
+              <button
+                onClick={() => router.push('/dashboard/metas')}
+                className="mt-3 text-primary-600 font-medium hover:text-primary-700"
+              >
+                Crear una meta
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {userGoals.slice(0, 5).map((goal) => (
+                <div key={goal.id} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{goal.title}</p>
+                      <p className="text-xs text-gray-500">{goal.description}</p>
+                    </div>
+                    {goal.isCompleted ? (
+                      <div className="bg-green-100 px-2 py-1 rounded-full text-green-800 text-xs font-medium flex items-center">
+                        <CheckIcon className="h-3 w-3 mr-1" />
+                        Completada
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleAddActivityToGoal(goal.id)}
+                        disabled={isLoading}
+                        className="p-1 text-gray-400 hover:text-gray-600"
+                        title="Registrar actividad"
+                      >
+                        <PlusIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span>{goal.currentCount} de {goal.targetCount}</span>
+                    <span>{goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${goal.isCompleted ? 'bg-green-500' : 'bg-primary-600'} rounded-full transition-all duration-500`}
+                      style={{ width: `${goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary-600 rounded-full transition-all duration-500"
-                    style={{ width: `${(objective.current / objective.target) * 100}%` }}
-                  />
-                </div>
+              ))}
+              
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => router.push('/dashboard/metas')}
+                  className="text-sm text-primary-600 font-medium hover:text-primary-700 flex items-center"
+                >
+                  Ver todas mis metas
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
