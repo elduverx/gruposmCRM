@@ -16,6 +16,7 @@ interface PropertyInput {
   occupiedBy?: string;
   latitude?: number;
   longitude?: number;
+  isSold?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
         occupiedBy: data.occupiedBy ?? null,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
+        isSold: data.isSold ?? false,
       },
     });
 

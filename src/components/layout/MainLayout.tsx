@@ -16,7 +16,8 @@ import {
   NewspaperIcon,
   Bars3Icon,
   XMarkIcon,
-  TrophyIcon
+  TrophyIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 // Navegación común para todos los usuarios
@@ -27,6 +28,7 @@ const commonNavigation = [
   { name: 'Encargos', href: '/dashboard/assignments', icon: ClipboardDocumentListIcon },
   { name: 'Noticias', href: '/noticia', icon: NewspaperIcon },
   { name: 'Pedidos', href: '/dashboard/orders', icon: ClipboardDocumentListIcon },
+  { name: 'Finalizar Ventas', href: '/dashboard/sales', icon: CheckCircleIcon },
 ];
 
 // Navegación adicional solo para administradores

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews } from '../actions';
-import { PlusIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/solid';
+import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews, deleteAssignment } from '../actions';
+import { PlusIcon, CheckIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
@@ -45,6 +45,8 @@ export default function PropertyDetailClient({
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [zones, setZones] = useState<Zone[]>([]);
+  const [currentAssignment, setCurrentAssignment] = useState<Assignment | null>(null);
+  const [isEditingAssignment, setIsEditingAssignment] = useState(false);
 
   // Cargar noticias al abrir la página
   useEffect(() => {
@@ -156,22 +158,34 @@ export default function PropertyDetailClient({
   };
 
   const handleEditAssignment = (assignment: Assignment) => {
-    // eslint-disable-next-line no-console
-    console.log('Editar asignación:', assignment);
-    // Implementar la lógica de edición
+    setCurrentAssignment(assignment);
+    setIsEditingAssignment(true);
+    setIsAssignmentFormOpen(true);
   };
 
   const handleDeleteAssignment = async (assignmentId: string) => {
+    if (!confirm('¿Está seguro de eliminar este encargo? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    
     try {
-      // Implementar la lógica de eliminación
-      // eslint-disable-next-line no-console
-      console.log('Eliminar asignación:', assignmentId);
-      // Recargar la página para mostrar los cambios
-      window.location.reload();
+      setIsUpdating(true);
+      const success = await deleteAssignment(assignmentId);
+      
+      if (success) {
+        toast.success('Encargo eliminado correctamente');
+        // Actualizar la lista de asignaciones
+        const updatedAssignments = assignments.filter(a => a.id !== assignmentId);
+        setAssignments(updatedAssignments);
+      } else {
+        toast.error('No se pudo eliminar el encargo');
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error deleting assignment:', error);
       toast.error('Error al eliminar la asignación');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -566,13 +580,13 @@ export default function PropertyDetailClient({
                             onClick={() => handleEditAssignment(assignment)}
                             className="text-indigo-600 hover:text-indigo-900"
                           >
-                            <PlusIcon className="h-5 w-5" />
+                            <PencilIcon className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => handleDeleteAssignment(assignment.id)}
                             className="text-red-600 hover:text-red-900"
                           >
-                            <PlusIcon className="h-5 w-5" />
+                            <TrashIcon className="h-5 w-5" />
                           </button>
                         </div>
                       </div>
@@ -691,7 +705,11 @@ export default function PropertyDetailClient({
       {/* Modal de Encargos */}
       <Dialog
         open={isAssignmentFormOpen}
-        onClose={() => setIsAssignmentFormOpen(false)}
+        onClose={() => {
+          setIsAssignmentFormOpen(false);
+          setIsEditingAssignment(false);
+          setCurrentAssignment(null);
+        }}
         className="relative z-50"
       >
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
@@ -699,9 +717,15 @@ export default function PropertyDetailClient({
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
             <div className="flex justify-between items-center p-6 border-b">
-              <Dialog.Title className="text-lg font-medium">Nuevo Encargo</Dialog.Title>
+              <Dialog.Title className="text-lg font-medium">
+                {isEditingAssignment ? 'Editar Encargo' : 'Nuevo Encargo'}
+              </Dialog.Title>
               <button
-                onClick={() => setIsAssignmentFormOpen(false)}
+                onClick={() => {
+                  setIsAssignmentFormOpen(false);
+                  setIsEditingAssignment(false);
+                  setCurrentAssignment(null);
+                }}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <PlusIcon className="h-6 w-6" />
@@ -711,8 +735,11 @@ export default function PropertyDetailClient({
             <div className="p-6">
               <AssignmentForm 
                 propertyId={propertyId}
+                initialData={isEditingAssignment ? currentAssignment : undefined}
                 onSuccess={(): void => {
                   setIsAssignmentFormOpen(false);
+                  setIsEditingAssignment(false);
+                  setCurrentAssignment(null);
                   getAssignmentsByPropertyId(propertyId).then(assignmentsData => {
                     setAssignments(assignmentsData);
                   });

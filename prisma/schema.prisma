@@ -58,6 +58,7 @@ model Property {
   zone            Zone?          @relation(fields: [zoneId], references: [id])
   propertyNews    PropertyNews[]
   clients         Client[]       @relation("ClientProperties")
+  isSold          Boolean        @default(false)
 
   @@index([clientId], map: "Property_clientId_fkey")
   @@index([zoneId], map: "Property_zoneId_fkey")

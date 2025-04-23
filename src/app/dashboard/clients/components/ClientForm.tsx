@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Property } from '@/types/property';
 import { getProperties } from '@/app/dashboard/properties/actions';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface ClientFormProps {
   initialData?: {
@@ -34,14 +35,17 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   const [hasRequest, setHasRequest] = useState(initialData?.hasRequest || false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
 
   useEffect(() => {
     const fetchProperties = async () => {
       setIsLoading(true);
       try {
-        const propertiesData = await getProperties();
+        const propertiesData = await getProperties(1, 10000, '');
         if (propertiesData) {
           setProperties(propertiesData.properties);
+          setFilteredProperties(propertiesData.properties);
         }
       } catch (error) {
         // eslint-disable-next-line no-console
@@ -53,6 +57,21 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
 
     fetchProperties();
   }, []);
+
+  // Filtrar propiedades cuando cambie el término de búsqueda
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredProperties(properties);
+    } else {
+      const term = searchTerm.toLowerCase().trim();
+      const filtered = properties.filter(property => {
+        const addressMatch = property.address?.toLowerCase().includes(term) || false;
+        const populationMatch = property.population?.toLowerCase().includes(term) || false;
+        return addressMatch || populationMatch;
+      });
+      setFilteredProperties(filtered);
+    }
+  }, [searchTerm, properties]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,21 +158,44 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
         {isLoading ? (
           <p className="text-sm text-gray-500">Cargando inmuebles...</p>
         ) : properties.length > 0 ? (
-          <div className="max-h-60 overflow-y-auto border rounded-md p-2">
-            {properties.map((property) => (
-              <div key={property.id} className="flex items-center py-1">
-                <input
-                  type="checkbox"
-                  id={`property-${property.id}`}
-                  checked={relatedProperties.includes(property.id)}
-                  onChange={() => handlePropertyToggle(property.id)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor={`property-${property.id}`} className="ml-2 block text-sm text-gray-700">
-                  {property.address} - {property.population}
-                </label>
+          <div className="space-y-2">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
               </div>
-            ))}
+              <input
+                type="text"
+                placeholder="Buscar por dirección o población..."
+                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+              {filteredProperties.length > 0 ? (
+                filteredProperties.map((property) => (
+                  <div key={property.id} className="flex items-center py-1 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      id={`property-${property.id}`}
+                      checked={relatedProperties.includes(property.id)}
+                      onChange={() => handlePropertyToggle(property.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor={`property-${property.id}`} className="ml-2 block text-sm text-gray-700">
+                      {property.address} {property.population && `- ${property.population}`}
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 py-2 text-center">No se encontraron inmuebles con ese término</p>
+              )}
+            </div>
+            {filteredProperties.length > 0 && (
+              <p className="text-xs text-gray-500 text-right">
+                Mostrando {filteredProperties.length} de 12105 inmuebles
+              </p>
+            )}
           </div>
         ) : (
           <p className="text-sm text-gray-500">No hay inmuebles disponibles</p>

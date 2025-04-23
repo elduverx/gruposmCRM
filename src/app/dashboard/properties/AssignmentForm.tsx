@@ -24,13 +24,50 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     clientId: initialData?.clientId || '',
     sellerFeeType: initialData?.sellerFeeType || 'PERCENTAGE',
     sellerFeeValue: initialData?.sellerFeeValue || 0,
+    sellerFeePercentage: 3, // Valor por defecto para el porcentaje
+    sellerFeeFixed: 3000, // Valor por defecto para el monto fijo
     buyerFeeType: initialData?.buyerFeeType || 'PERCENTAGE',
     buyerFeeValue: initialData?.buyerFeeValue || 0,
+    buyerFeePercentage: 3, // Valor por defecto para el porcentaje
+    buyerFeeFixed: 3000, // Valor por defecto para el monto fijo
   });
 
   // Estados para los toggles
   const [sellerFeeIsPercentage, setSellerFeeIsPercentage] = useState(formData.sellerFeeType === 'PERCENTAGE');
   const [buyerFeeIsPercentage, setBuyerFeeIsPercentage] = useState(formData.buyerFeeType === 'PERCENTAGE');
+
+  useEffect(() => {
+    // Inicializar los valores personalizados si hay datos iniciales
+    if (initialData) {
+      if (initialData.sellerFeeType === 'PERCENTAGE') {
+        // Calcular el porcentaje a partir del valor
+        const percentageValue = (initialData.sellerFeeValue / initialData.price) * 100;
+        setFormData(prev => ({
+          ...prev,
+          sellerFeePercentage: parseFloat(percentageValue.toFixed(2))
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          sellerFeeFixed: initialData.sellerFeeValue
+        }));
+      }
+
+      if (initialData.buyerFeeType === 'PERCENTAGE') {
+        // Calcular el porcentaje a partir del valor
+        const percentageValue = (initialData.buyerFeeValue / initialData.price) * 100;
+        setFormData(prev => ({
+          ...prev,
+          buyerFeePercentage: parseFloat(percentageValue.toFixed(2))
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          buyerFeeFixed: initialData.buyerFeeValue
+        }));
+      }
+    }
+  }, [initialData]);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -49,41 +86,41 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
   // Efecto para actualizar los valores de comisión cuando cambia el precio o el tipo de comisión
   useEffect(() => {
     if (sellerFeeIsPercentage) {
-      // Si es porcentaje, calcular el 3% del precio
-      const percentageValue = formData.price * 0.03;
+      // Calcular el valor basado en el porcentaje personalizado
+      const percentageValue = formData.price * (formData.sellerFeePercentage / 100);
       setFormData(prev => ({
         ...prev,
         sellerFeeType: 'PERCENTAGE',
         sellerFeeValue: percentageValue
       }));
     } else {
-      // Si es fijo, establecer 3000€
+      // Usar el valor fijo personalizado
       setFormData(prev => ({
         ...prev,
         sellerFeeType: 'FIXED',
-        sellerFeeValue: 3000
+        sellerFeeValue: prev.sellerFeeFixed
       }));
     }
-  }, [formData.price, sellerFeeIsPercentage]);
+  }, [formData.price, formData.sellerFeePercentage, formData.sellerFeeFixed, sellerFeeIsPercentage]);
 
   useEffect(() => {
     if (buyerFeeIsPercentage) {
-      // Si es porcentaje, calcular el 3% del precio
-      const percentageValue = formData.price * 0.03;
+      // Calcular el valor basado en el porcentaje personalizado
+      const percentageValue = formData.price * (formData.buyerFeePercentage / 100);
       setFormData(prev => ({
         ...prev,
         buyerFeeType: 'PERCENTAGE',
         buyerFeeValue: percentageValue
       }));
     } else {
-      // Si es fijo, establecer 3000€
+      // Usar el valor fijo personalizado
       setFormData(prev => ({
         ...prev,
         buyerFeeType: 'FIXED',
-        buyerFeeValue: 3000
+        buyerFeeValue: prev.buyerFeeFixed
       }));
     }
-  }, [formData.price, buyerFeeIsPercentage]);
+  }, [formData.price, formData.buyerFeePercentage, formData.buyerFeeFixed, buyerFeeIsPercentage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,22 +137,26 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         return;
       }
 
-      const data = {
-        ...formData,
+      const dataToSubmit = {
+        type: formData.type,
         price: parseFloat(formData.price.toString()),
         exclusiveUntil: new Date(formData.exclusiveUntil),
+        origin: formData.origin,
+        clientId: formData.clientId,
+        sellerFeeType: formData.sellerFeeType,
         sellerFeeValue: parseFloat(formData.sellerFeeValue.toString()),
+        buyerFeeType: formData.buyerFeeType,
         buyerFeeValue: parseFloat(formData.buyerFeeValue.toString()),
         propertyId,
       };
 
       if (initialData) {
-        const success = await updateAssignment(initialData.id, data);
+        const success = await updateAssignment(initialData.id, dataToSubmit);
         if (success) {
           onSuccess?.();
         }
       } else {
-        const success = await createAssignment(data);
+        const success = await createAssignment(dataToSubmit);
         if (success) {
           onSuccess?.();
         }
@@ -226,7 +267,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Porcentaje (3%)
+              Porcentaje
             </button>
             <button
               type="button"
@@ -237,14 +278,40 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Fijo (3.000€)
+              Fijo
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            {sellerFeeIsPercentage 
-              ? `Valor calculado: ${formatNumber(formData.price * 0.03)}€` 
-              : 'Valor fijo: 3.000€'}
-          </p>
+
+          {sellerFeeIsPercentage ? (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
+              <input
+                type="number"
+                name="sellerFeePercentage"
+                value={formData.sellerFeePercentage}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                min="0"
+                step="0.01"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Valor calculado: {formatNumber(formData.sellerFeeValue)}€
+              </p>
+            </div>
+          ) : (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
+              <input
+                type="number"
+                name="sellerFeeFixed"
+                value={formData.sellerFeeFixed}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          )}
         </div>
 
         <div>
@@ -259,7 +326,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Porcentaje (3%)
+              Porcentaje
             </button>
             <button
               type="button"
@@ -270,14 +337,40 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Fijo (3.000€)
+              Fijo
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            {buyerFeeIsPercentage 
-              ? `Valor calculado: ${formatNumber(formData.price * 0.03)}€` 
-              : 'Valor fijo: 3.000€'}
-          </p>
+
+          {buyerFeeIsPercentage ? (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
+              <input
+                type="number"
+                name="buyerFeePercentage"
+                value={formData.buyerFeePercentage}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                min="0"
+                step="0.01"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Valor calculado: {formatNumber(formData.buyerFeeValue)}€
+              </p>
+            </div>
+          ) : (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
+              <input
+                type="number"
+                name="buyerFeeFixed"
+                value={formData.buyerFeeFixed}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          )}
         </div>
       </div>
 

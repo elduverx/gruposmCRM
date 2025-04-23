@@ -64,11 +64,13 @@ export interface Assignment {
     name: string;
     email: string;
     phone: string | null;
+    hasRequest?: boolean;
   };
   property?: {
     id: string;
     address: string;
     population: string;
+    status?: string;
   };
 }
 
