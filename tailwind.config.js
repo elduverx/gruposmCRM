@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        audiowide: ['var(--font-audiowide)', 'sans-serif'],
       },
       colors: {
         primary: {

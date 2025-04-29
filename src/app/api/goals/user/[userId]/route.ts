@@ -34,7 +34,8 @@ export async function GET(
 
     return NextResponse.json(goals);
   } catch (error) {
-    console.error('Error al obtener metas:', error);
+    // En un entorno de producción, podríamos usar un servicio de logging
+    // o enviar el error a un servicio de monitoreo
     return new NextResponse('Error interno del servidor', { status: 500 });
   }
 } 

@@ -2,27 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
-import { Role } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { Role, User } from '@prisma/client';
 
+// Definir el tipo para la solicitud de inicio de sesión
 interface LoginRequest {
   email: string;
   password: string;
 }
 
-interface User {
-  id: string;
-  name?: string;
-  email: string;
-  password: string;
-  role: string | Role;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json() as LoginRequest;
+    const { email, password } = body;
 
     const user = await prisma.user.findUnique({
       where: { email }
@@ -58,14 +49,14 @@ export async function POST(request: Request) {
       user: userWithoutPassword
     });
 
-    // Establecer la cookie
+    // Establecer la cookie con el token
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 // 1 día
     });
-    
+
     return response;
   } catch (error) {
     return NextResponse.json(

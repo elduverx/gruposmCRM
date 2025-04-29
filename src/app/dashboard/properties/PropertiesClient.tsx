@@ -359,7 +359,7 @@ export default function PropertiesClient() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6">Propiedades</h1>
+      <h1 className="text-2xl font-semibold mb-6 font-audiowide">Propiedades</h1>
       
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">

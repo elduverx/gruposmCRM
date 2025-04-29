@@ -14,16 +14,31 @@ import {
 } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import { Spinner } from '@/components/ui/Spinner';
-import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 type TabType = 'pending' | 'completed';
 
+// Definir una interfaz para las propiedades vendidas
+interface SoldProperty {
+  id: string;
+  address: string;
+  population: string;
+  updatedAt: string;
+  assignments: Array<{
+    client?: {
+      id: string;
+      name: string;
+      email: string;
+      phone?: string;
+    };
+  }>;
+}
+
 export default function SalesClient() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
-  const [soldProperties, setSoldProperties] = useState<any[]>([]);
+  const [soldProperties, setSoldProperties] = useState<SoldProperty[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [processingAssignment, setProcessingAssignment] = useState<string | null>(null);
@@ -31,7 +46,7 @@ export default function SalesClient() {
   const [confirmSaleDialogOpen, setConfirmSaleDialogOpen] = useState(false);
   const [confirmRevertDialogOpen, setConfirmRevertDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<SoldProperty | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -59,7 +74,7 @@ export default function SalesClient() {
       setAssignments(filtered);
       setFilteredAssignments(filtered);
     } catch (error) {
-      console.error('Error fetching assignments:', error);
+      toast.error('Error al cargar las asignaciones');
     } finally {
       setLoading(false);
     }
@@ -71,7 +86,7 @@ export default function SalesClient() {
       const sold = await getSoldProperties();
       setSoldProperties(sold || []);
     } catch (error) {
-      console.error('Error fetching sold properties:', error);
+      toast.error('Error al cargar las propiedades vendidas');
     } finally {
       setLoading(false);
     }
@@ -104,7 +119,7 @@ export default function SalesClient() {
     setConfirmSaleDialogOpen(true);
   };
 
-  const handleConfirmRevert = (property: any) => {
+  const handleConfirmRevert = (property: SoldProperty) => {
     setSelectedProperty(property);
     setConfirmRevertDialogOpen(true);
   };
@@ -154,8 +169,7 @@ export default function SalesClient() {
       }
       
     } catch (error) {
-      console.error('Error processing sale:', error);
-      alert('Ha ocurrido un error al procesar la venta. Por favor, inténtelo de nuevo.');
+      toast.error('Error al procesar la venta. Por favor, inténtelo de nuevo.');
     } finally {
       setIsSaving(false);
       setProcessingAssignment(null);
@@ -198,8 +212,7 @@ export default function SalesClient() {
       }
       
     } catch (error) {
-      console.error('Error reverting sale:', error);
-      alert('Ha ocurrido un error al revertir la venta. Por favor, inténtelo de nuevo.');
+      toast.error('Error al revertir la venta. Por favor, inténtelo de nuevo.');
     } finally {
       setIsSaving(false);
       setProcessingPropertyRevert(null);

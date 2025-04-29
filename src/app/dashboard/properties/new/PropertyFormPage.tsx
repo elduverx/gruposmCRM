@@ -227,7 +227,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     if (propertyId) {
       setIsEditing(true);
     }
-  }, []);
+  }, [propertyId]);
 
   // Cargar datos de la propiedad si estamos editando
   useEffect(() => {

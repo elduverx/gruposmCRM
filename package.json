@@ -14,6 +14,7 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.9.0",
     "@headlessui/react": "^2.2.1",
     "@heroicons/react": "^2.1.1",
     "@hookform/resolvers": "^5.0.1",
@@ -41,6 +42,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.487.0",
     "next": "^14.2.28",
+    "next-auth": "^4.24.11",
     "papaparse": "^5.5.2",
     "postcss": "^8.5.3",
     "postcss-import": "^16.1.0",

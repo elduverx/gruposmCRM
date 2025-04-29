@@ -98,7 +98,7 @@ export default function UsersPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Administración de Usuarios</h1>
+        <h1 className="text-2xl font-bold text-gray-800 font-audiowide">Administración de Usuarios</h1>
         <div className="flex space-x-2">
           <button 
             onClick={fetchUsers}
@@ -123,15 +123,15 @@ export default function UsersPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Total Usuarios</h3>
+          <h3 className="text-lg font-semibold text-gray-700 font-audiowide">Total Usuarios</h3>
           <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Usuarios Activos</h3>
+          <h3 className="text-lg font-semibold text-gray-700 font-audiowide">Usuarios Activos</h3>
           <p className="text-3xl font-bold text-green-600">{stats.active}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-700">Usuarios Inactivos</h3>
+          <h3 className="text-lg font-semibold text-gray-700 font-audiowide">Usuarios Inactivos</h3>
           <p className="text-3xl font-bold text-purple-600">{stats.inactive}</p>
         </div>
       </div>

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default async function PropertiesPage() {
   return (
     <div className="py-10">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6 font-audiowide">Inmuebles</h1>
       <PropertiesClient />
     </div>
   );

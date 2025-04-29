@@ -15,7 +15,7 @@ export default async function OrdersPage() {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Pedidos</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6 font-audiowide">Pedidos</h1>
         </div>
         <OrderList orders={orders} clients={clients} />
       </div>
@@ -26,7 +26,7 @@ export default async function OrdersPage() {
       return (
         <div className="p-4">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900">Pedidos</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6 font-audiowide">Pedidos</h1>
           </div>
           <div>Cargando...</div>
         </div>

@@ -13,7 +13,7 @@ interface ProgresoClientProps {
 
 interface ActivityMetadata {
   status?: 'completed' | 'pending';
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export default function ProgresoClient({ userId }: ProgresoClientProps) {
@@ -33,13 +33,13 @@ export default function ProgresoClient({ userId }: ProgresoClientProps) {
           throw new Error('Error al cargar los datos');
         }
 
-        const activitiesData = await activitiesRes.json();
-        const goalsData = await goalsRes.json();
+        const activitiesData = await activitiesRes.json() as UserActivity[];
+        const goalsData = await goalsRes.json() as UserGoal[];
 
         setActivities(activitiesData);
         setGoals(goalsData);
       } catch (error) {
-        console.error('Error:', error);
+        alert('Error al cargar los datos. Por favor, inténtalo de nuevo.');
       } finally {
         setLoading(false);
       }

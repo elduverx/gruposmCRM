@@ -245,26 +245,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
                 {zone.description && (
                   <p className="text-sm text-gray-600">{zone.description}</p>
                 )}
-                <div className="mt-2 flex space-x-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onEditZone) onEditZone(zone);
-                    }}
-                    className="text-sm text-indigo-600 hover:text-indigo-800"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onDeleteZone) onDeleteZone(zone);
-                    }}
-                    className="text-sm text-red-600 hover:text-red-800"
-                  >
-                    Eliminar
-                  </button>
-                </div>
               </div>
             </Popup>
           </Polygon>

@@ -958,7 +958,7 @@ export default function ZonesPage() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2 font-audiowide">Error</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button 
             onClick={() => router.refresh()}
@@ -976,7 +976,7 @@ export default function ZonesPage() {
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-xl font-semibold text-gray-900">Zonas</h1>
+            <h1 className="text-xl font-semibold text-gray-900 font-audiowide">Zonas</h1>
           </div>
         </div>
         <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
@@ -1094,7 +1094,7 @@ export default function ZonesPage() {
 
           {/* Zonas en formato horizontal */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
+            <h2 className="text-lg font-semibold mb-4 flex items-center font-audiowide">
               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">
                 {filteredZones.length}
               </span>
@@ -1122,7 +1122,7 @@ export default function ZonesPage() {
                         style={{ backgroundColor: zone.color }}
                       />
                       <div>
-                        <h3 className="font-medium text-lg">{zone.name}</h3>
+                        <h3 className="font-medium text-lg font-audiowide">{zone.name}</h3>
                         {zone.description && (
                           <p className="text-sm text-gray-600 mt-1 line-clamp-1">{zone.description}</p>
                         )}
@@ -1155,7 +1155,7 @@ export default function ZonesPage() {
           {/* Propiedades en formato de tarjetas con paginación */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center">
+              <h2 className="text-lg font-semibold flex items-center font-audiowide">
                 <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
                   {selectedZoneId ? getPropertiesInSelectedZone().length : properties.length}
                 </span>
@@ -1201,7 +1201,7 @@ export default function ZonesPage() {
                       className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
                     >
                       <div className="p-4">
-                        <h3 className="font-medium text-lg line-clamp-1">{property.address}</h3>
+                        <h3 className="font-medium text-lg line-clamp-1 font-audiowide">{property.address}</h3>
                         <p className="text-sm text-gray-600 mt-1">{property.population}</p>
                         
                         <div className="mt-3 flex flex-wrap gap-1">
@@ -1272,7 +1272,7 @@ export default function ZonesPage() {
       {showZoneForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4">
+            <h2 className="text-xl font-bold mb-4 font-audiowide">
               {editingZone ? 'Editar Zona' : 'Nueva Zona'}
             </h2>
             <ZoneForm
@@ -1292,7 +1292,7 @@ export default function ZonesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white p-6 rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold font-audiowide">
                 {zones.find(z => z.id === selectedZoneId)?.name}
               </h2>
               <button
@@ -1338,17 +1338,17 @@ export default function ZonesPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-blue-800">Propiedades</h3>
+                    <h3 className="text-lg font-medium text-blue-800 font-audiowide">Propiedades</h3>
                     <p className="text-3xl font-bold text-blue-600">{getPropertiesInSelectedZone().length}</p>
                     <p className="text-sm text-blue-600">Total en esta zona</p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-purple-800">Propiedades con noticias</h3>
+                    <h3 className="text-lg font-medium text-purple-800 font-audiowide">Propiedades con noticias</h3>
                     <p className="text-3xl font-bold text-purple-600">{filteredZoneNews.length}</p>
                     <p className="text-sm text-purple-600">Inmuebles con noticias activas</p>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-orange-800">Encargos</h3>
+                    <h3 className="text-lg font-medium text-orange-800 font-audiowide">Encargos</h3>
                     <p className="text-3xl font-bold text-orange-600">{filteredZoneAssignments.length}</p>
                     <p className="text-sm text-orange-600">Total encargos en esta zona</p>
                   </div>
@@ -1357,7 +1357,7 @@ export default function ZonesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Columna izquierda: Propiedades con noticias */}
                   <div className="bg-white border rounded-lg shadow-sm p-4">
-                    <h3 className="text-lg font-medium mb-4 text-purple-800">Propiedades con noticias</h3>
+                    <h3 className="text-lg font-medium mb-4 text-purple-800 font-audiowide">Propiedades con noticias</h3>
                     {filteredZoneNews.length === 0 ? (
                       <p className="text-gray-500">No hay propiedades con noticias en esta zona</p>
                     ) : (
@@ -1372,7 +1372,7 @@ export default function ZonesPage() {
                             >
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <h4 className="font-medium">{property.address}</h4>
+                                  <h4 className="font-medium font-audiowide">{property.address}</h4>
                                   <p className="text-sm text-gray-600">{property.population}</p>
                                 </div>
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
@@ -1406,7 +1406,7 @@ export default function ZonesPage() {
                   
                   {/* Columna central: Encargos */}
                   <div className="bg-white border rounded-lg shadow-sm p-4">
-                    <h3 className="text-lg font-medium mb-4 text-orange-800">Encargos en esta zona</h3>
+                    <h3 className="text-lg font-medium mb-4 text-orange-800 font-audiowide">Encargos en esta zona</h3>
                     {filteredZoneAssignments.length === 0 ? (
                       <p className="text-gray-500">No hay encargos en esta zona</p>
                     ) : (
@@ -1419,7 +1419,7 @@ export default function ZonesPage() {
                           >
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-medium">{assignment.property.address}</h4>
+                                <h4 className="font-medium font-audiowide">{assignment.property.address}</h4>
                                 <p className="text-sm text-gray-600">{assignment.property.population}</p>
                               </div>
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1465,7 +1465,7 @@ export default function ZonesPage() {
                 <div className="mt-6">
                   <div className="bg-white border rounded-lg shadow-sm p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-blue-800">Inmuebles en esta zona</h3>
+                      <h3 className="text-lg font-medium text-blue-800 font-audiowide">Inmuebles en esta zona</h3>
                      
                     </div>
                     {filteredPropertiesInZone.length === 0 ? (
@@ -1486,7 +1486,7 @@ export default function ZonesPage() {
                           >
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-medium">{property.address}</h4>
+                                <h4 className="font-medium font-audiowide">{property.address}</h4>
                                 <p className="text-sm text-gray-600">{property.population}</p>
                               </div>
                               <div className="flex flex-col items-end space-y-1">

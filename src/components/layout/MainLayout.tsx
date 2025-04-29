@@ -163,7 +163,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen flex-col lg:pl-64">
         {/* Header solo visible en móvil */}
         <header className="sticky top-0 z-40 bg-white shadow-sm lg:hidden">
-          <div className="flex h-12 items-center px-4">
+          <div className="flex h-12 items-center justify-between px-4">
             <button
               type="button"
               className="-ml-0.5 -mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-500 hover:text-gray-900"
@@ -172,6 +172,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <span className="sr-only">Abrir sidebar</span>
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
             </button>
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-gray-900">{user?.name}</span>
+            </div>
           </div>
         </header>
 

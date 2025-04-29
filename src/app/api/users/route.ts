@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getUsers as getJsonUsers, addUser, User } from '@/lib/db';
-import { getUsers, createUser, findUserByEmail as findUserByEmailPrisma } from '@/lib/prisma-users';
+import { addUser, User } from '@/lib/db';
+import { createUser, findUserByEmail as findUserByEmailPrisma } from '@/lib/prisma-users';
 import bcrypt from 'bcryptjs';
-import { isAdmin, verifyToken, getCurrentUserId } from '@/lib/auth';
+import { isAdmin, getCurrentUserId } from '@/lib/auth';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
@@ -53,7 +53,8 @@ export async function GET() {
 
     return NextResponse.json(users);
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
+    // En un entorno de producción, podríamos usar un servicio de logging
+    // o enviar el error a un servicio de monitoreo
     return NextResponse.json(
       { message: 'Error interno del servidor' },
       { status: 500 }

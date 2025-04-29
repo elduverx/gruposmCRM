@@ -5,20 +5,19 @@ import {
   BuildingOfficeIcon, 
   UserGroupIcon, 
   ClipboardDocumentListIcon, 
-  NewspaperIcon, 
   CalendarIcon, 
   ArrowUpIcon,
-  ArrowDownIcon,
   PlusIcon,
   TrophyIcon,
-  CheckIcon
+  CheckIcon,
+  XMarkIcon,
+  TrashIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { Dialog } from '@/components/ui/dialog';
-import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
@@ -45,14 +44,6 @@ interface Activity {
   completed: boolean;
 }
 
-interface Objective {
-  id: string;
-  title: string;
-  target: number;
-  current: number;
-  unit: string;
-}
-
 // Definir interfaces para las respuestas de la API
 interface CountResponse {
   count: number;
@@ -71,7 +62,6 @@ export default function InicioPage() {
     totalObjectives: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [date, setDate] = useState<Date>(new Date());
@@ -83,6 +73,14 @@ export default function InicioPage() {
     description: '',
     type: 'MANUAL',
     goalId: ''
+  });
+
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const [selectedDateActivities, setSelectedDateActivities] = useState<UserActivity[]>([]);
+  const [newActivity, setNewActivity] = useState({
+    type: 'call',
+    description: '',
+    timestamp: new Date().toISOString()
   });
 
   useEffect(() => {
@@ -156,20 +154,27 @@ export default function InicioPage() {
   // Manejar el envío del formulario de actividad
   const handleActivitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    if (!activityFormData.description.trim()) return;
+    
     try {
-      await createUserActivity({
-        goalId: activityFormData.goalId,
+      setIsLoading(true);
+      
+      const newActivity = await createUserActivity({
+        goalId: activityFormData.goalId || undefined,
         type: activityFormData.type,
         description: activityFormData.description,
       });
-
+      
+      // Actualizar la lista de actividades
+      setUserActivities([newActivity, ...userActivities]);
+      
+      // Limpiar el formulario
       setActivityFormData({
         description: '',
         type: 'MANUAL',
         goalId: ''
       });
+      
       setIsActivityFormOpen(false);
       
       // Actualizar las estadísticas después de crear una actividad
@@ -177,7 +182,8 @@ export default function InicioPage() {
       newStats.pendingActivities = (stats.pendingActivities || 0) + 1;
       setStats(newStats);
     } catch (error) {
-      console.error('Error al crear actividad:', error);
+      // Manejar el error de forma más elegante
+      alert('Error al crear la actividad. Por favor, inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -237,11 +243,95 @@ export default function InicioPage() {
       });
       
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al registrar actividad:', error);
       alert('Error al registrar la actividad. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Función para manejar el clic en un día del calendario
+  const handleDateClick = (clickedDate: Date) => {
+    setDate(clickedDate);
+    // Filtrar actividades para el día seleccionado
+    const activitiesForDate = userActivities.filter(activity => {
+      const activityDate = new Date(activity.timestamp);
+      return (
+        activityDate.getDate() === clickedDate.getDate() &&
+        activityDate.getMonth() === clickedDate.getMonth() &&
+        activityDate.getFullYear() === clickedDate.getFullYear()
+      );
+    });
+    setSelectedDateActivities(activitiesForDate);
+    setShowActivityDialog(true);
+  };
+
+  // Función para crear una nueva actividad
+  const handleCreateActivity = async () => {
+    try {
+      const timestamp = new Date(date);
+      timestamp.setHours(12); // Establecer hora por defecto
+      
+      const activityData = {
+        ...newActivity,
+        timestamp: timestamp.toISOString()
+      };
+      
+      await createUserActivity(activityData);
+      
+      // Actualizar la lista de actividades
+      const updatedActivities = await getUserActivities();
+      setUserActivities(updatedActivities);
+      
+      // Limpiar el formulario
+      setNewActivity({
+        type: 'call',
+        description: '',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Cerrar el diálogo
+      setShowActivityDialog(false);
+    } catch (error) {
+      alert('Error al crear la actividad. Por favor, inténtalo de nuevo.');
+    }
+  };
+
+  // Función para eliminar una actividad
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('No estás autenticado');
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar la actividad');
+      }
+
+      // Actualizar la lista de actividades
+      const updatedActivities = await getUserActivities();
+      setUserActivities(updatedActivities);
+      
+      // Actualizar las actividades seleccionadas para el día actual
+      const updatedSelectedActivities = selectedDateActivities.filter(
+        activity => activity.id !== activityId
+      );
+      setSelectedDateActivities(updatedSelectedActivities);
+    } catch (error) {
+      alert('Error al eliminar la actividad. Por favor, inténtalo de nuevo.');
     }
   };
 
@@ -290,7 +380,7 @@ export default function InicioPage() {
       <div className="card">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {user?.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 font-audiowide">Bienvenido, {user?.name}</h1>
             <p className="mt-1 text-sm text-gray-500">
               Aquí tienes un resumen de tu actividad reciente
             </p>
@@ -448,7 +538,7 @@ export default function InicioPage() {
           {/* Calendario */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Calendario</h3>
+              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Calendario</h3>
               <div className="flex space-x-2">
                 <button 
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
@@ -457,7 +547,10 @@ export default function InicioPage() {
                   <CalendarIcon className="h-4 w-4 mr-1" />
                   Hoy
                 </button>
-                <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                <button 
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  onClick={() => router.push('/dashboard/progreso/actividades')}
+                >
                   Ver todo
                 </button>
               </div>
@@ -466,13 +559,12 @@ export default function InicioPage() {
               <Calendar
                 onChange={(value) => {
                   if (value instanceof Date) {
-                    setDate(value);
+                    handleDateClick(value);
                   }
                 }}
                 value={date}
                 className="w-full border-0 custom-calendar"
                 tileClassName={({ date: tileDate }) => {
-                  // Añadir clase para días con eventos usando actividades reales
                   const hasEvent = userActivities.some(activity => {
                     const activityDate = new Date(activity.timestamp);
                     return (
@@ -485,7 +577,6 @@ export default function InicioPage() {
                   return hasEvent ? 'event-day' : '';
                 }}
                 tileContent={({ date: tileDate }) => {
-                  // Mostrar indicador de eventos usando actividades reales
                   const dayEvents = userActivities.filter(activity => {
                     const activityDate = new Date(activity.timestamp);
                     return (
@@ -508,7 +599,7 @@ export default function InicioPage() {
           {/* Actividades Pendientes */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Actividades Recientes</h3>
+              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Actividades Recientes</h3>
               <button 
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                 onClick={() => router.push('/dashboard/metas')}
@@ -570,7 +661,7 @@ export default function InicioPage() {
         <div className="card lg:col-span-1">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Objetivos</h3>
+              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Objetivos</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Progreso de tus metas personales
               </p>
@@ -645,6 +736,127 @@ export default function InicioPage() {
         </div>
       </div>
 
+      {/* Diálogo de Actividades */}
+      {showActivityDialog && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4 text-center">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowActivityDialog(false)} />
+            
+            <div className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 activity-dialog">
+              <div className="absolute right-0 top-0 pr-4 pt-4">
+                <button
+                  type="button"
+                  className="rounded-md bg-white text-gray-400 hover:text-gray-500"
+                  onClick={() => setShowActivityDialog(false)}
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                </button>
+              </div>
+              
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                  <h3 className="text-lg font-semibold leading-6 text-gray-900 font-audiowide">
+                    Actividades para {format(date, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
+                  </h3>
+                  
+                  <div className="mt-4">
+                    {/* Lista de actividades existentes */}
+                    {selectedDateActivities.length > 0 ? (
+                      <div className="space-y-3 mb-4">
+                        {selectedDateActivities.map((activity) => (
+                          <div key={activity.id} className="activity-item flex items-start p-3 bg-gray-50 rounded-lg">
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center">
+                                  <span className={`activity-type-badge activity-type-${activity.type}`}>
+                                    {activity.type === 'call' ? 'Llamada' : 
+                                     activity.type === 'meeting' ? 'Reunión' : 
+                                     activity.type === 'email' ? 'Email' : 
+                                     activity.type === 'visit' ? 'Visita' : 'Otra'}
+                                  </span>
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    {format(new Date(activity.timestamp), 'HH:mm', { locale: es })}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="text-gray-400 hover:text-red-500"
+                                  onClick={() => handleDeleteActivity(activity.id)}
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <p className="text-sm text-gray-700">{activity.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 mb-4">No hay actividades programadas para este día.</p>
+                    )}
+                    
+                    {/* Formulario para nueva actividad */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 font-audiowide">Agregar nueva actividad</h4>
+                      
+                      <div>
+                        <label htmlFor="activityType" className="block text-sm font-medium text-gray-700">
+                          Tipo
+                        </label>
+                        <select
+                          id="activityType"
+                          value={newActivity.type}
+                          onChange={(e) => setNewActivity({...newActivity, type: e.target.value})}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        >
+                          <option value="call">Llamada</option>
+                          <option value="meeting">Reunión</option>
+                          <option value="email">Email</option>
+                          <option value="visit">Visita</option>
+                          <option value="other">Otra</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="activityDescription" className="block text-sm font-medium text-gray-700">
+                          Descripción
+                        </label>
+                        <textarea
+                          id="activityDescription"
+                          value={newActivity.description}
+                          onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
+                          rows={3}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          placeholder="Describe la actividad..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                  onClick={handleCreateActivity}
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                  onClick={() => setShowActivityDialog(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Añadir estilos CSS personalizados */}
       <style jsx global>{`
         .custom-calendar {
@@ -711,6 +923,7 @@ export default function InicioPage() {
           border-radius: 0.25rem;
           transition: all 0.2s ease;
           position: relative;
+          cursor: pointer;
         }
         
         .custom-calendar .react-calendar__tile:hover {
@@ -754,6 +967,54 @@ export default function InicioPage() {
         
         .custom-calendar .react-calendar__month-view__days__day--neighboringMonth {
           color: #9ca3af;
+        }
+        
+        /* Estilos para el diálogo de actividades */
+        .activity-dialog {
+          max-height: 80vh;
+          overflow-y: auto;
+        }
+        
+        .activity-item {
+          transition: all 0.2s ease;
+        }
+        
+        .activity-item:hover {
+          background-color: #f9fafb;
+        }
+        
+        .activity-type-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.5rem;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+        
+        .activity-type-call {
+          background-color: #dbeafe;
+          color: #1e40af;
+        }
+        
+        .activity-type-meeting {
+          background-color: #dcfce7;
+          color: #166534;
+        }
+        
+        .activity-type-email {
+          background-color: #fef3c7;
+          color: #92400e;
+        }
+        
+        .activity-type-visit {
+          background-color: #f3e8ff;
+          color: #6b21a8;
+        }
+        
+        .activity-type-other {
+          background-color: #f1f5f9;
+          color: #475569;
         }
       `}</style>
     </div>

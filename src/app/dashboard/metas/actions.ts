@@ -6,6 +6,7 @@ import { JWT_SECRET } from '@/lib/auth';
 import { UserGoal, UserActivity, CreateUserGoalInput, CreateUserActivityInput } from '@/types/user';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 
 // Obtener el ID del usuario actual basado en el token de autenticación
 async function getCurrentUserId(): Promise<string | null> {
@@ -209,19 +210,8 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
       throw new Error('Debes iniciar sesión para registrar una actividad');
     }
     
-    console.log('Creando actividad con datos:', {
-      userId,
-      goalId: data.goalId,
-      type: data.type,
-      description: data.description,
-      relatedId: data.relatedId,
-      relatedType: data.relatedType,
-      points: data.points,
-      metadata: data.metadata
-    });
-    
     // Preparar los datos para la creación
-    const activityData: any = {
+    const activityData = {
       userId,
       goalId: data.goalId,
       type: data.type,
@@ -229,50 +219,34 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
       timestamp: new Date(),
       relatedId: data.relatedId,
       relatedType: data.relatedType,
-      points: data.points || 0
+      points: data.points || 0,
+      metadata: undefined as unknown as Prisma.InputJsonValue
     };
     
     // Manejar el metadata correctamente
     if (data.metadata !== undefined && data.metadata !== null) {
-      console.log('Tipo de metadata:', typeof data.metadata);
-      console.log('Valor de metadata:', data.metadata);
-      
       if (typeof data.metadata === 'string') {
         // Si ya es una cadena, verificar que sea JSON válido
         try {
           JSON.parse(data.metadata);
-          activityData.metadata = data.metadata;
-        } catch (e) {
-          console.error('Metadata no es JSON válido:', e);
-          activityData.metadata = null;
+          activityData.metadata = data.metadata as unknown as Prisma.InputJsonValue;
+        } catch {
+          activityData.metadata = null as unknown as Prisma.InputJsonValue;
         }
       } else if (typeof data.metadata === 'object') {
         try {
           // Si es un objeto, convertirlo a JSON
-          const jsonString = JSON.stringify(data.metadata);
-          console.log('Metadata convertido a JSON:', jsonString);
-          activityData.metadata = jsonString;
-        } catch (e) {
-          console.error('Error al convertir metadata a JSON:', e);
-          activityData.metadata = null;
+          activityData.metadata = data.metadata as unknown as Prisma.InputJsonValue;
+        } catch {
+          activityData.metadata = null as unknown as Prisma.InputJsonValue;
         }
-      } else {
-        console.log('Metadata no es string ni objeto, estableciendo como null');
-        activityData.metadata = null;
       }
-    } else {
-      console.log('Metadata es undefined o null, estableciendo como null');
-      activityData.metadata = null;
     }
-    
-    console.log('Datos finales para crear actividad:', activityData);
     
     // Usar el cliente Prisma directamente
     const newActivity = await prisma.userActivity.create({
       data: activityData
     });
-    
-    console.log('Actividad creada:', newActivity);
     
     // Si está asociada a una meta, actualizar el contador de la meta
     if (data.goalId) {
@@ -297,9 +271,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     
     return activity;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al registrar actividad:', error);
-    throw new Error(`Error al registrar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error('Error al crear la actividad: ' + (error instanceof Error ? error.message : 'Error desconocido'));
   }
 }
 
@@ -460,4 +432,48 @@ function mapActivityToDTO(activity: RawUserActivity): UserActivity {
     points: Number(activity.points),
     metadata: parsedMetadata,
   };
+}
+
+// Eliminar una actividad del usuario
+export async function deleteUserActivity(activityId: string): Promise<boolean> {
+  try {
+    const userId = await getCurrentUserId();
+    
+    // Si no hay usuario autenticado, no se permite eliminar actividades
+    if (!userId) {
+      throw new Error('Debes iniciar sesión para eliminar una actividad');
+    }
+    
+    // Verificar que la actividad pertenece al usuario actual
+    const activityResult = await prisma.$queryRaw<RawUserActivity[]>`
+      SELECT * FROM UserActivity WHERE id = ${activityId} AND userId = ${userId}
+    `;
+    
+    const activity = Array.isArray(activityResult) && activityResult.length > 0 ? activityResult[0] : null;
+    
+    if (!activity || !isRawUserActivity(activity)) {
+      throw new Error('Actividad no encontrada o no tienes permiso para eliminarla');
+    }
+    
+    // Obtener el goalId antes de eliminar la actividad
+    const goalId = activity.goalId;
+    
+    // Eliminar la actividad
+    await prisma.$executeRaw`
+      DELETE FROM UserActivity WHERE id = ${activityId} AND userId = ${userId}
+    `;
+    
+    // Si la actividad estaba asociada a una meta, actualizar el progreso
+    if (goalId) {
+      await updateGoalProgress(goalId);
+    }
+    
+    revalidatePath('/dashboard/progreso/actividades');
+    
+    return true;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error al eliminar actividad:', error);
+    throw new Error(`Error al eliminar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+  }
 } 

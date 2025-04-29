@@ -13,7 +13,7 @@ export default async function MetasPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Mis Metas y Progreso</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 font-audiowide">Mis Metas y Progreso</h1>
         <p className="text-gray-600">
           Realiza actividades, completa tus metas y visualiza tu progreso
         </p>

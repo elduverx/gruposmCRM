@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/auth';
 
-export async function GET(
+export async function DELETE(
   request: Request,
-  { params }: { params: { userId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const currentUserId = await getCurrentUserId();
@@ -13,26 +13,26 @@ export async function GET(
       return new NextResponse('No autorizado', { status: 401 });
     }
 
-    // Solo permitir ver las actividades propias o si es admin
-    const isAdmin = await prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { role: true }
-    });
-
-    if (currentUserId !== params.userId && isAdmin?.role !== 'ADMIN') {
-      return new NextResponse('No autorizado', { status: 401 });
-    }
-
-    const activities = await prisma.userActivity.findMany({
+    // Verificar que la actividad existe y pertenece al usuario actual
+    const activity = await prisma.userActivity.findUnique({
       where: {
-        userId: params.userId
-      },
-      orderBy: {
-        timestamp: 'desc'
+        id: params.id,
+        userId: currentUserId
       }
     });
 
-    return NextResponse.json(activities);
+    if (!activity) {
+      return new NextResponse('Actividad no encontrada', { status: 404 });
+    }
+
+    // Eliminar la actividad
+    await prisma.userActivity.delete({
+      where: {
+        id: params.id
+      }
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     // En un entorno de producción, podríamos usar un servicio de logging
     // o enviar el error a un servicio de monitoreo

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { createUserActivity, getUserGoals } from '../../../metas/actions';
 import { UserGoal } from '@/types/user';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
@@ -33,7 +32,7 @@ export default function NewActivityForm({ onSuccess }: NewActivityFormProps) {
         const userGoals = await getUserGoals();
         setGoals(userGoals);
       } catch (error) {
-        console.error('Error al cargar metas:', error);
+        alert('Error al cargar las metas. Por favor, inténtalo de nuevo.');
       }
     };
 
@@ -61,7 +60,7 @@ export default function NewActivityForm({ onSuccess }: NewActivityFormProps) {
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Error al crear actividad:', error);
+      alert('Error al crear la actividad. Por favor, inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
