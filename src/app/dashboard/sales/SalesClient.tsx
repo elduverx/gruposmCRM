@@ -4,31 +4,53 @@ import { useState, useEffect } from 'react';
 import { Assignment } from '@/types/property';
 import { getAssignments } from '../properties/actions';
 import { markPropertyAsSold, getSoldProperties, revertPropertySale } from './actions';
+import { toast } from 'sonner';
+import Button from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/Badge';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { 
+  Building2, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  User, 
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
+} from 'lucide-react';
 import { 
   CheckIcon, 
   MagnifyingGlassIcon, 
   ArrowPathIcon,
   BuildingOfficeIcon,
-  UserIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import { Spinner } from '@/components/ui/Spinner';
-import { toast } from 'sonner';
 
 type TabType = 'pending' | 'completed';
 
-// Definir una interfaz para las propiedades vendidas
+// Definir una interfaz para las propiedades vendidas que coincida con la de actions.ts
 interface SoldProperty {
   id: string;
   address: string;
   population: string;
   updatedAt: string;
+  isSold: boolean;
+  assignment_id?: string;
+  clientId?: string;
+  client_name?: string;
+  client_email?: string;
+  client_phone?: string;
   assignments: Array<{
+    id: string;
+    clientId?: string;
     client?: {
-      id: string;
-      name: string;
-      email: string;
+      name?: string;
+      email?: string;
       phone?: string;
     };
   }>;
@@ -328,7 +350,7 @@ export default function SalesClient() {
 
                     <div className="space-y-2">
                       <div className="flex items-start">
-                        <UserIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                        <User className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
                         <div>
                           <h4 className="text-sm font-medium text-gray-900">Cliente</h4>
                           <p className="text-sm text-gray-500">{assignment.client?.email || 'Email no disponible'}</p>
@@ -431,7 +453,7 @@ export default function SalesClient() {
                     {property.assignments && property.assignments.length > 0 && property.assignments[0].client && (
                       <div className="space-y-2">
                         <div className="flex items-start">
-                          <UserIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                          <User className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
                           <div>
                             <h4 className="text-sm font-medium text-gray-900">Cliente</h4>
                             <p className="text-sm text-gray-500">{property.assignments[0].client.name || 'Nombre no disponible'}</p>
