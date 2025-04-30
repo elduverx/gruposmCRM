@@ -34,6 +34,11 @@ export default function ActividadesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [isNewActivityDialogOpen, setIsNewActivityDialogOpen] = useState(false);
 
+  const getActivityTypeLabel = (type: string) => {
+    const activityType = ACTIVITY_TYPES.find(t => t.value === type);
+    return activityType ? activityType.label : 'Actividad';
+  };
+
   const loadActivities = async () => {
     try {
       setLoading(true);
@@ -85,11 +90,6 @@ export default function ActividadesPage() {
       default:
         return <MessageSquare className="h-5 w-5 text-gray-500" />;
     }
-  };
-
-  const getActivityTypeLabel = (type: string) => {
-    const activityType = ACTIVITY_TYPES.find(t => t.value === type);
-    return activityType ? activityType.label : 'Actividad';
   };
 
   const handleDeleteActivity = async (activityId: string) => {
