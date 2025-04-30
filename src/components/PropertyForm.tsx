@@ -72,12 +72,12 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Información Básica */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
           <HomeIcon className="h-5 w-5 mr-2 text-blue-600" />
           Información Básica
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700">
               Dirección
@@ -221,12 +221,12 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
       </div>
 
       {/* Información del Propietario */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
           <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
           Información del Propietario
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
               Nombre del Propietario
@@ -264,158 +264,120 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
               />
             </div>
           </div>
-
-          <div>
-            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
-              Responsable
-            </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <UserIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              {/* @ts-ignore - Suprimir error de tipo para el select de responsable */}
-              <select
-                id="responsible"
-                name="responsible"
-                value={typeof formData.responsible === 'string' ? formData.responsible : ''}
-                onChange={handleInputChange}
-                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              >
-                <option value="">Sin responsable asignado</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.name || ''}>
-                    {user.name || 'Sin nombre'}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Características de la Propiedad */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-          <HomeIcon className="h-5 w-5 mr-2 text-blue-600" />
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+          <HomeModernIcon className="h-5 w-5 mr-2 text-blue-600" />
           Características de la Propiedad
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <label htmlFor="habitaciones" className="block text-sm font-medium text-gray-700">
               Habitaciones
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <input
-                type="number"
-                id="habitaciones"
-                name="habitaciones"
-                value={formData.habitaciones || ''}
-                onChange={handleInputChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                min="0"
-              />
-            </div>
+            <input
+              type="number"
+              id="habitaciones"
+              name="habitaciones"
+              value={formData.habitaciones || ''}
+              onChange={handleInputChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
           </div>
 
           <div>
             <label htmlFor="banos" className="block text-sm font-medium text-gray-700">
               Baños
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <input
-                type="number"
-                id="banos"
-                name="banos"
-                value={formData.banos || ''}
-                onChange={handleInputChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                min="0"
-              />
-            </div>
+            <input
+              type="number"
+              id="banos"
+              name="banos"
+              value={formData.banos || ''}
+              onChange={handleInputChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
           </div>
 
           <div>
             <label htmlFor="metrosCuadrados" className="block text-sm font-medium text-gray-700">
               Metros Cuadrados
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <input
-                type="number"
-                id="metrosCuadrados"
-                name="metrosCuadrados"
-                value={formData.metrosCuadrados || ''}
-                onChange={handleInputChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                min="0"
-              />
-            </div>
+            <input
+              type="number"
+              id="metrosCuadrados"
+              name="metrosCuadrados"
+              value={formData.metrosCuadrados || ''}
+              onChange={handleInputChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
           </div>
         </div>
 
-        <div className="mt-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Amenidades</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="parking"
-                name="parking"
-                checked={formData.parking}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="parking" className="ml-2 block text-sm text-gray-700">
-                Parking
-              </label>
-            </div>
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="parking"
+              name="parking"
+              checked={formData.parking}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="parking" className="text-sm font-medium text-gray-700">
+              Parking
+            </label>
+          </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="ascensor"
-                name="ascensor"
-                checked={formData.ascensor}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="ascensor" className="ml-2 block text-sm text-gray-700">
-                Ascensor
-              </label>
-            </div>
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="ascensor"
+              name="ascensor"
+              checked={formData.ascensor}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="ascensor" className="text-sm font-medium text-gray-700">
+              Ascensor
+            </label>
+          </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="piscina"
-                name="piscina"
-                checked={formData.piscina}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="piscina" className="ml-2 block text-sm text-gray-700">
-                Piscina
-              </label>
-            </div>
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="piscina"
+              name="piscina"
+              checked={formData.piscina}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="piscina" className="text-sm font-medium text-gray-700">
+              Piscina
+            </label>
           </div>
         </div>
       </div>
 
       {/* Botones de acción */}
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      <div className="flex justify-end space-x-4 pt-4">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Cancelar
           </button>
         )}
         <button
           type="submit"
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          Guardar Cambios
+          Guardar
         </button>
       </div>
     </form>

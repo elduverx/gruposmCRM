@@ -213,9 +213,9 @@ export default function PropertyDetailClient({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Información General */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h2 className="text-xl font-semibold text-blue-600">Información General</h2>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <button
               onClick={() => setIsEditFormOpen(true)}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -759,7 +759,7 @@ export default function PropertyDetailClient({
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+          <Dialog.Panel className="mx-auto w-full max-w-7xl bg-white rounded-xl shadow-lg">
             <div className="flex justify-between items-center p-6 border-b">
               <Dialog.Title className="text-lg font-medium">Editar Propiedad</Dialog.Title>
               <button
@@ -770,7 +770,7 @@ export default function PropertyDetailClient({
               </button>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
               <PropertyForm 
                 initialData={{
                   address: property.address,

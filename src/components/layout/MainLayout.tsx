@@ -4,6 +4,7 @@ import { useState, Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../app/dashboard/context/AuthContext';
+import Image from 'next/image';
 import {
   HomeIcon,
   MapIcon,
@@ -137,7 +138,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
             <Link href="/dashboard" className="flex items-center">
-              <span className="text-xl font-bold text-blue-600">{AppName}</span>
+              <Image
+                src="/logoFooter.png"
+                alt="GrupoSM CRM"
+                width={160}
+                height={50}
+                className="h-10 w-auto"
+              />
             </Link>
             <button
               className="lg:hidden -mr-1 rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
