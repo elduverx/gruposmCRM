@@ -9,23 +9,26 @@ import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 
 // Obtener el ID del usuario actual basado en el token de autenticación
-async function getCurrentUserId(): Promise<string | null> {
+async function getCurrentUserId(): Promise<{userId: string | null, isAdmin: boolean}> {
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('auth_token')?.value;
     
     if (!token) {
-      return null;
+      return {userId: null, isAdmin: false};
     }
     
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      return decoded.userId;
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string };
+      return {
+        userId: decoded.userId,
+        isAdmin: decoded.role === 'ADMIN'
+      };
     } catch (error) {
-      return null;
+      return {userId: null, isAdmin: false};
     }
   } catch (error) {
-    return null;
+    return {userId: null, isAdmin: false};
   }
 }
 
@@ -91,7 +94,7 @@ function isRawUserActivity(obj: unknown): obj is RawUserActivity {
 // Obtener todas las metas
 export async function getUserGoals(): Promise<UserGoal[]> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, devolver una lista vacía
     if (!userId) {
@@ -143,7 +146,7 @@ export async function getUserGoals(): Promise<UserGoal[]> {
 // Crear una nueva meta 
 export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoal> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, no se permite crear metas
     if (!userId) {
@@ -203,7 +206,7 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
 // Registrar una nueva actividad
 export async function createUserActivity(data: CreateUserActivityInput): Promise<UserActivity> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, no se permite crear actividades
     if (!userId) {
@@ -235,8 +238,8 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
         }
       } else if (typeof data.metadata === 'object') {
         try {
-          // Si es un objeto, convertirlo a JSON
-          activityData.metadata = data.metadata as unknown as Prisma.InputJsonValue;
+          // Si es un objeto, convertirlo a JSON string
+          activityData.metadata = JSON.stringify(data.metadata) as unknown as Prisma.InputJsonValue;
         } catch {
           activityData.metadata = null as unknown as Prisma.InputJsonValue;
         }
@@ -278,7 +281,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
 // Obtener el historial de actividades
 export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, devolver una lista vacía
     if (!userId) {
@@ -305,22 +308,34 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
 // Eliminar una meta del usuario
 export async function deleteUserGoal(goalId: string): Promise<boolean> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId, isAdmin} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, no se permite eliminar metas
     if (!userId) {
       throw new Error('Debes iniciar sesión para eliminar una meta');
     }
     
-    // Verificar que la meta pertenece al usuario actual
-    const goalResult = await prisma.$queryRaw<RawUserGoal[]>`
-      SELECT * FROM UserGoal WHERE id = ${goalId} AND userId = ${userId}
-    `;
+    // Verificar que la meta existe
+    const goalExists = await prisma.userGoal.findUnique({
+      where: { id: goalId }
+    });
     
-    const goal = Array.isArray(goalResult) && goalResult.length > 0 ? goalResult[0] : null;
+    if (!goalExists) {
+      throw new Error('Meta no encontrada');
+    }
     
-    if (!goal || !isRawUserGoal(goal)) {
-      throw new Error('Meta no encontrada o no tienes permiso para eliminarla');
+    // Si no es admin, verificar que la meta pertenece al usuario actual
+    if (!isAdmin) {
+      const goalBelongsToUser = await prisma.userGoal.findFirst({
+        where: {
+          id: goalId,
+          userId: userId
+        }
+      });
+      
+      if (!goalBelongsToUser) {
+        throw new Error('No tienes permiso para eliminar esta meta');
+      }
     }
     
     // Eliminar las actividades asociadas a la meta
@@ -330,7 +345,7 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
     
     // Eliminar la meta
     await prisma.$executeRaw`
-      DELETE FROM UserGoal WHERE id = ${goalId} AND userId = ${userId}
+      DELETE FROM UserGoal WHERE id = ${goalId}
     `;
     
     revalidatePath('/dashboard/metas');
@@ -437,30 +452,42 @@ function mapActivityToDTO(activity: RawUserActivity): UserActivity {
 // Eliminar una actividad del usuario
 export async function deleteUserActivity(activityId: string): Promise<boolean> {
   try {
-    const userId = await getCurrentUserId();
+    const {userId, isAdmin} = await getCurrentUserId();
     
     // Si no hay usuario autenticado, no se permite eliminar actividades
     if (!userId) {
       throw new Error('Debes iniciar sesión para eliminar una actividad');
     }
     
-    // Verificar que la actividad pertenece al usuario actual
-    const activityResult = await prisma.$queryRaw<RawUserActivity[]>`
-      SELECT * FROM UserActivity WHERE id = ${activityId} AND userId = ${userId}
-    `;
+    // Verificar que la actividad existe
+    const activityExists = await prisma.userActivity.findUnique({
+      where: { id: activityId }
+    });
     
-    const activity = Array.isArray(activityResult) && activityResult.length > 0 ? activityResult[0] : null;
+    if (!activityExists) {
+      throw new Error('Actividad no encontrada');
+    }
     
-    if (!activity || !isRawUserActivity(activity)) {
-      throw new Error('Actividad no encontrada o no tienes permiso para eliminarla');
+    // Si no es admin, verificar que la actividad pertenece al usuario actual
+    if (!isAdmin) {
+      const activityBelongsToUser = await prisma.userActivity.findFirst({
+        where: {
+          id: activityId,
+          userId: userId
+        }
+      });
+      
+      if (!activityBelongsToUser) {
+        throw new Error('No tienes permiso para eliminar esta actividad');
+      }
     }
     
     // Obtener el goalId antes de eliminar la actividad
-    const goalId = activity.goalId;
+    const goalId = activityExists.goalId;
     
     // Eliminar la actividad
     await prisma.$executeRaw`
-      DELETE FROM UserActivity WHERE id = ${activityId} AND userId = ${userId}
+      DELETE FROM UserActivity WHERE id = ${activityId}
     `;
     
     // Si la actividad estaba asociada a una meta, actualizar el progreso

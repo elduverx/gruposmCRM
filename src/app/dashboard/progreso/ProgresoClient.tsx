@@ -62,6 +62,9 @@ export default function ProgresoClient({ userId }: ProgresoClientProps) {
     return metadata?.status !== 'completed';
   });
 
+  // Obtener metas completadas
+  const completedGoals = goals.filter(goal => goal.isCompleted);
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="objetivos" className="w-full">
@@ -115,10 +118,35 @@ export default function ProgresoClient({ userId }: ProgresoClientProps) {
         <TabsContent value="completadas">
           <Card>
             <CardHeader>
-              <CardTitle>Actividades Completadas</CardTitle>
+              <CardTitle>Actividades y Metas Completadas</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {/* Mostrar metas completadas */}
+                {completedGoals.map((goal) => (
+                  <div
+                    key={goal.id}
+                    className="flex items-center justify-between p-4 border rounded-lg bg-green-50"
+                  >
+                    <div>
+                      <p className="font-medium">{goal.title}</p>
+                      <p className="text-sm text-gray-500">
+                        Meta completada el {format(new Date(goal.updatedAt), 'PPP', { locale: es })}
+                      </p>
+                      {goal.description && (
+                        <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Meta</p>
+                      <p className="text-sm font-medium text-green-600">
+                        {goal.currentCount} / {goal.targetCount}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Mostrar actividades completadas */}
                 {completedActivities.map((activity) => (
                   <div
                     key={activity.id}

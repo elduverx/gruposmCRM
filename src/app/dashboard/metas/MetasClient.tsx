@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { UserGoal, UserActivity, CreateUserGoalInput, User } from '@/types/user';
 import { createUserGoal, createUserActivity, deleteUserGoal } from './actions';
 import { Dialog } from '@headlessui/react';
@@ -13,6 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import confetti from 'canvas-confetti';
+import useSound from 'use-sound';
 
 interface MetasClientProps {
   initialGoals: UserGoal[];
@@ -39,6 +41,8 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     category: 'GENERAL',
   });
   const [userActivityCounts, setUserActivityCounts] = useState<{[key: string]: number}>({});
+  const [playCelebration] = useSound('/sounds/celebration.mp3', { volume: 0.5 });
+  const previousGoalsRef = useRef<UserGoal[]>(initialGoals);
 
   // Cargar usuarios y contar actividades por usuario
   useEffect(() => {
@@ -123,6 +127,30 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
 
     fetchGoalContributors();
   }, [activities]);
+
+  // Efecto para detectar cuando una meta se completa
+  useEffect(() => {
+    // Comparar las metas actuales con las anteriores
+    goals.forEach(goal => {
+      const previousGoal = previousGoalsRef.current.find(g => g.id === goal.id);
+      
+      // Si la meta no estaba completada antes y ahora sí lo está
+      if (previousGoal && !previousGoal.isCompleted && goal.isCompleted) {
+        // Lanzar confeti
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        
+        // Reproducir sonido
+        playCelebration();
+      }
+    });
+    
+    // Actualizar la referencia
+    previousGoalsRef.current = goals;
+  }, [goals, playCelebration]);
 
   // Crear una nueva meta
   const handleCreateGoal = async (e: React.FormEvent) => {
