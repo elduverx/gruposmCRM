@@ -11,7 +11,6 @@ interface ActivityFormProps {
 
 export default function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
   const [type, setType] = useState<Activity['type']>('Llamada');
-  const [status, setStatus] = useState<Activity['status']>('Programada');
   const [date, setDate] = useState(() => {
     const now = new Date();
     return now.toISOString().slice(0, 16); // Formato YYYY-MM-DDThh:mm
@@ -19,7 +18,7 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
   const [client, setClient] = useState('');
   const [notes, setNotes] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent, status: 'Programada' | 'Realizada') => {
     e.preventDefault();
     onSubmit({
       type,
@@ -32,7 +31,7 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
       <div>
         <label htmlFor="type" className="block text-sm font-medium text-gray-700">
           Tipo
@@ -45,24 +44,6 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
         >
           <option value="Llamada">Llamada</option>
           <option value="Contacto Directo">Contacto Directo</option>
-          <option value="Visita">Visita</option>
-          <option value="Email">Email</option>
-          <option value="WhatsApp">WhatsApp</option>
-        </select>
-      </div>
-
-      <div>
-        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-          Estado
-        </label>
-        <select
-          id="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as Activity['status'])}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        >
-          <option value="Programada">Programada</option>
-          <option value="Realizada">Realizada</option>
         </select>
       </div>
 
@@ -115,10 +96,18 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
           Cancelar
         </button>
         <button
-          type="submit"
+          type="button"
+          onClick={(e) => handleSubmit(e, 'Programada')}
           className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          Guardar
+          Programar
+        </button>
+        <button
+          type="button"
+          onClick={(e) => handleSubmit(e, 'Realizada')}
+          className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          Realizar
         </button>
       </div>
     </form>

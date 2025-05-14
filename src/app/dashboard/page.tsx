@@ -72,7 +72,12 @@ export default function InicioPage() {
   const [activityFormData, setActivityFormData] = useState({
     description: '',
     type: 'MANUAL',
-    goalId: ''
+    goalId: '',
+    timestamp: new Date().toISOString(),
+    metadata: {
+      completed: false,
+      priority: 'medium'
+    }
   });
 
   const [showActivityDialog, setShowActivityDialog] = useState(false);
@@ -163,87 +168,51 @@ export default function InicioPage() {
         goalId: activityFormData.goalId || undefined,
         type: activityFormData.type,
         description: activityFormData.description,
+        metadata: activityFormData.metadata,
+        timestamp: new Date(activityFormData.timestamp)
       });
       
       // Actualizar la lista de actividades
       setUserActivities([newActivity, ...userActivities]);
+      
+      // Si está asociada a una meta, actualizar el progreso
+      if (activityFormData.goalId) {
+        const updatedGoals = userGoals.map(goal => {
+          if (goal.id === activityFormData.goalId) {
+            const newCount = goal.currentCount + 1;
+            const isCompleted = newCount >= goal.targetCount;
+            return {
+              ...goal,
+              currentCount: newCount,
+              isCompleted,
+              progress: Math.min(Math.floor((newCount / goal.targetCount) * 100), 100),
+            };
+          }
+          return goal;
+        });
+        setUserGoals(updatedGoals);
+      }
       
       // Limpiar el formulario
       setActivityFormData({
         description: '',
         type: 'MANUAL',
-        goalId: ''
+        goalId: '',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          completed: false,
+          priority: 'medium'
+        }
       });
       
       setIsActivityFormOpen(false);
       
-      // Actualizar las estadísticas después de crear una actividad
+      // Actualizar las estadísticas
       const newStats = { ...stats };
       newStats.pendingActivities = (stats.pendingActivities || 0) + 1;
       setStats(newStats);
     } catch (error) {
-      // Manejar el error de forma más elegante
       alert('Error al crear la actividad. Por favor, inténtalo de nuevo.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Manejar la adición de actividad a una meta
-  const handleAddActivityToGoal = async (goalId: string) => {
-    if (!goalId) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const goalTitle = userGoals.find(g => g.id === goalId)?.title || 'Meta';
-      
-      const newActivity = await createUserActivity({
-        goalId,
-        type: 'MANUAL',
-        description: `Actividad manual para: ${goalTitle}`,
-      });
-      
-      // Actualizar la lista de actividades
-      setUserActivities([newActivity, ...userActivities]);
-      
-      // Actualizar el progreso de la meta
-      setUserGoals(userGoals.map(goal => {
-        if (goal.id === goalId) {
-          const newCount = goal.currentCount + 1;
-          const isCompleted = newCount >= goal.targetCount;
-          return {
-            ...goal,
-            currentCount: newCount,
-            isCompleted,
-            progress: Math.min(Math.floor((newCount / goal.targetCount) * 100), 100),
-          };
-        }
-        return goal;
-      }));
-
-      // Actualizar estadísticas
-      const updatedGoals = userGoals.map(goal => {
-        if (goal.id === goalId) {
-          const newCount = goal.currentCount + 1;
-          const isCompleted = newCount >= goal.targetCount;
-          return {
-            ...goal,
-            currentCount: newCount,
-            isCompleted,
-          };
-        }
-        return goal;
-      });
-      
-      const completedGoals = updatedGoals.filter(g => g.isCompleted).length;
-      setStats({
-        ...stats,
-        completedObjectives: completedGoals,
-      });
-      
-    } catch (error) {
-      alert('Error al registrar la actividad. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -273,7 +242,11 @@ export default function InicioPage() {
       
       const activityData = {
         ...newActivity,
-        timestamp: timestamp.toISOString()
+        timestamp: timestamp,
+        metadata: {
+          completed: false,
+          priority: 'medium'
+        }
       };
       
       await createUserActivity(activityData);
@@ -395,7 +368,7 @@ export default function InicioPage() {
         </div>
       </div>
 
-      {/* Formulario de nueva actividad */}
+      {/* Formulario unificado de actividad/meta */}
       <Dialog
         open={isActivityFormOpen}
         onClose={() => setIsActivityFormOpen(false)}
@@ -404,23 +377,60 @@ export default function InicioPage() {
         <form onSubmit={handleActivitySubmit} className="space-y-4">
           <div>
             <Select
-              label="Meta"
+              label="Meta asociada (opcional)"
               value={activityFormData.goalId}
               onChange={(e) => setActivityFormData({ ...activityFormData, goalId: e.target.value })}
-              options={goalOptions}
-              required
+              options={[
+                { value: '', label: 'Sin meta asociada' },
+                ...goalOptions
+              ]}
             />
           </div>
 
           <div>
             <Select
-              label="Tipo"
+              label="Tipo de actividad"
               value={activityFormData.type}
               onChange={(e) => setActivityFormData({ ...activityFormData, type: e.target.value })}
               options={[
-                { value: 'MANUAL', label: 'Manual' },
-                { value: 'AUTOMATIC', label: 'Automática' }
+                { value: 'call', label: 'Llamada' },
+                { value: 'meeting', label: 'Reunión' },
+                { value: 'email', label: 'Email' },
+                { value: 'visit', label: 'Visita' },
+                { value: 'other', label: 'Otra' }
               ]}
+            />
+          </div>
+
+          <div>
+            <Select
+              label="Prioridad"
+              value={activityFormData.metadata.priority}
+              onChange={(e) => setActivityFormData({
+                ...activityFormData,
+                metadata: { ...activityFormData.metadata, priority: e.target.value }
+              })}
+              options={[
+                { value: 'high', label: 'Alta' },
+                { value: 'medium', label: 'Media' },
+                { value: 'low', label: 'Baja' }
+              ]}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="activityDate" className="block text-sm font-medium text-gray-700">
+              Fecha y hora
+            </label>
+            <input
+              type="datetime-local"
+              id="activityDate"
+              value={activityFormData.timestamp.slice(0, 16)}
+              onChange={(e) => setActivityFormData({
+                ...activityFormData,
+                timestamp: new Date(e.target.value).toISOString()
+              })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
 
@@ -433,6 +443,7 @@ export default function InicioPage() {
               value={activityFormData.description}
               onChange={(e) => setActivityFormData({ ...activityFormData, description: e.target.value })}
               required
+              placeholder="Describe la actividad..."
             />
           </div>
 
@@ -471,10 +482,22 @@ export default function InicioPage() {
               <p className="text-2xl font-semibold text-gray-900">{stats.properties}</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <ArrowUpIcon className="h-4 w-4 text-success-500" />
-            <span className="ml-1 text-success-600 font-medium">12%</span>
-            <span className="ml-2 text-gray-500">vs mes anterior</span>
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center text-sm">
+              <ArrowUpIcon className="h-4 w-4 text-success-500" />
+              <span className="ml-1 text-success-600 font-medium">12%</span>
+              <span className="ml-2 text-gray-500">vs mes anterior</span>
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/dashboard/properties/new');
+              }}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Nuevo inmueble
+            </button>
           </div>
         </div>
 
@@ -599,31 +622,41 @@ export default function InicioPage() {
           {/* Actividades Pendientes */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Actividades Recientes</h3>
-              <button 
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                onClick={() => router.push('/dashboard/metas')}
-              >
-                Ver todas
-              </button>
+              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Actividades Pendientes</h3>
+              <div className="flex space-x-2">
+                <button 
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  onClick={() => router.push('/dashboard/progreso/actividades')}
+                >
+                  Ver todo
+                </button>
+                <button 
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
+                  onClick={() => setIsActivityFormOpen(true)}
+                >
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  Nueva actividad
+                </button>
+              </div>
             </div>
             <div className="space-y-4">
-              {userActivities.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500">No hay actividades recientes</p>
-                  <button
-                    onClick={() => setIsActivityFormOpen(true)}
-                    className="mt-3 text-primary-600 font-medium hover:text-primary-700"
-                  >
-                    Registrar una actividad
-                  </button>
-                </div>
-              ) : (
-                userActivities.slice(0, 5).map((activity) => {
-                  const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title || 'Meta desconocida';
-                  const isCompleted = Boolean(userGoals.find(g => g.id === activity.goalId)?.isCompleted);
+              {userActivities
+                .filter(activity => !activity.metadata?.completed)
+                .sort((a, b) => {
+                  // Ordenar por prioridad y fecha
+                  const priorityOrder = { high: 0, medium: 1, low: 2 };
+                  const aPriority = a.metadata?.priority || 'medium';
+                  const bPriority = b.metadata?.priority || 'medium';
                   
+                  if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+                    return priorityOrder[aPriority] - priorityOrder[bPriority];
+                  }
+                  
+                  return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+                })
+                .slice(0, 5)
+                .map((activity) => {
+                  const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title;
                   return (
                     <div
                       key={activity.id}
@@ -631,27 +664,43 @@ export default function InicioPage() {
                     >
                       <div className="flex items-center">
                         <div className={`h-2 w-2 rounded-full ${
-                          isCompleted ? 'bg-success-500' : 'bg-primary-500'
+                          activity.metadata?.priority === 'high' ? 'bg-red-500' :
+                          activity.metadata?.priority === 'medium' ? 'bg-yellow-500' :
+                          'bg-green-500'
                         }`} />
                         <div className="ml-4">
                           <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                          <p className="text-sm text-gray-500">
-                            Meta: {goalTitle} · {format(new Date(activity.timestamp), 'dd/MM/yyyy', { locale: es })}
-                          </p>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span>{format(new Date(activity.timestamp), 'dd/MM/yyyy HH:mm', { locale: es })}</span>
+                            {goalTitle && (
+                              <>
+                                <span>•</span>
+                                <span className="text-primary-600">{goalTitle}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div
-                        className={`px-3 py-1 text-sm font-medium rounded-full ${
-                          isCompleted
-                            ? 'bg-success-100 text-success-700'
-                            : 'bg-primary-100 text-primary-700'
-                        }`}
-                      >
-                        {activity.type}
+                      <div className="px-3 py-1 text-sm font-medium rounded-full bg-primary-100 text-primary-700">
+                        {activity.type === 'call' ? 'Llamada' : 
+                         activity.type === 'meeting' ? 'Reunión' : 
+                         activity.type === 'email' ? 'Email' : 
+                         activity.type === 'visit' ? 'Visita' : 'Otra'}
                       </div>
                     </div>
                   );
-                })
+                })}
+              {userActivities.filter(activity => !activity.metadata?.completed).length === 0 && (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No hay actividades pendientes</p>
+                  <button
+                    onClick={() => setIsActivityFormOpen(true)}
+                    className="mt-3 text-primary-600 font-medium hover:text-primary-700"
+                  >
+                    Crear una actividad
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -701,7 +750,7 @@ export default function InicioPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => handleAddActivityToGoal(goal.id)}
+                        onClick={() => setIsActivityFormOpen(true)}
                         disabled={isLoading}
                         className="p-1 text-gray-400 hover:text-gray-600"
                         title="Registrar actividad"

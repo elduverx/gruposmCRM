@@ -55,4 +55,5 @@ export interface CreateUserActivityInput {
   relatedType?: string;
   points?: number;
   metadata?: Record<string, any>;
+  timestamp?: Date;
 } 
