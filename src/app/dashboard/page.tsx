@@ -15,16 +15,25 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/light.css';
 import { Dialog } from '@/components/ui/dialog';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
 import { createUserActivity, getUserGoals, getUserActivities } from './metas/actions';
 import { UserGoal, UserActivity } from '@/types/user';
+import { Activity } from '@/types/activity';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EventClickArg, EventInput } from '@fullcalendar/core';
+import React from 'react';
 
 interface InicioStats {
   properties: number;
@@ -37,14 +46,6 @@ interface InicioStats {
   totalObjectives?: number;
 }
 
-interface Activity {
-  id: string;
-  title: string;
-  date: string;
-  completed: boolean;
-}
-
-// Definir interfaces para las respuestas de la API
 interface CountResponse {
   count: number;
 }
@@ -64,7 +65,9 @@ export default function InicioPage() {
   const [loading, setLoading] = useState(true);
   const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [date, setDate] = useState<Date>(new Date());
+  const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth');
   
   // Estados para el formulario de nueva actividad
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
@@ -85,8 +88,39 @@ export default function InicioPage() {
   const [newActivity, setNewActivity] = useState({
     type: 'call',
     description: '',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    goalId: '',
+    metadata: {
+      completed: false,
+      priority: 'medium',
+      duration: 30, // Duración en minutos
+      reminder: 15 // Recordatorio en minutos antes
+    }
   });
+
+  // Referencia al calendario
+  const calendarRef = React.useRef<FullCalendar | null>(null);
+
+  // Efecto para manejar la fecha de la URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const dateParam = searchParams.get('date');
+    
+    if (dateParam) {
+      const parsedDate = new Date(dateParam);
+      if (!isNaN(parsedDate.getTime())) {
+        setDate(parsedDate);
+        // Cambiar a vista de día si viene de una actividad específica
+        setCalendarView('timeGridDay');
+        
+        // Actualizar el calendario si la referencia existe
+        if (calendarRef.current) {
+          const calendarApi = calendarRef.current.getApi();
+          calendarApi.gotoDate(parsedDate);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -97,19 +131,21 @@ export default function InicioPage() {
     const fetchData = async () => {
       try {
         // Obtener estadísticas básicas
-        const [propertiesRes, clientsRes, assignmentsRes, newsRes] = await Promise.all([
+        const [propertiesRes, clientsRes, assignmentsRes, newsRes, activitiesRes] = await Promise.all([
           fetch('/api/properties/count'),
           fetch('/api/clients/count'),
           fetch('/api/assignments/count'),
-          fetch('/api/news/count')
+          fetch('/api/news/count'),
+          fetch('/api/activities')
         ]);
 
         // Usar tipos específicos para las respuestas
-        const [properties, clients, assignments, news] = await Promise.all([
+        const [properties, clients, assignments, news, activitiesData] = await Promise.all([
           propertiesRes.json() as Promise<CountResponse>,
           clientsRes.json() as Promise<CountResponse>,
           assignmentsRes.json() as Promise<CountResponse>,
-          newsRes.json() as Promise<CountResponse>
+          newsRes.json() as Promise<CountResponse>,
+          activitiesRes.json() as Promise<Activity[]>
         ]);
 
         const newStats: InicioStats = {
@@ -135,6 +171,7 @@ export default function InicioPage() {
         const recentActivities = await getUserActivities(10);
         setUserGoals(goals);
         setUserActivities(recentActivities);
+        setActivities(activitiesData);
 
         // Actualizar estadísticas de objetivos
         const completedGoals = goals.filter(g => g.isCompleted).length;
@@ -155,6 +192,14 @@ export default function InicioPage() {
 
     fetchData();
   }, [user, authLoading, router]);
+
+  // Add useEffect to update calendar view when calendarView state changes
+  useEffect(() => {
+    if (calendarRef.current) {
+      const api = calendarRef.current.getApi();
+      api.changeView(calendarView);
+    }
+  }, [calendarView]);
 
   // Manejar el envío del formulario de actividad
   const handleActivitySubmit = async (e: React.FormEvent) => {
@@ -218,9 +263,63 @@ export default function InicioPage() {
     }
   };
 
+  // Función para convertir actividades al formato que espera FullCalendar
+  const getCalendarEvents = (): EventInput[] => {
+    const userEvents = userActivities.map(activity => ({
+      id: activity.id,
+      title: activity.description || 'Sin descripción',
+      start: activity.timestamp,
+      end: new Date(new Date(activity.timestamp).getTime() + (activity.metadata?.duration || 30) * 60000),
+      extendedProps: {
+        type: 'user',
+        isCompleted: activity.metadata?.completed || false,
+        priority: activity.metadata?.priority || 'medium',
+        description: activity.description || 'Sin descripción',
+        goalId: activity.goalId
+      },
+      backgroundColor: activity.metadata?.completed ? '#9CA3AF' : '#4F46E5',
+      borderColor: activity.metadata?.completed ? '#6B7280' : '#4338CA'
+    }));
+
+    const propertyEvents = activities.map(activity => ({
+      id: `property-${activity.id}`,
+      title: `${activity.type} - ${activity.property?.address || 'Sin dirección'}`,
+      start: activity.date,
+      end: new Date(new Date(activity.date).getTime() + 60 * 60000), // 1 hora por defecto
+      extendedProps: {
+        type: 'property',
+        status: activity.status,
+        client: activity.client || '',
+        notes: activity.notes || '',
+        propertyId: activity.propertyId
+      },
+      backgroundColor: activity.status === 'Completada' ? '#9CA3AF' : '#10B981',
+      borderColor: activity.status === 'Completada' ? '#6B7280' : '#059669'
+    }));
+
+    return [...userEvents, ...propertyEvents];
+  };
+
   // Función para manejar el clic en un día del calendario
-  const handleDateClick = (clickedDate: Date) => {
+  const handleDateClick = (info: DateClickArg) => {
+    // Obtener la fecha del calendario donde se hizo clic
+    const clickedDate = new Date(info.date);
+    
+    // Log para ver la fecha seleccionada
+    console.log("Fecha seleccionada en calendario:", clickedDate);
+    
+    // Establecer la fecha para la visualización general
     setDate(clickedDate);
+    
+    // Establecer hora actual para la nueva actividad
+    const now = new Date();
+    clickedDate.setHours(now.getHours());
+    clickedDate.setMinutes(now.getMinutes());
+    clickedDate.setSeconds(0);
+    clickedDate.setMilliseconds(0);
+    
+    console.log("Fecha modificada con hora actual:", clickedDate);
+    
     // Filtrar actividades para el día seleccionado
     const activitiesForDate = userActivities.filter(activity => {
       const activityDate = new Date(activity.timestamp);
@@ -230,41 +329,167 @@ export default function InicioPage() {
         activityDate.getFullYear() === clickedDate.getFullYear()
       );
     });
+    
+    // Configurar la nueva actividad con la fecha seleccionada
+    setNewActivity({
+      ...newActivity,
+      timestamp: clickedDate.toISOString() // Guardar como ISO string con la fecha y hora correctas
+    });
+    
+    console.log("Nueva actividad timestamp establecido:", clickedDate.toISOString());
+    
     setSelectedDateActivities(activitiesForDate);
     setShowActivityDialog(true);
   };
+  
+  // Función para manejar el clic en un evento existente
+  const handleEventClick = (info: EventClickArg) => {
+    const eventId = info.event.id;
+    
+    // Verificar si es una actividad de propiedad
+    if (eventId.startsWith('property-')) {
+      const propertyId = info.event.extendedProps.propertyId;
+      if (propertyId) {
+        router.push(`/dashboard/properties/${propertyId}`);
+        return;
+      }
+    }
+    
+    // Si es una actividad de usuario, mantener el comportamiento actual
+    const activity = userActivities.find(act => act.id === eventId);
+    if (activity) {
+      const eventDate = new Date(activity.timestamp);
+      setDate(eventDate);
+      
+      // Actualizar el estado de nueva actividad con la fecha del evento
+      setNewActivity({
+        ...newActivity,
+        timestamp: eventDate.toISOString()
+      });
+      
+      setSelectedDateActivities([activity]);
+      setShowActivityDialog(true);
+    }
+  };
+  
+  // Configurar tooltips para los eventos después de que el componente se monte
+  useEffect(() => {
+    const setupTooltips = () => {
+      // Buscar todos los eventos en el calendario
+      const eventElements = document.querySelectorAll('.fc-event');
+      
+      // Para cada evento, añadir un tooltip
+      eventElements.forEach(element => {
+        const eventId = element.getAttribute('data-event-id');
+        const activity = userActivities.find(act => act.id === eventId);
+        
+        if (activity) {
+          // Crear contenido HTML para el tooltip
+          const tooltipContent = `
+            <div class="p-2">
+              <div class="font-medium">${activity.description}</div>
+              <div class="text-xs text-gray-500">${format(new Date(activity.timestamp), 'dd/MM/yyyy HH:mm')}</div>
+              <div class="text-xs mt-1 font-medium ${
+                activity.type === 'call' ? 'text-blue-700' : 
+                activity.type === 'meeting' ? 'text-green-700' :
+                activity.type === 'email' ? 'text-yellow-700' :
+                activity.type === 'visit' ? 'text-purple-700' : 'text-gray-700'
+              }">${
+                activity.type === 'call' ? 'Llamada' : 
+                activity.type === 'meeting' ? 'Reunión' : 
+                activity.type === 'email' ? 'Email' : 
+                activity.type === 'visit' ? 'Visita' : 'Otra'
+              }</div>
+              <div class="text-xs mt-1 ${
+                activity.metadata?.priority === 'high' ? 'text-red-600' :
+                activity.metadata?.priority === 'medium' ? 'text-yellow-600' :
+                'text-green-600'
+              }">
+                Prioridad: ${
+                  activity.metadata?.priority === 'high' ? 'Alta' :
+                  activity.metadata?.priority === 'medium' ? 'Media' :
+                  'Baja'
+                }
+              </div>
+            </div>
+          `;
+          
+          // Inicializar el tooltip
+          tippy(element, {
+            content: tooltipContent,
+            allowHTML: true,
+            theme: 'light',
+            placement: 'top',
+            delay: [200, 0],
+            animation: 'scale'
+          });
+        }
+      });
+    };
+    
+    // Ejecutar la configuración de tooltips después de un pequeño retraso para asegurar que los elementos están en el DOM
+    if (userActivities.length > 0) {
+      setTimeout(setupTooltips, 500);
+    }
+  }, [userActivities, calendarView]);
 
   // Función para crear una nueva actividad
   const handleCreateActivity = async () => {
     try {
-      const timestamp = new Date(date);
-      timestamp.setHours(12); // Establecer hora por defecto
+      if (!newActivity.description.trim()) {
+        alert('Por favor, añade una descripción para la actividad');
+        return;
+      }
+
+      // Usar directamente la fecha del estado, que ya contiene la fecha seleccionada por el usuario
+      const timestamp = new Date(newActivity.timestamp);
       
+      // Log para depuración - mostrar la fecha que vamos a usar
+      console.log("Fecha seleccionada (string):", newActivity.timestamp);
+      console.log("Fecha convertida a objeto Date:", timestamp);
+      console.log("Fecha formateada:", format(timestamp, "dd/MM/yyyy HH:mm", { locale: es }));
+      
+      // Pasar explícitamente la fecha como objeto Date (no como string)
       const activityData = {
-        ...newActivity,
-        timestamp: timestamp,
-        metadata: {
-          completed: false,
-          priority: 'medium'
-        }
+        type: newActivity.type,
+        description: newActivity.description,
+        goalId: newActivity.goalId || undefined,
+        timestamp: timestamp,  // Pasar como Date object
+        metadata: newActivity.metadata
       };
       
+      console.log("Enviando datos de actividad:", activityData);
+      
+      // Llamar a la función de creación
       await createUserActivity(activityData);
       
       // Actualizar la lista de actividades
       const updatedActivities = await getUserActivities();
       setUserActivities(updatedActivities);
       
-      // Limpiar el formulario
-      setNewActivity({
-        type: 'call',
-        description: '',
-        timestamp: new Date().toISOString()
+      // Filtrar actividades para el día seleccionado nuevamente para actualizar la lista
+      const refreshedActivities = updatedActivities.filter(activity => {
+        const activityDate = new Date(activity.timestamp);
+        const selectedDate = new Date(date);
+        return (
+          activityDate.getDate() === selectedDate.getDate() &&
+          activityDate.getMonth() === selectedDate.getMonth() &&
+          activityDate.getFullYear() === selectedDate.getFullYear()
+        );
       });
       
-      // Cerrar el diálogo
-      setShowActivityDialog(false);
+      setSelectedDateActivities(refreshedActivities);
+      
+      // Limpiar la descripción pero mantener la fecha y otros valores
+      setNewActivity({
+        ...newActivity,
+        description: ''
+      });
+      
+      // Mensaje de confirmación
+      alert('Actividad creada correctamente para: ' + format(timestamp, "dd/MM/yyyy", { locale: es }));
     } catch (error) {
+      console.error("Error al crear actividad:", error);
       alert('Error al crear la actividad. Por favor, inténtalo de nuevo.');
     }
   };
@@ -562,10 +787,37 @@ export default function InicioPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Calendario</h3>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-2">
+                <div className="flex border rounded-md shadow-sm overflow-hidden">
+                  <button 
+                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'dayGridMonth' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => setCalendarView('dayGridMonth')}
+                  >
+                    Mes
+                  </button>
+                  <button 
+                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'timeGridWeek' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => setCalendarView('timeGridWeek')}
+                  >
+                    Semana
+                  </button>
+                  <button 
+                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'timeGridDay' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => setCalendarView('timeGridDay')}
+                  >
+                    Día
+                  </button>
+                </div>
                 <button 
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-                  onClick={() => setDate(new Date())}
+                  onClick={() => {
+                    // Resetear la fecha a hoy y actualizar la vista del calendario
+                    if (calendarRef.current) {
+                      const calendarApi = calendarRef.current.getApi();
+                      calendarApi.today();
+                      setDate(new Date());
+                    }
+                  }}
                 >
                   <CalendarIcon className="h-4 w-4 mr-1" />
                   Hoy
@@ -579,43 +831,66 @@ export default function InicioPage() {
               </div>
             </div>
             <div className="calendar-container">
-              <Calendar
-                onChange={(value) => {
-                  if (value instanceof Date) {
-                    handleDateClick(value);
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView={calendarView}
+                headerToolbar={false} // Ocultamos la barra de herramientas predeterminada
+                locale={esLocale}
+                events={getCalendarEvents()}
+                dateClick={handleDateClick}
+                eventClick={handleEventClick}
+                height="auto"
+                dayMaxEvents={3}
+                eventTimeFormat={{
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  meridiem: false
+                }}
+                eventClassNames={(arg) => {
+                  const classes = ['transition-opacity'];
+                  
+                  // Añadir clase según si está completada
+                  if (arg.event.extendedProps.isCompleted) {
+                    classes.push('opacity-60');
                   }
-                }}
-                value={date}
-                className="w-full border-0 custom-calendar"
-                tileClassName={({ date: tileDate }) => {
-                  const hasEvent = userActivities.some(activity => {
-                    const activityDate = new Date(activity.timestamp);
-                    return (
-                      tileDate.getDate() === activityDate.getDate() &&
-                      tileDate.getMonth() === activityDate.getMonth() &&
-                      tileDate.getFullYear() === activityDate.getFullYear()
-                    );
-                  });
                   
-                  return hasEvent ? 'event-day' : '';
-                }}
-                tileContent={({ date: tileDate }) => {
-                  const dayEvents = userActivities.filter(activity => {
-                    const activityDate = new Date(activity.timestamp);
-                    return (
-                      tileDate.getDate() === activityDate.getDate() &&
-                      tileDate.getMonth() === activityDate.getMonth() &&
-                      tileDate.getFullYear() === activityDate.getFullYear()
-                    );
-                  });
+                  // Añadir clase según la prioridad
+                  if (arg.event.extendedProps.priority === 'high') {
+                    classes.push('fc-priority-high');
+                  } else if (arg.event.extendedProps.priority === 'medium') {
+                    classes.push('fc-priority-medium');
+                  } else {
+                    classes.push('fc-priority-low');
+                  }
                   
-                  return dayEvents.length > 0 ? (
-                    <div className="event-indicator">
-                      <div className="event-dot"></div>
-                    </div>
-                  ) : null;
+                  return classes;
                 }}
               />
+            </div>
+            
+            {/* Leyenda del calendario */}
+            <div className="mt-4 flex flex-wrap gap-4 text-xs">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-blue-200 border border-blue-500 mr-1"></div>
+                <span>Llamada</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-green-200 border border-green-500 mr-1"></div>
+                <span>Reunión</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-yellow-200 border border-yellow-500 mr-1"></div>
+                <span>Email</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-purple-200 border border-purple-500 mr-1"></div>
+                <span>Visita</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-gray-200 border border-gray-400 mr-1"></div>
+                <span>Completada</span>
+              </div>
             </div>
           </div>
 
@@ -837,6 +1112,13 @@ export default function InicioPage() {
                                 </button>
                               </div>
                               <p className="text-sm text-gray-700">{activity.description}</p>
+                              {activity.goalId && (
+                                <div className="mt-1">
+                                  <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-full">
+                                    {userGoals.find(g => g.id === activity.goalId)?.title || 'Objetivo'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -846,24 +1128,113 @@ export default function InicioPage() {
                     )}
                     
                     {/* Formulario para nueva actividad */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 font-audiowide">Agregar nueva actividad</h4>
+                    <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-gray-900 font-audiowide border-b pb-2">Agregar nueva actividad</h4>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="activityType" className="block text-sm font-medium text-gray-700">
+                            Tipo
+                          </label>
+                          <select
+                            id="activityType"
+                            value={newActivity.type}
+                            onChange={(e) => setNewActivity({...newActivity, type: e.target.value})}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          >
+                            <option value="call">Llamada</option>
+                            <option value="meeting">Reunión</option>
+                            <option value="email">Email</option>
+                            <option value="visit">Visita</option>
+                            <option value="other">Otra</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="activityTime" className="block text-sm font-medium text-gray-700">
+                            Hora
+                          </label>
+                          <input
+                            type="time"
+                            id="activityTime"
+                            value={format(new Date(newActivity.timestamp), 'HH:mm')}
+                            onChange={(e) => {
+                              const [hours, minutes] = e.target.value.split(':').map(Number);
+                              const timestamp = new Date(newActivity.timestamp);
+                              timestamp.setHours(hours);
+                              timestamp.setMinutes(minutes);
+                              setNewActivity({...newActivity, timestamp: timestamp.toISOString()});
+                            }}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="activityPriority" className="block text-sm font-medium text-gray-700">
+                            Prioridad
+                          </label>
+                          <select
+                            id="activityPriority"
+                            value={newActivity.metadata.priority}
+                            onChange={(e) => setNewActivity({
+                              ...newActivity, 
+                              metadata: { 
+                                ...newActivity.metadata, 
+                                priority: e.target.value 
+                              }
+                            })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          >
+                            <option value="high">Alta</option>
+                            <option value="medium">Media</option>
+                            <option value="low">Baja</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="activityDuration" className="block text-sm font-medium text-gray-700">
+                            Duración (min)
+                          </label>
+                          <select
+                            id="activityDuration"
+                            value={newActivity.metadata.duration}
+                            onChange={(e) => setNewActivity({
+                              ...newActivity, 
+                              metadata: { 
+                                ...newActivity.metadata, 
+                                duration: parseInt(e.target.value) 
+                              }
+                            })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          >
+                            <option value="15">15 min</option>
+                            <option value="30">30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">1 hora</option>
+                            <option value="90">1.5 horas</option>
+                            <option value="120">2 horas</option>
+                          </select>
+                        </div>
+                      </div>
                       
                       <div>
-                        <label htmlFor="activityType" className="block text-sm font-medium text-gray-700">
-                          Tipo
+                        <label htmlFor="activityGoal" className="block text-sm font-medium text-gray-700">
+                          Asociar a objetivo
                         </label>
                         <select
-                          id="activityType"
-                          value={newActivity.type}
-                          onChange={(e) => setNewActivity({...newActivity, type: e.target.value})}
+                          id="activityGoal"
+                          value={newActivity.goalId}
+                          onChange={(e) => setNewActivity({...newActivity, goalId: e.target.value})}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                         >
-                          <option value="call">Llamada</option>
-                          <option value="meeting">Reunión</option>
-                          <option value="email">Email</option>
-                          <option value="visit">Visita</option>
-                          <option value="other">Otra</option>
+                          <option value="">Sin objetivo asociado</option>
+                          {userGoals.map(goal => (
+                            <option key={goal.id} value={goal.id}>
+                              {goal.title}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       
@@ -879,6 +1250,31 @@ export default function InicioPage() {
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                           placeholder="Describe la actividad..."
                         />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="activityReminder" className="block text-sm font-medium text-gray-700">
+                          Recordatorio
+                        </label>
+                        <select
+                          id="activityReminder"
+                          value={newActivity.metadata.reminder}
+                          onChange={(e) => setNewActivity({
+                            ...newActivity, 
+                            metadata: { 
+                              ...newActivity.metadata, 
+                              reminder: parseInt(e.target.value) 
+                            }
+                          })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        >
+                          <option value="0">Sin recordatorio</option>
+                          <option value="5">5 minutos antes</option>
+                          <option value="15">15 minutos antes</option>
+                          <option value="30">30 minutos antes</option>
+                          <option value="60">1 hora antes</option>
+                          <option value="1440">1 día antes</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -906,116 +1302,93 @@ export default function InicioPage() {
         </div>
       )}
 
-      {/* Añadir estilos CSS personalizados */}
+      {/* Reemplazar los estilos CSS personalizados */}
       <style jsx global>{`
-        .custom-calendar {
-          width: 100%;
-          border: none;
-          border-radius: 0.5rem;
-          box-shadow: none;
-          background-color: transparent;
+        /* Estilos para FullCalendar */
+        .fc {
+          --fc-border-color: #e5e7eb;
+          --fc-button-bg-color: #4f46e5;
+          --fc-button-border-color: #4f46e5;
+          --fc-button-hover-bg-color: #4338ca;
+          --fc-button-hover-border-color: #4338ca;
+          --fc-button-active-bg-color: #3730a3;
+          --fc-button-active-border-color: #3730a3;
+          --fc-event-bg-color: #4f46e5;
+          --fc-event-border-color: #4338ca;
+          --fc-event-text-color: #fff;
+          --fc-page-bg-color: #fff;
+          --fc-today-bg-color: #e0e7ff;
         }
         
-        .custom-calendar .react-calendar__navigation {
-          display: flex;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-        
-        .custom-calendar .react-calendar__navigation button {
-          min-width: 2.5rem;
-          background: none;
-          font-size: 1rem;
-          color: #4f46e5;
-          border: none;
+        .fc .fc-button {
           border-radius: 0.25rem;
+          padding: 0.375rem 0.75rem;
+          font-size: 0.875rem;
+        }
+        
+        .fc .fc-scrollgrid {
+          border-radius: 0.375rem;
+          overflow: hidden;
+        }
+        
+        .fc .fc-day-today {
+          background-color: var(--fc-today-bg-color);
+        }
+        
+        .fc .fc-daygrid-day-number,
+        .fc .fc-col-header-cell-cushion {
           padding: 0.5rem;
-          transition: all 0.2s ease;
-        }
-        
-        .custom-calendar .react-calendar__navigation button:hover {
-          background-color: #e0e7ff;
-        }
-        
-        .custom-calendar .react-calendar__navigation button:disabled {
-          background-color: #f3f4f6;
-          color: #9ca3af;
-        }
-        
-        .custom-calendar .react-calendar__navigation button.react-calendar__navigation__label {
-          flex-grow: 1;
-          font-weight: 600;
-          color: #111827;
-          font-size: 1.125rem;
-        }
-        
-        .custom-calendar .react-calendar__month-view__weekdays {
-          text-align: center;
-          text-transform: uppercase;
-          font-weight: 600;
-          font-size: 0.75rem;
-          color: #6b7280;
-        }
-        
-        .custom-calendar .react-calendar__month-view__weekdays__weekday {
-          padding: 0.5rem;
-        }
-        
-        .custom-calendar .react-calendar__month-view__weekdays__weekday abbr {
           text-decoration: none;
+          color: #374151;
         }
         
-        .custom-calendar .react-calendar__tile {
-          padding: 0.75rem 0.5rem;
-          background: none;
-          text-align: center;
+        .fc .fc-col-header-cell {
+          background-color: #f9fafb;
+          padding: 0.5rem 0;
+        }
+        
+        .fc .fc-col-header-cell-cushion {
+          font-weight: 600;
+          color: #4b5563;
+          text-transform: uppercase;
+          font-size: 0.75rem;
+        }
+        
+        .fc .fc-event {
           border-radius: 0.25rem;
-          transition: all 0.2s ease;
-          position: relative;
+          border-left-width: 3px;
+          padding: 0.125rem 0.25rem;
+          font-size: 0.75rem;
           cursor: pointer;
+          transition: box-shadow 0.2s ease;
         }
         
-        .custom-calendar .react-calendar__tile:hover {
-          background-color: #f3f4f6;
+        .fc .fc-event:hover {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
         }
         
-        .custom-calendar .react-calendar__tile--now {
-          background-color: #e0e7ff;
-          color: #4f46e5;
-          font-weight: 600;
+        /* Prioridad alta - borde rojo en el lado izquierdo */
+        .fc .fc-priority-high {
+          border-left-color: #ef4444 !important;
         }
         
-        .custom-calendar .react-calendar__tile--active {
-          background-color: #4f46e5;
-          color: white;
+        /* Prioridad media - borde amarillo en el lado izquierdo */
+        .fc .fc-priority-medium {
+          border-left-color: #f59e0b !important;
         }
         
-        .custom-calendar .react-calendar__tile--active:hover {
-          background-color: #4338ca;
+        /* Prioridad baja - borde verde en el lado izquierdo */
+        .fc .fc-priority-low {
+          border-left-color: #10b981 !important;
         }
         
-        .custom-calendar .event-day {
-          font-weight: 600;
-        }
-        
-        .custom-calendar .event-indicator {
-          position: absolute;
-          bottom: 0.25rem;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          justify-content: center;
-        }
-        
-        .custom-calendar .event-dot {
-          width: 0.5rem;
-          height: 0.5rem;
-          border-radius: 50%;
-          background-color: #4f46e5;
-        }
-        
-        .custom-calendar .react-calendar__month-view__days__day--neighboringMonth {
-          color: #9ca3af;
+        /* Estilos para tooltips */
+        .tippy-box[data-theme~='light'] {
+          background-color: white;
+          color: #111827;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border-radius: 0.375rem;
+          font-size: 0.875rem;
         }
         
         /* Estilos para el diálogo de actividades */

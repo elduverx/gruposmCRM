@@ -10,7 +10,6 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
-import { useUsers } from '@/hooks/useUsers';
 
 interface PropertyFormProps {
   onSubmit: (data: PropertyCreateInput) => void;
@@ -20,7 +19,6 @@ interface PropertyFormProps {
 }
 
 export default function PropertyForm({ onSubmit, initialData, onCancel, zones }: PropertyFormProps) {
-  const { users } = useUsers();
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: initialData?.address || '',
     population: initialData?.population || '',

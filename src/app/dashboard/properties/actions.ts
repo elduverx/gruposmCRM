@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import { Property, PropertyCreateInput, Activity, DPV, Assignment, PropertyType, PropertyAction, OperationType } from '@/types/property';
+import { Property, PropertyCreateInput, Activity, DPV, Assignment } from '@/types/property';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
@@ -197,16 +197,6 @@ function mapClients(clients: unknown[]): { id: string; name: string; email: stri
   });
 }
 
-// Helper function to safely map zone
-function mapZone(zone: unknown): { id: string; name: string } | null {
-  if (typeof zone !== 'object' || zone === null) return null;
-  
-  const id = typeof (zone as { id?: unknown }).id === 'string' ? (zone as { id: string }).id : '';
-  const name = typeof (zone as { name?: unknown }).name === 'string' ? (zone as { name: string }).name : '';
-  
-  return { id, name };
-}
-
 // Helper function to safely map responsible user
 function mapResponsibleUser(user: unknown): { id: string; name: string; email: string } | null {
   if (typeof user !== 'object' || user === null) return null;
@@ -325,148 +315,12 @@ export async function getProperties(
               { address: { contains: searchTerm } },
               { population: { contains: searchTerm } },
               { ownerName: { contains: searchTerm } },
-              { ownerPhone: { contains: searchTerm } },
-              { responsible: { contains: searchTerm } },
-              { ownerEmail: { contains: searchTerm } },
-              { tenantName: { contains: searchTerm } },
-              { tenantPhone: { contains: searchTerm } },
-              { tenantEmail: { contains: searchTerm } },
-              { description: { contains: searchTerm } },
-              { notes: { contains: searchTerm } },
-              { price: { contains: searchTerm } },
-              { yearBuilt: { contains: searchTerm } },
-              { type: { contains: searchTerm } },
-              { status: { contains: searchTerm } },
-              { action: { contains: searchTerm } },
-              { occupiedBy: { contains: searchTerm } },
-              { habitaciones: { equals: parseInt(searchTerm) || undefined } },
-              { banos: { equals: parseInt(searchTerm) || undefined } },
-              { metrosCuadrados: { equals: parseInt(searchTerm) || undefined } }
+              { ownerPhone: { contains: searchTerm } }
             ]
           }
         : {}),
       ...(zoneId ? { zoneId } : {})
     };
-
-    // Si hay un término de búsqueda, buscar en las relaciones
-    if (searchTerm) {
-      // Buscar en zonas
-      const zonesWithMatch = await prisma.zone.findMany({
-        where: {
-          OR: [
-            { name: { contains: searchTerm } },
-            { description: { contains: searchTerm } }
-          ]
-        },
-        select: { id: true }
-      });
-      
-      const zoneIds = zonesWithMatch.map(zone => zone.id);
-      
-      // Buscar en usuarios responsables
-      const usersWithMatch = await prisma.user.findMany({
-        where: {
-          OR: [
-            { name: { contains: searchTerm } },
-            { email: { contains: searchTerm } }
-          ]
-        },
-        select: { id: true }
-      });
-      
-      const userIds = usersWithMatch.map(user => user.id);
-      
-      // Buscar en actividades
-      const activitiesWithMatch = await prisma.activity.findMany({
-        where: {
-          OR: [
-            { notes: { contains: searchTerm } },
-            { client: { contains: searchTerm } },
-            { type: { contains: searchTerm } },
-            { status: { contains: searchTerm } }
-          ]
-        },
-        select: { propertyId: true }
-      });
-      
-      const activityPropertyIds = activitiesWithMatch.map(activity => activity.propertyId);
-      
-      // Buscar en asignaciones
-      const assignmentsWithMatch = await prisma.assignment.findMany({
-        where: {
-          OR: [
-            { origin: { contains: searchTerm } },
-            { type: { contains: searchTerm } }
-          ]
-        },
-        select: { propertyId: true }
-      });
-      
-      const assignmentPropertyIds = assignmentsWithMatch.map(assignment => assignment.propertyId);
-      
-      // Buscar en clientes
-      const clientsWithMatch = await prisma.client.findMany({
-        where: {
-          OR: [
-            { name: { contains: searchTerm } },
-            { email: { contains: searchTerm } },
-            { phone: { contains: searchTerm } }
-          ]
-        },
-        select: { id: true }
-      });
-      
-      const clientIds = clientsWithMatch.map(client => client.id);
-      
-      // Obtener propiedades relacionadas con los clientes
-      const clientProperties = await prisma.property.findMany({
-        where: {
-          clients: {
-            some: {
-              id: { in: clientIds }
-            }
-          }
-        },
-        select: { id: true }
-      });
-      
-      const clientPropertyIds = clientProperties.map(property => property.id);
-      
-      // Buscar en noticias de propiedades
-      const propertyNewsWithMatch = await prisma.propertyNews.findMany({
-        where: {
-          OR: [
-            { type: { contains: searchTerm } },
-            { action: { contains: searchTerm } },
-            { responsible: { contains: searchTerm } }
-          ]
-        },
-        select: { propertyId: true }
-      });
-      
-      const newsPropertyIds = propertyNewsWithMatch.map(news => news.propertyId);
-      
-      // Combinar todos los IDs de propiedades que coinciden
-      const allMatchingPropertyIds = new Set([
-        ...activityPropertyIds,
-        ...assignmentPropertyIds,
-        ...clientPropertyIds,
-        ...newsPropertyIds
-      ]);
-      
-      // Añadir condiciones para buscar en relaciones
-      if (zoneIds.length > 0) {
-        where.OR.push({ zoneId: { in: zoneIds } });
-      }
-      
-      if (userIds.length > 0) {
-        where.OR.push({ responsibleId: { in: userIds } });
-      }
-      
-      if (allMatchingPropertyIds.size > 0) {
-        where.OR.push({ id: { in: Array.from(allMatchingPropertyIds) } });
-      }
-    }
 
     // Obtener el total de propiedades que coinciden con el filtro
     const total = await prisma.property.count({ where });
@@ -478,15 +332,9 @@ export async function getProperties(
         zone: true,
         activities: {
           orderBy: { date: 'desc' },
-          take: 1 // Solo obtener la actividad más reciente
+          take: 1
         },
-        responsibleUser: true,
-        assignments: {
-          take: 1 // Solo obtener la asignación más reciente
-        },
-        clients: {
-          take: 1 // Solo obtener el cliente más reciente
-        }
+        responsibleUser: true
       },
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * limit,
@@ -498,9 +346,8 @@ export async function getProperties(
       total
     };
   } catch (error) {
-      // eslint-disable-next-line no-console
-    console.error('Error al obtener propiedades:', error instanceof Error ? error.message : 'Unknown error');
-    return { properties: [], total: 0 };
+    console.error('Error fetching properties:', error);
+    throw new Error('Error al obtener las propiedades');
   }
 }
 
@@ -522,9 +369,7 @@ export async function getProperty(id: string): Promise<Property | null> {
 
     return mapProperty(property);
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error getting property:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error getting property');
   }
 }
 
@@ -554,150 +399,19 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
     revalidatePath('/dashboard/properties');
     return property;
   } catch (error) {
-    console.error('Error creating property:', error);
-    return null;
+    throw new Error('Error creating property');
   }
 }
 
-export async function updateProperty(id: string, data: {
-  address?: string;
-  population?: string;
-  type?: string;
-  ownerName?: string;
-  ownerPhone?: string;
-  zoneId?: string | null;
-  status?: string;
-  action?: string;
-  captureDate?: string;
-  responsibleId?: string | null;
-  hasSimpleNote?: boolean;
-  isOccupied?: boolean;
-  clientId?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  occupiedBy?: string | null;
-  isLocated?: boolean;
-  habitaciones?: number | null;
-  banos?: number | null;
-  metrosCuadrados?: number | null;
-  parking?: boolean;
-  ascensor?: boolean;
-  piscina?: boolean;
-  responsible?: string | null;
-}): Promise<Property | null> {
+export async function updateProperty(id: string, data: Partial<Property>): Promise<Property | null> {
   try {
-    // eslint-disable-next-line no-console
-    console.log('Updating property with data:', data);
-    
-    // Si se proporciona un responsibleId, verificar que el usuario existe
-    if (data.responsibleId) {
-      const user = await prisma.user.findUnique({
-        where: { id: data.responsibleId }
-      });
-      
-      if (!user) {
-        throw new Error(`Usuario responsable con ID ${data.responsibleId} no encontrado`);
-      }
-    }
-    
-    // Estructura base para los datos a actualizar
-    const updateData: Record<string, unknown> = {
-      address: data.address,
-      population: data.population,
-      type: data.type,
-      ownerName: data.ownerName,
-      ownerPhone: data.ownerPhone,
-      action: data.action,
-      status: data.status,
-      isOccupied: data.isOccupied,
-      occupiedBy: data.occupiedBy,
-      isLocated: data.isLocated,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      zoneId: data.zoneId,
-      habitaciones: data.habitaciones,
-      banos: data.banos,
-      metrosCuadrados: data.metrosCuadrados,
-      parking: data.parking,
-      ascensor: data.ascensor,
-      piscina: data.piscina,
-      responsible: data.responsible,
-    };
-    
-    // Remover campos undefined para no sobrescribir con null
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
-    });
-    
-    // Solo incluir responsibleId si está definido
-    if (data.responsibleId !== undefined) {
-      updateData.responsibleId = data.responsibleId;
-    }
-    
-    // Solo incluir clientId si está definido
-    if (data.clientId !== undefined) {
-      updateData.clientId = data.clientId;
-    }
-    
-    // Solo incluir hasSimpleNote si está definido
-    if (data.hasSimpleNote !== undefined) {
-      updateData.hasSimpleNote = data.hasSimpleNote;
-    }
-    
-    // Si hay una fecha de captura, convertirla a Date
-    if (data.captureDate) {
-      updateData.captureDate = new Date(data.captureDate);
-    }
-    
-    const updatedProperty = await prisma.property.update({
+    const property = await prisma.property.update({
       where: { id },
-      data: updateData,
-      include: {
-        zone: true,
-        activities: true,
-        responsibleUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        assignments: true,
-        dpv: true,
-        clients: true
-      }
+      data
     });
-    
-    // Si se actualizó el campo responsible, actualizar todas las noticias relacionadas
-    if (data.responsible !== undefined) {
-      await prisma.propertyNews.updateMany({
-        where: { propertyId: id },
-        data: { responsible: data.responsible }
-      });
-      
-      // Revalidar la ruta de noticias
-      revalidatePath('/noticia');
-    }
-    
-    // Revalidar rutas para refrescar la cache
-    revalidatePath('/dashboard/properties');
-    revalidatePath(`/dashboard/properties/${id}`);
-    
-    await logActivity({
-      type: 'PROPERTY',
-      description: `Propiedad actualizada: ${updatedProperty.address}`,
-      relatedId: id,
-      relatedType: 'property'
-    });
-    
-    // Mapear la propiedad actualizada al tipo correcto
-    return mapProperty(updatedProperty);
+    return property;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error updating property:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error al actualizar la propiedad');
   }
 }
 
@@ -731,8 +445,7 @@ export async function deleteProperty(id: string): Promise<boolean> {
     revalidatePath('/dashboard/properties');
     return true;
   } catch (error) {
-    console.error('Error deleting property:', error);
-    return false;
+    throw new Error('Error deleting property');
   }
 }
 
@@ -767,9 +480,7 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
       };
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error getting activities:', error instanceof Error ? error.message : 'Unknown error');
-    return [];
+    throw new Error('Error getting activities');
   }
 }
 
@@ -806,9 +517,7 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       updatedAt: updatedAt.toISOString()
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating activity:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error creating activity');
   }
 }
 
@@ -818,9 +527,6 @@ export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null
     const dpv = await prisma.dPV.findFirst({
       where: { propertyId }
     });
-    
-    // eslint-disable-next-line no-console
-    console.log('DPV fetched for property:', propertyId, dpv ? 'found' : 'not found');
     
     if (!dpv) return null;
     
@@ -836,9 +542,7 @@ export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null
       updatedAt: dpv.updatedAt.toISOString()
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching DPV:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error fetching DPV');
   }
 }
 
@@ -867,11 +571,7 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
       updatedAt: dpv.updatedAt.toISOString()
     };
   } catch (error) {
-    if (error instanceof Error) {
-      // eslint-disable-next-line no-console
-      console.error('Error creating/updating DPV:', error.message);
-    }
-    return null;
+    throw new Error('Error creating/updating DPV');
   }
 }
 
@@ -908,9 +608,7 @@ export async function createPropertyNews(propertyId: string, data: {
     revalidatePath(`/dashboard/properties/${propertyId}`);
     return news;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating property news:', error instanceof Error ? error.message : 'Unknown error');
-    throw error;
+    throw new Error('Error creating property news');
   }
 }
 
@@ -969,9 +667,7 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNewsW
       return safeItem;
     }).filter(Boolean) as PropertyNewsWithProperty[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error getting property news:', error instanceof Error ? error.message : 'Unknown error');
-    return [];
+    throw new Error('Error getting property news');
   }
 }
 
@@ -1031,9 +727,7 @@ export async function createAssignment(data: {
       } : undefined
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating assignment:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error creating assignment');
   }
 }
 
@@ -1066,9 +760,7 @@ export async function getAssignmentsByPropertyId(propertyId: string): Promise<As
       } : undefined
     }));
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error getting assignments:', error instanceof Error ? error.message : 'Unknown error');
-    return [];
+    throw new Error('Error getting assignments');
   }
 }
 
@@ -1085,9 +777,7 @@ export async function getAssignments(): Promise<Assignment[]> {
     });
     return assignments;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error getting assignments:', error instanceof Error ? error.message : 'Unknown error');
-    return [];
+    throw new Error('Error getting assignments');
   }
 }
 
@@ -1118,9 +808,6 @@ export async function updateAssignment(id: string, data: {
       }
     });
     
-    // eslint-disable-next-line no-console
-    console.log('Assignment updated:', id);
-    
     // Revalidar todas las rutas relevantes
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
     revalidatePath('/dashboard/assignments');
@@ -1143,9 +830,7 @@ export async function updateAssignment(id: string, data: {
       updatedAt: assignment.updatedAt.toISOString()
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error updating assignment:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
+    throw new Error('Error updating assignment');
   }
 }
 
@@ -1155,9 +840,6 @@ export async function deleteAssignment(id: string): Promise<boolean> {
       where: { id }
     });
     
-    // eslint-disable-next-line no-console
-    console.log('Assignment deleted:', id);
-    
     // Revalidar todas las rutas relevantes
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
     revalidatePath('/dashboard/assignments');
@@ -1166,8 +848,6 @@ export async function deleteAssignment(id: string): Promise<boolean> {
     
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error deleting assignment:', error instanceof Error ? error.message : 'Unknown error');
-    return false;
+    throw new Error('Error deleting assignment');
   }
 }

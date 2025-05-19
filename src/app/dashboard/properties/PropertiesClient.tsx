@@ -8,102 +8,136 @@ import { Zone } from '@/types/zone';
 import { useRouter } from 'next/navigation';
 import { PropertyType, OperationType, PropertyAction } from '@/types/property';
 import { PlusIcon } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
 
 export default function PropertiesClient() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
   const [zones, setZones] = useState<Zone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>('address');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage] = useState<number>(30);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(30);
   const [filters, setFilters] = useState({
     type: '',
     status: '',
     action: '',
     isOccupied: null as boolean | null,
-    zoneId: '',
+    zoneId: ''
   });
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const router = useRouter();
+  const [userZones, setUserZones] = useState<Zone[]>([]);
+  const [hasZoneRestriction, setHasZoneRestriction] = useState(false);
+  const initialLoadRef = React.useRef(false);
 
   // Fetch properties, activities, and zones
   useEffect(() => {
+    // Solo ejecutar si no se ha cargado inicialmente
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+    
     const fetchData = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch properties
-        const propertiesResponse = await fetch('/api/properties');
-        if (!propertiesResponse.ok) {
-          throw new Error('Failed to fetch properties');
+        // First, check if the user has assigned zones
+        const userZonesResponse = await fetch('/api/users/zones');
+        if (userZonesResponse.ok) {
+          const userZonesData = await userZonesResponse.json() as Zone[];
+          setUserZones(userZonesData);
+          
+          // If user has assigned zones, enable zone restriction
+          if (userZonesData.length > 0) {
+            setHasZoneRestriction(true);
+            
+            // Set the first user zone as the initial filter
+            if (userZonesData.length > 0) {
+              setFilters(prevFilters => ({
+                ...prevFilters,
+                zoneId: userZonesData[0].id
+              }));
+            }
+            
+            // Fetch properties for this zone
+            const propertiesUrl = `/api/properties?zoneId=${userZonesData[0].id}`;
+            const propertiesResponse = await fetch(propertiesUrl);
+            if (!propertiesResponse.ok) {
+              throw new Error('Failed to fetch properties');
+            }
+            
+            const propertiesData = await propertiesResponse.json() as Property[];
+            setProperties(propertiesData);
+            
+            // Fetch zones but only show assigned zones
+            const zonesResponse = await fetch('/api/zones');
+            if (!zonesResponse.ok) {
+              throw new Error('Failed to fetch zones');
+            }
+            const zonesData = await zonesResponse.json() as Zone[];
+            
+            // Only show assigned zones in the filter
+            setZones(userZonesData);
+          } else {
+            // No zone restrictions, fetch all properties
+            const propertiesResponse = await fetch('/api/properties');
+            if (!propertiesResponse.ok) {
+              throw new Error('Failed to fetch properties');
+            }
+            
+            const propertiesData = await propertiesResponse.json() as Property[];
+            setProperties(propertiesData);
+            
+            // Fetch all zones
+            const zonesResponse = await fetch('/api/zones');
+            if (!zonesResponse.ok) {
+              throw new Error('Failed to fetch zones');
+            }
+            const zonesData = await zonesResponse.json() as Zone[];
+            setZones(zonesData);
+          }
+        } else {
+          // Error fetching user zones, try to fetch all data
+          const propertiesResponse = await fetch('/api/properties');
+          if (!propertiesResponse.ok) {
+            throw new Error('Failed to fetch properties');
+          }
+          
+          const propertiesData = await propertiesResponse.json() as Property[];
+          setProperties(propertiesData);
+          
+          // Fetch all zones
+          const zonesResponse = await fetch('/api/zones');
+          if (!zonesResponse.ok) {
+            throw new Error('Failed to fetch zones');
+          }
+          const zonesData = await zonesResponse.json() as Zone[];
+          setZones(zonesData);
         }
-        const propertiesData = await propertiesResponse.json() as Property[];
-        
-        // Log para depuración
-        console.log('Propiedades cargadas:', propertiesData.length);
-        console.log('Muestra de propiedad:', propertiesData.length > 0 ? {
-          id: propertiesData[0].id,
-          zoneId: propertiesData[0].zoneId,
-          zone: propertiesData[0].zone,
-          address: propertiesData[0].address
-        } : 'No hay propiedades');
-        
-        setProperties(propertiesData);
         
         // Fetch activities
         const activitiesResponse = await fetch('/api/activities');
         if (!activitiesResponse.ok) {
           throw new Error('Failed to fetch activities');
         }
+        
         const activitiesData = await activitiesResponse.json() as Activity[];
         
-        // Group activities by property ID
-        const activitiesByProperty: Record<string, Activity[]> = {};
-        
-        // Type guard for Activity
-        const isActivity = (obj: unknown): obj is Activity => {
-          return obj !== null && 
-            typeof obj === 'object' && 
-            'propertyId' in obj && 
-            'date' in obj;
-        };
-        
-        // Safely process activities
-        if (Array.isArray(activitiesData)) {
-          activitiesData.forEach((item) => {
-            if (isActivity(item)) {
-              if (!activitiesByProperty[item.propertyId]) {
-                activitiesByProperty[item.propertyId] = [];
-              }
-              activitiesByProperty[item.propertyId].push(item);
-            }
-          });
-        }
-        
-        // Sort activities by date (newest first)
-        Object.keys(activitiesByProperty).forEach(propertyId => {
-          activitiesByProperty[propertyId].sort((a, b) => 
-            new Date(b.date).getTime() - new Date(a.date).getTime()
-          );
+        // Create a mapping of property ID to activities
+        const activitiesMapping: Record<string, Activity[]> = {};
+        activitiesData.forEach((activity: Activity) => {
+          if (!activitiesMapping[activity.propertyId]) {
+            activitiesMapping[activity.propertyId] = [];
+          }
+          activitiesMapping[activity.propertyId].push(activity);
         });
         
-        setActivitiesMap(activitiesByProperty);
-        
-        // Fetch zones
-        const zonesResponse = await fetch('/api/zones');
-        if (!zonesResponse.ok) {
-          throw new Error('Failed to fetch zones');
-        }
-        const zonesData = await zonesResponse.json() as Zone[];
-        setZones(zonesData);
+        setActivitiesMap(activitiesMapping);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error fetching data:', error);
+        toast.error('Error al cargar los datos');
       } finally {
         setIsLoading(false);
       }
@@ -115,8 +149,7 @@ export default function PropertiesClient() {
   // Handle property click
   const handlePropertyClick = useCallback((property: Property) => {
     if (!property || typeof property !== 'object') {
-      // eslint-disable-next-line no-console
-      console.error('Invalid property data');
+      toast.error('Datos de propiedad inválidos');
       return;
     }
 
@@ -142,10 +175,9 @@ export default function PropertiesClient() {
       
       // Remove the property from the state
       setProperties(prevProperties => prevProperties.filter(property => property.id !== id));
+      toast.success('Propiedad eliminada correctamente');
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting property:', error);
-      alert('Error al eliminar la propiedad. Por favor, inténtalo de nuevo.');
+      toast.error('Error al eliminar la propiedad');
     } finally {
       setIsDeleting(null);
     }
@@ -170,7 +202,7 @@ export default function PropertiesClient() {
         throw new Error('Failed to update property');
       }
       
-      const updatedProperty = await response.json();
+      const updatedProperty = await response.json() as Property;
       
       // Update the property in the state
       setProperties(prevProperties => 
@@ -178,10 +210,9 @@ export default function PropertiesClient() {
           p.id === property.id ? updatedProperty : p
         )
       );
+      toast.success('Estado de localización actualizado');
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error updating property:', error);
-      alert('Error al actualizar la propiedad. Por favor, inténtalo de nuevo.');
+      toast.error('Error al actualizar la propiedad');
     } finally {
       setIsUpdating(null);
     }
@@ -197,46 +228,22 @@ export default function PropertiesClient() {
 
   // Handle filter change
   const handleFilterChange = useCallback((filterType: string, value: string | boolean | null) => {
+    // If we're changing the zone and there are zone restrictions, 
+    // only allow selecting from assigned zones
+    if (filterType === 'zoneId' && hasZoneRestriction && value === '') {
+      // If user tries to select "All zones" but has restrictions,
+      // set it to their first assigned zone instead
+      if (userZones.length > 0) {
+        value = userZones[0].id;
+      }
+    }
+    
     setFilters(prev => ({
       ...prev,
       [filterType]: value
     }));
     setCurrentPage(1); // Reset to first page when filters change
-    
-    // Si es un cambio de zona, podemos realizar una carga específica
-    if (filterType === 'zoneId' && typeof value === 'string' && value !== '') {
-      console.log('Cargando propiedades específicamente para la zona:', value);
-      setIsLoading(true);
-      
-      // Función para cargar propiedades por zona
-      const fetchPropertiesByZone = async (zoneId: string) => {
-        try {
-          // Construir URL con parámetro de zona
-          const url = `/api/properties?zoneId=${zoneId}`;
-          const response = await fetch(url);
-          
-          if (!response.ok) {
-            throw new Error('Error al cargar propiedades por zona');
-          }
-          
-          const data = await response.json();
-          console.log(`Cargadas ${data.length} propiedades para la zona ${zoneId}`);
-          
-          // Actualizar solo si hay respuesta
-          if (Array.isArray(data) && data.length > 0) {
-            setProperties(data);
-          }
-        } catch (error) {
-          console.error('Error al cargar propiedades por zona:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      // Ejecutar la función de carga
-      fetchPropertiesByZone(value);
-    }
-  }, []);
+  }, [hasZoneRestriction, userZones]);
 
   // Memoized filtered and sorted properties
   const filteredAndSortedProperties = useMemo(() => {
@@ -316,48 +323,6 @@ export default function PropertiesClient() {
     setCurrentPage(page);
   }, []);
 
-  const handleSearch = (searchTerm: string) => {
-    setSearchQuery(searchTerm);
-    setCurrentPage(1);
-    
-    const filtered = properties.filter(property => {
-      const searchLower = searchTerm.toLowerCase();
-      
-      // Manejo seguro de propiedades que pueden ser null o undefined
-      const address = property.address?.toLowerCase() || '';
-      const ownerName = property.ownerName?.toLowerCase() || '';
-      const ownerPhone = property.ownerPhone?.toLowerCase() || '';
-      const ownerEmail = property.ownerEmail?.toLowerCase() || '';
-      const tenantName = property.tenantName?.toLowerCase() || '';
-      const tenantPhone = property.tenantPhone?.toLowerCase() || '';
-      const tenantEmail = property.tenantEmail?.toLowerCase() || '';
-      const notes = property.notes?.toLowerCase() || '';
-      const type = property.type?.toLowerCase() || '';
-      const status = property.status?.toLowerCase() || '';
-      const action = property.action?.toLowerCase() || '';
-      const zoneName = property.zone?.name?.toLowerCase() || '';
-      const description = property.description?.toLowerCase() || '';
-      
-      return (
-        address.includes(searchLower) ||
-        ownerName.includes(searchLower) ||
-        ownerPhone.includes(searchLower) ||
-        ownerEmail.includes(searchLower) ||
-        tenantName.includes(searchLower) ||
-        tenantPhone.includes(searchLower) ||
-        tenantEmail.includes(searchLower) ||
-        notes.includes(searchLower) ||
-        type.includes(searchLower) ||
-        status.includes(searchLower) ||
-        action.includes(searchLower) ||
-        zoneName.includes(searchLower) ||
-        description.includes(searchLower)
-      );
-    });
-    
-    setFilteredProperties(filtered);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -370,6 +335,24 @@ export default function PropertiesClient() {
           Nuevo inmueble
         </button>
       </div>
+      
+      {/* Add a visual indicator if the user has zone restrictions */}
+      {hasZoneRestriction && (
+        <div className="px-4 py-3 mb-4 bg-yellow-100 border-l-4 border-yellow-500 rounded-md">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Solo puedes ver inmuebles de las zonas que tienes asignadas.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">
@@ -462,7 +445,7 @@ export default function PropertiesClient() {
             </select>
           </div>
           
-          {/* Zone Filter */}
+          {/* Zone Filter - update to respect zone restrictions */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Zona
@@ -471,14 +454,18 @@ export default function PropertiesClient() {
               value={filters.zoneId}
               onChange={(e) => handleFilterChange('zoneId', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={hasZoneRestriction && userZones.length <= 1}
             >
-              <option value="">Todas</option>
+              {!hasZoneRestriction && <option value="">Todas</option>}
               {zones.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.name}
                 </option>
               ))}
             </select>
+            {hasZoneRestriction && (
+              <p className="mt-1 text-xs text-gray-500">Solo puedes ver zonas asignadas</p>
+            )}
           </div>
         </div>
       </div>

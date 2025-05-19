@@ -39,8 +39,6 @@ const adminNavigation = [
   { name: 'Metas', href: '/dashboard/metas', icon: TrophyIcon },
 ];
 
-const AppName = "GrupoSM CRM";
-
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();

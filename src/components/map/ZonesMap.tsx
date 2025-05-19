@@ -20,20 +20,20 @@ import { useRouter } from 'next/navigation';
 interface ZonesMapProps {
   zones: Zone[];
   onZoneCreated: (coordinates: { lat: number; lng: number }[]) => void;
-  onZoneClick?: (zone: Zone) => void;
+  onZoneClick: (zone: Zone) => void;
   onEditZone?: (zone: Zone) => void;
-  onDeleteZone?: (zone: Zone) => void;
-  selectedZoneId?: string | null;
-  newZoneColor?: string;
-  zoneCoordinates?: { lat: number; lng: number }[];
+  properties: Property[];
+  onPropertyClick: (property: Property) => void;
+  selectedPropertyId: string | null;
+  setSelectedPropertyId: (id: string | null) => void;
+  handleZoneClick: (zone: Zone) => void;
+  selectedLocation?: {lat: number, lng: number, name: string} | null;
   initialCenter?: [number, number];
   initialZoom?: number;
-  properties?: Property[];
-  onPropertyClick?: (property: Property) => void;
-  setSelectedPropertyId?: (id: string | null) => void;
-  handleZoneClick?: (zone: Zone) => void;
-  selectedLocation?: {lat: number, lng: number, name: string} | null;
-  onMarkerRefsUpdate?: (refs: { [key: string]: L.Marker | null }) => void;
+  onMarkerRefsUpdate: (refs: { [key: string]: L.Marker | null }) => void;
+  newZoneColor?: string;
+  zoneCoordinates?: { lat: number; lng: number }[];
+  zoneUsers?: { [zoneId: string]: { id: string; name: string | null; email: string }[] };
 }
 
 const ZonesMap: React.FC<ZonesMapProps> = ({
@@ -41,7 +41,6 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
   onZoneCreated,
   onZoneClick,
   onEditZone,
-  onDeleteZone,
   initialCenter = [39.4015, -0.4027],
   initialZoom = 15,
   properties = [],
@@ -51,7 +50,8 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
   selectedLocation,
   newZoneColor = '#FF0000',
   zoneCoordinates = [],
-  onMarkerRefsUpdate
+  onMarkerRefsUpdate,
+  zoneUsers
 }) => {
   const router = useRouter();
   const mapRef = useRef<L.Map | null>(null);
@@ -242,8 +242,19 @@ const ZonesMap: React.FC<ZonesMapProps> = ({
             <Popup>
               <div className="p-2">
                 <h3 className="font-semibold">{zone.name}</h3>
-                {zone.description && (
+                {zoneUsers && zoneUsers[zone.id]?.length > 0 ? (
+                  <div className="mt-1">
+                    <p className="text-sm font-medium text-gray-700">Usuarios asignados:</p>
+                    <ul className="text-sm text-gray-600 mt-1 pl-2">
+                      {zoneUsers[zone.id].map(user => (
+                        <li key={user.id}>{user.name || user.email.split('@')[0]}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : zone.description ? (
                   <p className="text-sm text-gray-600">{zone.description}</p>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Sin usuarios asignados</p>
                 )}
               </div>
             </Popup>

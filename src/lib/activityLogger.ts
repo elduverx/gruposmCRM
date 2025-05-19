@@ -1,6 +1,14 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/auth';
 
+// Custom error class for activity logging
+class ActivityLoggerError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'ActivityLoggerError';
+  }
+}
+
 export type ActivityType = 
   | 'PROPERTY_CREATED'
   | 'PROPERTY_UPDATED'
@@ -43,8 +51,7 @@ export async function logActivity({
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      console.error('No se pudo obtener el ID del usuario actual');
-      return null;
+      throw new ActivityLoggerError('Usuario no autenticado');
     }
 
     const activity = await prisma.userActivity.create({
@@ -67,8 +74,7 @@ export async function logActivity({
 
     return activity;
   } catch (error) {
-    console.error('Error al registrar actividad:', error);
-    return null;
+    throw new ActivityLoggerError('Error al registrar actividad', error);
   }
 }
 
@@ -90,7 +96,7 @@ async function updateGoalProgress(goalId: string): Promise<void> {
     });
     
     if (!goal) {
-      throw new Error('Meta no encontrada');
+      throw new ActivityLoggerError('Meta no encontrada');
     }
     
     // Actualizar el contador y verificar si se completó
@@ -105,6 +111,6 @@ async function updateGoalProgress(goalId: string): Promise<void> {
       }
     });
   } catch (error) {
-    console.error('Error al actualizar progreso de meta:', error);
+    throw new ActivityLoggerError('Error al actualizar progreso de meta', error);
   }
 } 

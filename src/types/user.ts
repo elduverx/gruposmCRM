@@ -43,7 +43,7 @@ export interface CreateUserGoalInput {
   title: string;
   description?: string;
   targetCount: number;
-  category?: string;
+  category?: 'GENERAL' | 'PROPERTY' | 'CLIENT' | 'ASSIGNMENT' | 'NEWS';
   endDate?: string;
 }
 

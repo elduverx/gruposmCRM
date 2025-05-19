@@ -21,7 +21,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/common/SearchBar';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import L from 'leaflet';
 
@@ -148,6 +148,11 @@ interface NominatimResponse {
   lon: string;
 }
 
+// Add UserAssignmentModal dynamic import
+const UserAssignmentModal = dynamic(() => import('@/components/zones/UserAssignmentModal'), {
+  ssr: false
+});
+
 export default function ZonesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertiesData, setPropertiesData] = useState<{ properties: Property[]; total: number }>({ properties: [], total: 0 });
@@ -188,6 +193,8 @@ export default function ZonesPage() {
   const [loadingZones, setLoadingZones] = useState(false);
   const propertiesPerPage = 100;
   const [totalProperties, setTotalProperties] = useState(0);
+  const [showUserAssignmentModal, setShowUserAssignmentModal] = useState(false);
+  const [zoneUsers, setZoneUsers] = useState<{ [zoneId: string]: { id: string; name: string | null; email: string }[] }>({});
 
   // Función para cargar propiedades de forma paginada
   const loadProperties = useCallback(async (page = 1, searchTerm = '', zoneId?: string, loadAll = false) => {
@@ -208,12 +215,12 @@ export default function ZonesPage() {
       // Caso normal con paginación
       const data = await getProperties(page, propertiesPerPage, searchTerm, 'updatedAt', 'desc', zoneId);
       
-      if (page === 1) {
-        // Si es la primera página, reemplazar las propiedades
+      if (page === 1 || searchTerm !== '') {
+        // Si es la primera página o hay un término de búsqueda, reemplazar las propiedades
         setProperties(data.properties);
         setVisibleProperties(data.properties);
       } else {
-        // Si es paginación, añadir a las propiedades existentes
+        // Si es paginación sin búsqueda, añadir a las propiedades existentes
         setProperties(prev => [...prev, ...data.properties]);
         setVisibleProperties(prev => [...prev, ...data.properties]);
       }
@@ -575,7 +582,16 @@ export default function ZonesPage() {
     // setEditingZone(zone); - Comentado para prevenir que el formulario se abra en modo de edición
     
     // Cargar todas las propiedades de la zona seleccionada
-    loadProperties(1, '', zone.id, true);
+    loadProperties(1, '', zone.id, true).then(() => {
+      // Una vez cargadas las propiedades, actualizar las propiedades localizadas en una única operación
+      const localizedProps = properties.filter(property => 
+        (property.zoneId === zone.id || 
+         (property.latitude && property.longitude && isPropertyInZone(property, zone.coordinates))) && 
+        (property.isLocated === true || property.isLocated === "true")
+      );
+      
+      setZoneLocalizedProperties(localizedProps);
+    });
     
     // Cargar las noticias de la zona seleccionada
     setIsLoadingNews(true);
@@ -583,20 +599,6 @@ export default function ZonesPage() {
       .then(({ news, assignments }) => {
         setZoneNews(news);
         setZoneAssignments(assignments);
-        
-        // Actualizar las propiedades localizadas una vez cargadas todas las propiedades
-        setTimeout(() => {
-          const localizedProps = getLocalizedPropertiesInSelectedZone();
-          
-          // Asegurarse de que las propiedades localizadas tengan todos los datos necesarios
-          const localizedPropsWithDetails = localizedProps.map(prop => {
-            // Buscar la propiedad completa en el array de propiedades
-            const fullProperty = properties.find(p => p.id === prop.id);
-            return fullProperty || prop;
-          });
-          
-          setZoneLocalizedProperties(localizedPropsWithDetails);
-        }, 500); // Esperar a que las propiedades se carguen
       })
       .catch(error => {
         console.error('Error loading zone news and assignments:', error);
@@ -605,6 +607,8 @@ export default function ZonesPage() {
       .finally(() => {
         setIsLoadingNews(false);
       });
+    
+    setSelectedZone(zone);
   };
 
   const handlePolygonEdited = async (zone: Zone, newCoordinates: { lat: number; lng: number }[]) => {
@@ -850,29 +854,19 @@ export default function ZonesPage() {
   const getLocalizedPropertiesInSelectedZone = () => {
     if (!selectedZoneId) return [];
     
-    // Filtrar propiedades que están en la zona seleccionada y están localizadas
-    const propertiesInZone = getPropertiesInSelectedZone();
+    // Utilizar directamente las propiedades filtradas por zona
+    // en lugar de llamar recursivamente a getPropertiesInSelectedZone
+    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
+    if (!selectedZone) return [];
     
-    // Filtrar propiedades que están localizadas
-    const localizedProps = propertiesInZone.filter(property => {
-      return property.isLocated === true || property.isLocated === "true";
-    });
-    
-    // También buscar propiedades que tienen zoneId igual a selectedZoneId y están localizadas
-    const propsWithZoneId = properties.filter(property => 
-      property.zoneId === selectedZoneId && 
+    // Filtrar directamente las propiedades que tienen zoneId igual a selectedZoneId y están localizadas
+    const localizedProps = properties.filter(property => 
+      (property.zoneId === selectedZoneId || 
+       (property.latitude && property.longitude && isPropertyInZone(property, selectedZone.coordinates))) && 
       (property.isLocated === true || property.isLocated === "true")
     );
     
-    // Combinar ambos conjuntos de propiedades, eliminando duplicados
-    const combinedProps = [...localizedProps];
-    propsWithZoneId.forEach(property => {
-      if (!combinedProps.some(p => p.id === property.id)) {
-        combinedProps.push(property);
-      }
-    });
-    
-    return combinedProps;
+    return localizedProps;
   };
 
   // Filtrar propiedades y zonas basadas en el término de búsqueda
@@ -929,7 +923,18 @@ export default function ZonesPage() {
 
   // Filtrar propiedades en la zona seleccionada basadas en el término de búsqueda
   const filteredPropertiesInZone = useMemo(() => {
-    const propertiesInZone = getPropertiesInSelectedZone();
+    if (!selectedZoneId) return [];
+    
+    const selectedZone = zones.find(zone => zone.id === selectedZoneId);
+    if (!selectedZone) return [];
+    
+    // Filtrar directamente las propiedades que están en la zona o tienen zoneId igual a selectedZoneId
+    const propertiesInZone = properties.filter(property => 
+      property.zoneId === selectedZoneId || 
+      (property.latitude && property.longitude && isPropertyInZone(property, selectedZone.coordinates))
+    );
+    
+    // Aplicar el filtro de búsqueda si existe
     if (!zoneSearchTerm) return propertiesInZone;
     
     return propertiesInZone.filter(property => 
@@ -940,7 +945,88 @@ export default function ZonesPage() {
       (property.habitaciones && property.habitaciones.toString().includes(zoneSearchTerm)) ||
       (property.metrosCuadrados && property.metrosCuadrados.toString().includes(zoneSearchTerm))
     );
-  }, [selectedZoneId, zoneSearchTerm, properties]);
+  }, [selectedZoneId, zoneSearchTerm, properties, zones]);
+
+  // Add function to handle user assignment
+  const handleAssignUsers = async (userIds: string[]) => {
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/zones/${selectedZone?.id}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ userIds })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al asignar usuarios a la zona');
+      }
+      
+      // Update zoneUsers state for the selected zone
+      if (selectedZone) {
+        // Fetch updated users for this zone
+        const updatedUsersResponse = await fetch(`/api/zones/${selectedZone.id}/users`, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        if (updatedUsersResponse.ok) {
+          const updatedUsers = await updatedUsersResponse.json();
+          
+          // Update the zoneUsers state
+          setZoneUsers(prev => ({
+            ...prev,
+            [selectedZone.id]: updatedUsers
+          }));
+        }
+      }
+      
+      toast.success('Usuarios asignados correctamente');
+    } catch (error) {
+      console.error('Error assigning users to zone:', error);
+      toast.error('Error al asignar usuarios a la zona');
+    } finally {
+      setShowUserAssignmentModal(false);
+    }
+  };
+
+  // Load users assigned to zones
+  useEffect(() => {
+    const loadZoneUsers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Authorization': token ? `Bearer ${token}` : ''
+        };
+        
+        const promises = zones.map(zone => 
+          fetch(`/api/zones/${zone.id}/users`, { headers })
+            .then(response => response.ok ? response.json() : [])
+            .catch(() => [])
+        );
+        
+        const results = await Promise.all(promises);
+        
+        const newZoneUsers: { [zoneId: string]: any[] } = {};
+        zones.forEach((zone, index) => {
+          newZoneUsers[zone.id] = results[index];
+        });
+        
+        setZoneUsers(newZoneUsers);
+      } catch (error) {
+        console.error('Error loading zone users:', error);
+      }
+    };
+    
+    if (zones.length > 0) {
+      loadZoneUsers();
+    }
+  }, [zones]);
 
   if (loading) {
     return (
@@ -989,21 +1075,23 @@ export default function ZonesPage() {
             </div>
           )}
           <ZonesMap
-            zones={filteredZones} 
-            properties={properties}
+            zones={zones}
             onZoneCreated={handleZoneCreated}
-            onPropertyClick={onPropertyClick}
             onZoneClick={handleZoneClick}
+            onEditZone={handleEditZone}
             onDeleteZone={handleDeleteZone}
+            properties={properties}
+            onPropertyClick={onPropertyClick}
             selectedPropertyId={selectedPropertyId}
             setSelectedPropertyId={setSelectedPropertyId}
             handleZoneClick={handleZoneClick}
-            onMarkerRefsUpdate={setMarkerRefs}
             selectedLocation={selectedLocation}
             initialCenter={mapCenter}
             initialZoom={mapZoom}
             newZoneColor={newZoneColor}
             zoneCoordinates={zoneCoordinates}
+            onMarkerRefsUpdate={setMarkerRefs}
+            zoneUsers={zoneUsers}
           />
         </div>
 
@@ -1123,8 +1211,14 @@ export default function ZonesPage() {
                       />
                       <div>
                         <h3 className="font-medium text-lg font-audiowide">{zone.name}</h3>
-                        {zone.description && (
+                        {zoneUsers[zone.id]?.length > 0 ? (
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                            Asignada a: {zoneUsers[zone.id].map(user => user.name || user.email.split('@')[0]).join(', ')}
+                          </p>
+                        ) : zone.description ? (
                           <p className="text-sm text-gray-600 mt-1 line-clamp-1">{zone.description}</p>
+                        ) : (
+                          <p className="text-sm text-gray-400 mt-1 italic">Sin usuarios asignados</p>
                         )}
                       </div>
                     </div>
@@ -1157,7 +1251,7 @@ export default function ZonesPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold flex items-center font-audiowide">
                 <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
-                  {selectedZoneId ? getPropertiesInSelectedZone().length : properties.length}
+                  {selectedZoneId ? filteredPropertiesInZone.length : properties.length}
                 </span>
                 {selectedZoneId 
                   ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
@@ -1184,7 +1278,7 @@ export default function ZonesPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                 <span className="ml-2 text-gray-600">Cargando propiedades...</span>
               </div>
-            ) : selectedZoneId && getPropertiesInSelectedZone().length === 0 ? (
+            ) : selectedZoneId && filteredPropertiesInZone.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No hay propiedades dentro de esta zona.
               </div>
@@ -1195,7 +1289,7 @@ export default function ZonesPage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {(selectedZoneId ? getPropertiesInSelectedZone() : properties).map((property) => (
+                  {(selectedZoneId ? filteredPropertiesInZone : properties).map((property) => (
                     <div 
                       key={property.id} 
                       className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
@@ -1295,15 +1389,31 @@ export default function ZonesPage() {
               <h2 className="text-2xl font-bold font-audiowide">
                 {zones.find(z => z.id === selectedZoneId)?.name}
               </h2>
-              <button
-                onClick={() => setSelectedZoneId(null)}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <span className="sr-only">Cerrar</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => {
+                    const zoneToEdit = zones.find(z => z.id === selectedZoneId);
+                    if (zoneToEdit) {
+                      setSelectedZoneId(null);
+                      setShowUserAssignmentModal(true);
+                      setSelectedZone(zoneToEdit);
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <UserPlusIcon className="h-5 w-5 mr-1" />
+                  Asignar Usuarios
+                </button>
+                <button
+                  onClick={() => setSelectedZoneId(null)}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             
             {/* Barra de búsqueda para filtrar contenido dentro de la zona */}
@@ -1339,7 +1449,7 @@ export default function ZonesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="text-lg font-medium text-blue-800 font-audiowide">Propiedades</h3>
-                    <p className="text-3xl font-bold text-blue-600">{getPropertiesInSelectedZone().length}</p>
+                    <p className="text-3xl font-bold text-blue-600">{filteredPropertiesInZone.length}</p>
                     <p className="text-sm text-blue-600">Total en esta zona</p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
@@ -1545,6 +1655,15 @@ export default function ZonesPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* User Assignment Modal */}
+      {showUserAssignmentModal && selectedZone && (
+        <UserAssignmentModal
+          zone={selectedZone}
+          onClose={() => setShowUserAssignmentModal(false)}
+          onSave={handleAssignUsers}
+        />
       )}
     </div>
   );

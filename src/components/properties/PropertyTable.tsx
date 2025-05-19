@@ -109,65 +109,67 @@ export default function PropertyTable({
   };
 
   return (
-    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-      <table className="min-w-full divide-y divide-gray-300">
-        <thead className="bg-gray-50">
-          <tr>
-            {renderColumnHeader('population', 'Población')}
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Zona</th>
-            {renderColumnHeader('address', 'Dirección')}
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ocupado por</th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Último contacto</th>
-            <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Localizado</th>
-            {renderColumnHeader('ownerName', 'Propietario')}
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Teléfono</th>
-            {renderColumnHeader('responsible', 'Responsable')}
-            <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-              <span className="sr-only">Acciones</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {properties.map((property) => (
-            <tr key={property.id} className="hover:bg-gray-50">
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                {renderZone(property.zoneId)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                <button
-                  onClick={() => onPropertyClick(property)}
-                  className="text-blue-600 hover:text-blue-800 hover:underline text-left"
-                >
-                  {property.address}
-                </button>
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                {renderLastActivity(property.id)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
-                {renderLocationIndicator(property)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
-              <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => onDeleteProperty(property.id)}
-                    disabled={isDeleting === property.id}
-                    className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                    <span className="sr-only">Eliminar {property.address}</span>
-                  </button>
-                </div>
-              </td>
+    <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+      <div className="min-w-max">
+        <table className="min-w-full divide-y divide-gray-300">
+          <thead className="bg-gray-50">
+            <tr>
+              {renderColumnHeader('population', 'Población')}
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Zona</th>
+              {renderColumnHeader('address', 'Dirección')}
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ocupado por</th>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Último contacto</th>
+              <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Localizado</th>
+              {renderColumnHeader('ownerName', 'Propietario')}
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Teléfono</th>
+              {renderColumnHeader('responsible', 'Responsable')}
+              <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                <span className="sr-only">Acciones</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {properties.map((property) => (
+              <tr key={property.id} className="hover:bg-gray-50">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.population}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                  {renderZone(property.zoneId)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                  <button
+                    onClick={() => onPropertyClick(property)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                  >
+                    {property.address}
+                  </button>
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                  {renderLastActivity(property.id)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
+                  {renderLocationIndicator(property)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerName}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
+                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => onDeleteProperty(property.id)}
+                      disabled={isDeleting === property.id}
+                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                      <span className="sr-only">Eliminar {property.address}</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       
       {/* Indicador de carga */}
       {isLoading && (

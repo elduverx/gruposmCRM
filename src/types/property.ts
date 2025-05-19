@@ -98,7 +98,7 @@ export interface Property {
   id: string;
   address: string;
   population: string;
-  status: typeof OperationType[keyof typeof OperationType];
+  status: string;
   action: PropertyAction;
   type: PropertyType;
   ownerName: string;
@@ -135,6 +135,8 @@ export interface Property {
   parking: boolean;
   ascensor: boolean;
   piscina: boolean;
+  basePropertyId: string | null;
+  isSold: boolean;
   price: string;
   description: string;
   yearBuilt: string;

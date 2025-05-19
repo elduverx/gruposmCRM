@@ -63,6 +63,7 @@ export interface MapWithDrawProps {
   selectedLocation?: {lat: number, lng: number, name: string} | null;
   initialCenter?: [number, number];
   initialZoom?: number;
+  zoneUsers?: { [zoneId: string]: { id: string; name: string | null; email: string }[] };
 }
 
 const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
@@ -83,7 +84,8 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
     handleZoneClick,
     selectedLocation,
     initialCenter = [39.4015, -0.4027],
-    initialZoom = 15
+    initialZoom = 15,
+    zoneUsers
   } = props;
 
   const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
@@ -276,8 +278,19 @@ const MapWithDraw = forwardRef<L.Map, MapWithDrawProps>((props, ref) => {
           <Popup>
             <div className="p-2">
               <h3 className="font-semibold">{zone.name}</h3>
-              {zone.description && (
+              {zoneUsers && zoneUsers[zone.id]?.length > 0 ? (
+                <div className="mt-1">
+                  <p className="text-sm font-medium text-gray-700">Usuarios asignados:</p>
+                  <ul className="text-sm text-gray-600 mt-1 pl-2">
+                    {zoneUsers[zone.id].map(user => (
+                      <li key={user.id}>{user.name || user.email.split('@')[0]}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : zone.description ? (
                 <p className="text-sm text-gray-600">{zone.description}</p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">Sin usuarios asignados</p>
               )}
               <div className="mt-2 flex space-x-2">
                 <button

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews, deleteAssignment } from '../actions';
-import { PlusIcon, CheckIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, CheckIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import PropertyForm from '@/components/PropertyForm';
 import { getZones } from '@/app/dashboard/zones/actions';
 import type { Zone } from '@/app/dashboard/zones/actions';
+import { useRouter } from 'next/navigation';
 
 interface PropertyDetailClientProps {
   propertyId: string;
@@ -47,6 +48,7 @@ export default function PropertyDetailClient({
   const [zones, setZones] = useState<Zone[]>([]);
   const [currentAssignment, setCurrentAssignment] = useState<Assignment | null>(null);
   const [isEditingAssignment, setIsEditingAssignment] = useState(false);
+  const router = useRouter();
 
   // Cargar noticias al abrir la página
   useEffect(() => {
@@ -81,8 +83,6 @@ export default function PropertyDetailClient({
     
     setIsUpdating(true);
     try {
-      // eslint-disable-next-line no-console
-      console.log('Toggling located status');
       const updatedProperty = await updateProperty(property.id, {
         isLocated: !property.isLocated
       });
@@ -94,8 +94,6 @@ export default function PropertyDetailClient({
         toast.success(`Propiedad marcada como ${property.isLocated ? 'no localizada' : 'localizada'}`);
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error toggling located status:', error);
       toast.error('Error al cambiar el estado de localización');
     } finally {
       setIsUpdating(false);
@@ -122,8 +120,6 @@ export default function PropertyDetailClient({
       }
       setIsActivityFormOpen(false);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error creating activity:', error);
       toast.error('Error al crear la actividad');
     }
   };
@@ -145,8 +141,6 @@ export default function PropertyDetailClient({
       }
       setIsDPVFormOpen(false);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error updating DPV:', error);
       toast.error('Error al actualizar el DPV');
     }
   };
@@ -181,8 +175,6 @@ export default function PropertyDetailClient({
         toast.error('No se pudo eliminar el encargo');
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting assignment:', error);
       toast.error('Error al eliminar la asignación');
     } finally {
       setIsUpdating(false);
@@ -199,8 +191,6 @@ export default function PropertyDetailClient({
         setIsEditFormOpen(false);
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error updating property:', error);
       toast.error('Error al actualizar la propiedad');
     } finally {
       setIsUpdating(false);
@@ -227,17 +217,13 @@ export default function PropertyDetailClient({
               <span className="text-sm text-gray-600">Localizado:</span>
               <button 
                 onClick={handleToggleLocated}
-                disabled={isUpdating}
-                className="relative w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                title="Marcar como localizado"
-              >
-                {property.isLocated && (
-                  <CheckIcon 
-                    className={`absolute inset-0 m-auto h-4 w-4 ${
-                      isUpdating ? 'text-gray-400' : 'text-green-600'
+                className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md ${
+                  property.isLocated
+                    ? 'text-green-700 bg-green-100 hover:bg-green-200'
+                    : 'text-red-700 bg-red-100 hover:bg-red-200'
                     }`}
-                  />
-                )}
+              >
+                {property.isLocated ? 'Sí' : 'No'}
               </button>
             </div>
           </div>
@@ -388,11 +374,24 @@ export default function PropertyDetailClient({
                         {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
                         {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            // Navegar al calendario con la fecha de la actividad
+                            const activityDate = new Date(activity.date);
+                            router.push(`/dashboard?date=${activityDate.toISOString()}`);
+                          }}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Ver en calendario"
+                        >
+                          <CalendarIcon className="h-5 w-5" />
+                        </button>
                       <span className={`px-2 py-1 text-sm rounded-full ${
                         activity.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                       }`}>
                         {activity.status}
                       </span>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -781,7 +780,7 @@ export default function PropertyDetailClient({
                   latitude: property.latitude,
                   longitude: property.longitude,
                   zoneId: property.zoneId,
-                  status: property.status,
+                  status: property.status as 'SALE' | 'RENT' | undefined,
                   action: property.action,
                   captureDate: property.captureDate ? new Date(property.captureDate) : null,
                   responsibleId: property.responsibleId,

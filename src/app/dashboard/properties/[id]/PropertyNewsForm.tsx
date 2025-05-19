@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { PropertyNews } from '@/types/property';
+import { toast } from 'react-hot-toast';
 import { createPropertyNews } from '@/app/dashboard/properties/actions';
 import { useUsers } from '@/hooks/useUsers';
-import { toast } from 'react-hot-toast';
 
 interface PropertyNewsFormProps {
   propertyId: string;

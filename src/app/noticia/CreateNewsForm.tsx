@@ -30,7 +30,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const { users } = useUsers();
+  const { users, loading: usersLoading, error: usersError } = useUsers();
   const [formData, setFormData] = useState<NewsFormData>({
     propertyId: '',
     type: 'DPV',
@@ -254,14 +254,22 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   required
+                  disabled={usersLoading}
                 >
-                  <option value="">Seleccionar responsable</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.name || ''}>
-                      {user.name || 'Sin nombre'}
+                  <option value="">
+                    {usersLoading ? 'Cargando usuarios...' : 'Seleccionar responsable'}
+                  </option>
+                  {!usersLoading && users && users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.id}
                     </option>
                   ))}
                 </select>
+                {usersError && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Error al cargar los usuarios. Por favor, intenta de nuevo.
+                  </p>
+                )}
               </div>
 
               <div>

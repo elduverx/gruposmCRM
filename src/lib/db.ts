@@ -5,6 +5,14 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 
+// Custom error class for database operations
+class DatabaseError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'DatabaseError';
+  }
+}
+
 // Define the User interface
 export interface User {
   id: string;
@@ -25,12 +33,9 @@ const ensureDataDir = () => {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
-      // eslint-disable-next-line no-console
-      console.log('Directorio de datos creado:', dataDir);
     }
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error al crear el directorio de datos:', error);
     return false;
   }
@@ -40,7 +45,7 @@ const ensureDataDir = () => {
 export const initializeDb = async () => {
   try {
     if (!ensureDataDir()) {
-      throw new Error('No se pudo crear el directorio de datos');
+      throw new DatabaseError('No se pudo crear el directorio de datos');
     }
     
     if (!fs.existsSync(DB_PATH)) {
@@ -59,8 +64,6 @@ export const initializeDb = async () => {
       ];
       
       fs.writeFileSync(DB_PATH, JSON.stringify(defaultUsers, null, 2));
-      // eslint-disable-next-line no-console
-      console.log('Base de datos inicializada con usuario admin por defecto');
     } else {
       // Verificar y corregir usuarios existentes
       const users = getUsers();
@@ -81,16 +84,12 @@ export const initializeDb = async () => {
       
       if (needsUpdate) {
         saveUsers(updatedUsers);
-        // eslint-disable-next-line no-console
-        console.log('Usuarios actualizados con campos faltantes');
       }
     }
     
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al inicializar la base de datos:', error);
-    return false;
+    throw new DatabaseError('Error al inicializar la base de datos', error);
   }
 };
 
@@ -104,15 +103,13 @@ export const getUsers = (): User[] => {
   
   try {
     const data = fs.readFileSync(DB_PATH, 'utf8');
-    const users = JSON.parse(data);
+    const users = JSON.parse(data) as User[];
     if (!Array.isArray(users)) {
-      console.error('El archivo users.json no contiene un array:', users);
-      return [];
+      throw new DatabaseError('El archivo users.json no contiene un array');
     }
-    return users as User[];
+    return users;
   } catch (error) {
-    console.error('Error al leer usuarios:', error);
-    return [];
+    throw new DatabaseError('Error al leer usuarios', error);
   }
 };
 
@@ -124,9 +121,7 @@ export const saveUsers = (users: User[]) => {
     fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2));
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al guardar usuarios:', error);
-    return false;
+    throw new DatabaseError('Error al guardar usuarios', error);
   }
 };
 
@@ -136,7 +131,7 @@ export const addUser = (user: User) => {
   
   // Check if user with the same email already exists
   if (users.some(u => u.email === user.email)) {
-    throw new Error('Ya existe un usuario con este email');
+    throw new DatabaseError('Ya existe un usuario con este email');
   }
   
   // Generate a new ID if not provided
@@ -159,13 +154,13 @@ export const updateUser = (id: string, userData: Partial<User>) => {
   const index = users.findIndex(u => u.id === id);
   
   if (index === -1) {
-    throw new Error('Usuario no encontrado');
+    throw new DatabaseError('Usuario no encontrado');
   }
   
   // Check if email is being changed and if it already exists
   if (userData.email && userData.email !== users[index].email) {
     if (users.some(u => u.email === userData.email && u.id !== id)) {
-      throw new Error('Ya existe un usuario con este email');
+      throw new DatabaseError('Ya existe un usuario con este email');
     }
   }
   
@@ -186,7 +181,7 @@ export const deleteUser = (id: string) => {
   const filteredUsers = users.filter(u => u.id !== id);
   
   if (filteredUsers.length === users.length) {
-    throw new Error('Usuario no encontrado');
+    throw new DatabaseError('Usuario no encontrado');
   }
   
   saveUsers(filteredUsers);
@@ -205,12 +200,10 @@ export const findUserById = (id: string): User | undefined => {
   try {
     const users = getUsers();
     if (!Array.isArray(users)) {
-      console.error('getUsers no devolvió un array:', users);
-      return undefined;
+      throw new DatabaseError('getUsers no devolvió un array');
     }
     return users.find(u => u.id === id);
   } catch (error) {
-    console.error('Error al buscar usuario por ID:', error);
-    return undefined;
+    throw new DatabaseError('Error al buscar usuario por ID', error);
   }
 }; 

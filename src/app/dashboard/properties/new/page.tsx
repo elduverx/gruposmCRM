@@ -131,7 +131,9 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
             latitude: propertyData.latitude || null,
             longitude: propertyData.longitude || null,
             zoneId: propertyData.zoneId || null,
-            status: propertyData.status || OperationType.SALE,
+            status: (propertyData.status === 'SALE' || propertyData.status === 'RENT') 
+              ? propertyData.status 
+              : OperationType.SALE,
             action: propertyData.action || PropertyAction.IR_A_DIRECCION,
             captureDate: propertyData.captureDate || new Date().toISOString(),
             responsibleId: propertyData.responsibleId || null,

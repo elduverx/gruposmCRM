@@ -13,12 +13,13 @@ async function fixCsvFile() {
     
     // Guardar el archivo modificado
     fs.writeFileSync(csvPath, content, 'utf8');
-    
-    console.log('Archivo CSV actualizado exitosamente');
   } catch (error) {
-    console.error('Error al procesar el archivo:', error);
+    throw new Error(`Error al procesar el archivo: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 // Ejecutar la función
-fixCsvFile(); 
+fixCsvFile().catch(error => {
+  process.exitCode = 1;
+  throw error;
+}); 

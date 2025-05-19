@@ -38,6 +38,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     title: '',
     description: '',
     targetCount: 5,
+    endDate: '',
     category: 'GENERAL',
   });
   const [userActivityCounts, setUserActivityCounts] = useState<{[key: string]: number}>({});
@@ -55,17 +56,12 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
           },
         });
         
-        const data = await response.json();
-        
         if (!response.ok) {
-          console.error('Error response:', {
-            status: response.status,
-            statusText: response.statusText,
-            data
-          });
-          throw new Error(data.message || 'Error al cargar usuarios');
+          const errorData = await response.json() as { message?: string };
+          throw new Error(errorData.message || 'Error al cargar usuarios');
         }
         
+        const data = await response.json() as User[];
         setUsers(data);
 
         // Contar actividades por usuario después de cargar usuarios
@@ -78,7 +74,11 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
         });
         setUserActivityCounts(counts);
       } catch (error) {
-        console.error('Error al cargar usuarios:', error);
+        if (error instanceof Error) {
+          alert(error.message);
+        } else {
+          alert('Error al cargar usuarios');
+        }
       }
     };
 
@@ -92,11 +92,18 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
 
       try {
         const response = await fetch(`/api/activities/user/${selectedUser}`);
-        if (!response.ok) throw new Error('Error al cargar actividades');
-        const data = await response.json();
+        if (!response.ok) {
+          const errorData = await response.json() as { message?: string };
+          throw new Error(errorData.message || 'Error al cargar actividades');
+        }
+        const data = await response.json() as UserActivity[];
         setUserActivities(data);
       } catch (error) {
-        console.error('Error:', error);
+        if (error instanceof Error) {
+          alert(error.message);
+        } else {
+          alert('Error al cargar actividades');
+        }
       }
     };
 
@@ -163,8 +170,6 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     
     try {
       setIsLoading(true);
-      // eslint-disable-next-line no-console
-      console.log('Creando meta:', newGoalData);
       const newGoal = await createUserGoal(newGoalData);
       setGoals([newGoal, ...goals]);
       setIsNewGoalModalOpen(false);
@@ -172,12 +177,15 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
         title: '',
         description: '',
         targetCount: 5,
+        endDate: '',
         category: 'GENERAL',
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al crear meta:', error);
-      alert('Error al crear la meta. Por favor intenta de nuevo.');
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Error al crear la meta. Por favor intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -215,9 +223,11 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       }));
       
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al registrar actividad:', error);
-      alert('Error al registrar la actividad. Por favor intenta de nuevo.');
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Error al registrar la actividad. Por favor intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -229,8 +239,6 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     
     try {
       setIsLoading(true);
-      // eslint-disable-next-line no-console
-      console.log('Eliminando meta:', goalToDelete);
       await deleteUserGoal(goalToDelete);
       
       // Actualizar la lista de metas
@@ -242,9 +250,11 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       setIsDeleteModalOpen(false);
       setGoalToDelete(null);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al eliminar meta:', error);
-      alert('Error al eliminar la meta. Por favor intenta de nuevo.');
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Error al eliminar la meta. Por favor intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -779,13 +789,14 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
                 <select
                   id="category"
                   value={newGoalData.category}
-                  onChange={e => setNewGoalData({...newGoalData, category: e.target.value})}
+                  onChange={e => setNewGoalData({...newGoalData, category: e.target.value as 'GENERAL' | 'PROPERTY' | 'CLIENT' | 'ASSIGNMENT' | 'NEWS'})}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="GENERAL">General</option>
                   <option value="PROPERTY">Propiedades</option>
                   <option value="CLIENT">Clientes</option>
                   <option value="ASSIGNMENT">Encargos</option>
+                  <option value="NEWS">Noticias</option>
                 </select>
               </div>
               

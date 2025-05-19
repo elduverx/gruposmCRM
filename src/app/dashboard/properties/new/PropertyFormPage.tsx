@@ -255,9 +255,11 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
               });
             }
           }
-        } catch (error) {
+        } catch (error: unknown) {
           if (error instanceof Error) {
-            // Handle error appropriately
+            toast.error(`Error al cargar la propiedad: ${error.message}`);
+          } else {
+            toast.error('Error desconocido al cargar la propiedad');
           }
         }
       };

@@ -1,5 +1,4 @@
 import { getUsers as getUsersFromDb, User } from '@/lib/db';
-import { prisma } from '@/lib/prisma';
 
 /**
  * Obtiene todos los usuarios del sistema
@@ -16,29 +15,19 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 /**
- * Obtiene todos los usuarios para usar en formularios de selección de responsables
- * @returns Lista simplificada de usuarios para dropdown
+ * Obtiene una lista simplificada de usuarios para usar en selectores
+ * @returns Lista de usuarios con id y name
  */
 export const getUsersForSelect = async (): Promise<{id: string; name: string}[]> => {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true
-      },
-      orderBy: {
-        name: 'asc'
-      }
-    });
-    
+    const users = await getUsersFromDb();
     return users.map(user => ({
       id: user.id,
-      name: user.name || user.email.split('@')[0] // Si no hay nombre, usa la primera parte del email
+      name: user.name
     }));
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error al obtener usuarios para selector:', error);
-    return [];
+    throw new Error('Error al obtener usuarios para selector');
   }
 }; 

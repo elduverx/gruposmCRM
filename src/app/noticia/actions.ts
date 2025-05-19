@@ -59,6 +59,7 @@ export async function deleteNews(id: string): Promise<boolean> {
     // Revalidar las rutas
     revalidatePath('/noticia');
     revalidatePath('/dashboard/properties');
+    revalidatePath('/dashboard/metas');
 
     return true;
   } catch (error) {
@@ -99,6 +100,7 @@ export async function updatePropertyNews(id: string, data: {
     });
 
     revalidatePath('/noticia');
+    revalidatePath('/dashboard/metas');
     return news;
   } catch (error) {
     // eslint-disable-next-line no-console

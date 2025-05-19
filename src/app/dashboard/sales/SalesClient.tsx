@@ -5,21 +5,10 @@ import { Assignment } from '@/types/property';
 import { getAssignments } from '../properties/actions';
 import { markPropertyAsSold, getSoldProperties, revertPropertySale } from './actions';
 import { toast } from 'sonner';
-import Button from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/Badge';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+
 import { 
-  Building2, 
-  MapPin, 
-  Phone, 
-  Mail, 
+
   User, 
-  Calendar,
-  CheckCircle2,
-  XCircle,
-  AlertCircle
 } from 'lucide-react';
 import { 
   CheckIcon, 

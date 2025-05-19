@@ -16,6 +16,34 @@
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
   }
+  
+  /* Estilos para FullCalendar */
+  .fc {
+    --fc-border-color: #e5e7eb;
+    --fc-button-bg-color: #4f46e5;
+    --fc-button-border-color: #4f46e5;
+    --fc-button-hover-bg-color: #4338ca;
+    --fc-button-hover-border-color: #4338ca;
+    --fc-button-active-bg-color: #3730a3;
+    --fc-button-active-border-color: #3730a3;
+    --fc-event-bg-color: #4f46e5;
+    --fc-event-border-color: #4338ca;
+    --fc-event-text-color: #fff;
+    --fc-page-bg-color: #fff;
+    --fc-today-bg-color: #e0e7ff;
+  }
+  
+  .fc-priority-high {
+    border-left-color: #ef4444 !important;
+  }
+  
+  .fc-priority-medium {
+    border-left-color: #f59e0b !important;
+  }
+  
+  .fc-priority-low {
+    border-left-color: #10b981 !important;
+  }
 }
 
 /* Leaflet styles */

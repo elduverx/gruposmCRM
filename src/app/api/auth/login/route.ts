@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma-users';
 import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
-import { Role, User } from '@prisma/client';
 
 // Definir el tipo para la solicitud de inicio de sesión
 interface LoginRequest {

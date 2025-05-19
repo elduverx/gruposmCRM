@@ -137,9 +137,7 @@ export async function getUserGoals(): Promise<UserGoal[]> {
 
     return goalsWithActivities;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al obtener metas:', error);
-    return [];
+    throw new Error(`Error al obtener metas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -152,15 +150,6 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
     if (!userId) {
       throw new Error('Debes iniciar sesión para crear una meta');
     }
-    
-    console.log('Creando meta con datos:', {
-      userId,
-      title: data.title,
-      description: data.description,
-      targetCount: data.targetCount,
-      endDate: data.endDate,
-      category: data.category
-    });
     
     // Usar el cliente Prisma directamente
     const newGoal = await prisma.userGoal.create({
@@ -176,8 +165,6 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
         category: data.category
       }
     });
-    
-    console.log('Meta creada:', newGoal);
     
     // Convertir a UserGoal
     const goal: UserGoal = {
@@ -197,8 +184,6 @@ export async function createUserGoal(data: CreateUserGoalInput): Promise<UserGoa
     
     return goal;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al crear meta:', error);
     throw new Error(`Error al crear meta: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
@@ -213,13 +198,16 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
       throw new Error('Debes iniciar sesión para registrar una actividad');
     }
     
+    // Usar la fecha proporcionada o la fecha actual si no se proporciona
+    const activityTimestamp = data.timestamp || new Date();
+    
     // Preparar los datos para la creación
     const activityData = {
       userId,
       goalId: data.goalId,
       type: data.type,
       description: data.description,
-      timestamp: new Date(),
+      timestamp: activityTimestamp,
       relatedId: data.relatedId,
       relatedType: data.relatedType,
       points: data.points || 0,
@@ -246,35 +234,28 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
       }
     }
     
-    // Usar el cliente Prisma directamente
+    // Crear la actividad
     const newActivity = await prisma.userActivity.create({
       data: activityData
     });
     
-    // Si está asociada a una meta, actualizar el contador de la meta
+    // Actualizar el progreso de la meta si está asociada a una
     if (data.goalId) {
       await updateGoalProgress(data.goalId);
     }
-
+    
     revalidatePath('/dashboard/metas');
     
-    // Convertir a UserActivity
-    const activity: UserActivity = {
-      id: newActivity.id,
-      userId: newActivity.userId,
-      goalId: newActivity.goalId,
-      type: newActivity.type,
-      description: newActivity.description,
+    // Convertir el timestamp a string y asegurar que metadata sea string o null
+    const activityWithStringTimestamp = {
+      ...newActivity,
       timestamp: newActivity.timestamp.toISOString(),
-      metadata: newActivity.metadata ? JSON.parse(newActivity.metadata as string) : undefined,
-      relatedId: newActivity.relatedId,
-      relatedType: newActivity.relatedType,
-      points: newActivity.points
+      metadata: newActivity.metadata ? JSON.stringify(newActivity.metadata) : null
     };
     
-    return activity;
+    return mapActivityToDTO(activityWithStringTimestamp);
   } catch (error) {
-    throw new Error('Error al crear la actividad: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+    throw new Error(`Error al crear actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -299,9 +280,7 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
 
     return activities.map(mapActivityToDTO);
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al obtener actividades:', error);
-    return [];
+    throw new Error(`Error al obtener actividades: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -352,8 +331,6 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
     
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al eliminar meta:', error);
     throw new Error(`Error al eliminar meta: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
@@ -361,16 +338,12 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
 // Actualizar el progreso de una meta
 async function updateGoalProgress(goalId: string): Promise<void> {
   try {
-    console.log('Actualizando progreso de meta:', goalId);
-    
     // Contar actividades asociadas a esta meta
     const count = await prisma.userActivity.count({
       where: {
         goalId: goalId
       }
     });
-    
-    console.log('Número de actividades encontradas:', count);
     
     // Obtener la meta actual
     const goal = await prisma.userGoal.findUnique({
@@ -380,11 +353,8 @@ async function updateGoalProgress(goalId: string): Promise<void> {
     });
     
     if (!goal) {
-      console.error('Meta no encontrada:', goalId);
       throw new Error('Meta no encontrada');
     }
-    
-    console.log('Meta encontrada:', goal);
     
     // Actualizar el contador y verificar si se completó
     const isCompleted = count >= goal.targetCount;
@@ -399,11 +369,7 @@ async function updateGoalProgress(goalId: string): Promise<void> {
         updatedAt: new Date()
       }
     });
-    
-    console.log('Progreso actualizado correctamente');
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al actualizar progreso de meta:', error);
     throw new Error(`Error al actualizar progreso: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
@@ -429,8 +395,6 @@ function mapActivityToDTO(activity: RawUserActivity): UserActivity {
         parsedMetadata = activity.metadata as Record<string, unknown>;
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error parsing metadata:', error);
       parsedMetadata = undefined;
     }
   }
@@ -499,8 +463,6 @@ export async function deleteUserActivity(activityId: string): Promise<boolean> {
     
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al eliminar actividad:', error);
     throw new Error(`Error al eliminar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 } 

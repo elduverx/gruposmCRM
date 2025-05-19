@@ -386,4 +386,128 @@ export async function getZoneNewsAndAssignments(zoneId: string) {
     console.error('Error fetching zone news and assignments:', error);
     throw new Error('Error al cargar las noticias y encargos de la zona');
   }
+}
+
+// Get users assigned to a zone
+export async function getUsersByZoneId(zoneId: string) {
+  try {
+    // Using type assertion to handle the Prisma type issue
+    const zone = await prisma.zone.findUnique({
+      where: { id: zoneId },
+      include: {
+        // @ts-ignore - The Prisma types don't recognize the new relationship yet
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      }
+    });
+    
+    if (!zone) {
+      throw new Error('Zona no encontrada');
+    }
+    
+    // @ts-ignore - The Prisma types don't recognize the new relationship yet
+    return zone.users;
+  } catch (error) {
+    console.error('Error getting users for zone:', error);
+    throw new Error('Error al obtener usuarios para la zona');
+  }
+}
+
+// Get all users for assignment
+export async function getAllUsers() {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+    
+    return users;
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    throw new Error('Error al obtener usuarios');
+  }
+}
+
+// Assign users to a zone
+export async function assignUsersToZone(zoneId: string, userIds: string[]) {
+  try {
+    // Get current users
+    const currentUsers = await getUsersByZoneId(zoneId);
+    const currentUserIds = currentUsers.map(user => user.id);
+    
+    // Determine which users to connect and which to disconnect
+    const usersToConnect = userIds.filter(id => !currentUserIds.includes(id));
+    const usersToDisconnect = currentUserIds.filter(id => !userIds.includes(id));
+    
+    // Update the zone with new user connections
+    // @ts-ignore - The Prisma types don't recognize the new relationship yet
+    await prisma.zone.update({
+      where: { id: zoneId },
+      data: {
+        users: {
+          connect: usersToConnect.map(id => ({ id })),
+          disconnect: usersToDisconnect.map(id => ({ id }))
+        }
+      }
+    });
+    
+    // Log the activity
+    await logActivity({
+      // @ts-ignore - Extending the ActivityType with a new value
+      type: 'ZONE_UPDATED', // Changed to use existing activity type
+      description: `Usuarios asignados a zona ${zoneId}`,
+      relatedId: zoneId,
+      relatedType: 'ZONE',
+      metadata: {
+        userIds,
+        usersAdded: usersToConnect,
+        usersRemoved: usersToDisconnect
+      }
+    });
+    
+    revalidatePath('/dashboard/zones');
+    return true;
+  } catch (error) {
+    console.error('Error assigning users to zone:', error);
+    throw new Error('Error al asignar usuarios a la zona');
+  }
+}
+
+// Get zones assigned to a user
+export async function getZonesByUserId(userId: string) {
+  try {
+    // @ts-ignore - The Prisma types don't recognize the new relationship yet
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        zones: true
+      }
+    });
+    
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    
+    // @ts-ignore - The Prisma types don't recognize the new relationship yet
+    return user.zones.map(zone => ({
+      ...zone,
+      coordinates: JSON.parse(zone.coordinates as string),
+    }));
+  } catch (error) {
+    console.error('Error getting zones for user:', error);
+    throw new Error('Error al obtener zonas para el usuario');
+  }
 } 

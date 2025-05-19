@@ -1,61 +1,53 @@
 import jwt from 'jsonwebtoken';
 import { findUserById } from './db';
-import { findUserByEmail as findUserByEmailPrisma } from './prisma-users';
 import { getUserById } from './prisma-users';
 import { cookies } from 'next/headers';
+
+// Custom error class for authentication operations
+class AuthError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
 
 // Clave secreta para JWT
 export const JWT_SECRET = process.env.JWT_SECRET || 'gruposm_crm_secret_key_2024';
 
 // Verificar que la clave secreta no sea la predeterminada
 if (JWT_SECRET === 'your-secret-key') {
-  // eslint-disable-next-line no-console
-  console.warn('ADVERTENCIA: Se está utilizando una clave secreta predeterminada. Por favor, configure JWT_SECRET en las variables de entorno.');
+  throw new AuthError('ADVERTENCIA: Se está utilizando una clave secreta predeterminada. Por favor, configure JWT_SECRET en las variables de entorno.');
 }
 
 // Verificar si el token es válido y devolver el usuario decodificado
 export const verifyToken = (token: string) => {
   try {
     if (!token) {
-      // eslint-disable-next-line no-console
-      console.error('Token no proporcionado');
-      throw new Error('Token no proporcionado');
+      throw new AuthError('Token no proporcionado');
     }
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; exp: number };
-      // eslint-disable-next-line no-console
-      console.log('Token decodificado:', { userId: decoded.userId, role: decoded.role });
 
       // Verificar si el token ha expirado
       const currentTime = Math.floor(Date.now() / 1000);
       if (decoded.exp && decoded.exp < currentTime) {
-        // eslint-disable-next-line no-console
-        console.error('Token expirado');
-        throw new Error('Token expirado');
+        throw new AuthError('Token expirado');
       }
 
       return decoded;
     } catch (jwtError) {
       // Manejar específicamente errores de JWT
       if (jwtError instanceof jwt.TokenExpiredError) {
-        // eslint-disable-next-line no-console
-        console.error('Token expirado (JWT):', jwtError.message);
-        throw new Error('Token expirado');
+        throw new AuthError('Token expirado');
       } else if (jwtError instanceof jwt.JsonWebTokenError) {
-        // eslint-disable-next-line no-console
-        console.error('Token inválido (JWT):', jwtError.message);
-        throw new Error('Token inválido');
+        throw new AuthError('Token inválido');
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Error al verificar token (JWT):', jwtError);
-        throw jwtError;
+        throw new AuthError('Error al verificar token', jwtError);
       }
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error al verificar token:', error);
-    throw error;
+    throw new AuthError('Error al verificar token', error);
   }
 };
 
@@ -77,7 +69,7 @@ export const isAdmin = async (request: Request) => {
         return prismaUser.role === 'ADMIN';
       }
     } catch (prismaError) {
-      console.error('Error al verificar en Prisma:', prismaError);
+      throw new AuthError('Error al verificar en Prisma', prismaError);
     }
 
     // Si no se encuentra en Prisma, intentar con JSON
@@ -87,20 +79,18 @@ export const isAdmin = async (request: Request) => {
         return jsonUser.role === 'ADMIN';
       }
     } catch (jsonError) {
-      console.error('Error al verificar en JSON:', jsonError);
+      throw new AuthError('Error al verificar en JSON', jsonError);
     }
 
     return false;
   } catch (error) {
-    console.error('Error en isAdmin:', error);
-    return false;
+    throw new AuthError('Error en isAdmin', error);
   }
 };
 
 // Generar un token JWT
 export const generateToken = (userId: string, role: string) => {
-  // eslint-disable-next-line no-console
-  console.log('Generando token para usuario:', userId, 'con rol:', role);
+  try {
   return jwt.sign(
     { userId, role },
     JWT_SECRET,
@@ -108,13 +98,29 @@ export const generateToken = (userId: string, role: string) => {
       expiresIn: '24h',
     }
   );
+  } catch (error) {
+    throw new AuthError('Error al generar token', error);
+  }
 };
 
 // Obtener el ID del usuario actual basado en el token de autenticación
-export async function getCurrentUserId(): Promise<string | null> {
+export async function getCurrentUserId(request?: Request): Promise<string | null> {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    let token: string | undefined;
+    
+    // Check if request object is provided (API routes)
+    if (request) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+    
+    // If no token found in request headers, check cookies (server components)
+    if (!token) {
+      const cookieStore = cookies();
+      token = cookieStore.get('auth_token')?.value;
+    }
     
     if (!token) {
       return null;
@@ -124,9 +130,9 @@ export async function getCurrentUserId(): Promise<string | null> {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
       return decoded.userId;
     } catch (error) {
-      return null;
+      throw new AuthError('Error al verificar token', error);
     }
   } catch (error) {
-    return null;
+    throw new AuthError('Error al obtener ID de usuario', error);
   }
 } 

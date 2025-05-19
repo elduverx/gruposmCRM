@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Suspense } from 'react';
 import ProgresoClient from './ProgresoClient';
 import { getCurrentUserId } from '@/lib/auth';

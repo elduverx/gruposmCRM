@@ -14,9 +14,10 @@ interface CreateUserRequest {
 }
 
 // GET /api/users - Obtener todos los usuarios
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const currentUserId = await getCurrentUserId();
+    // Simplemente verificar si hay un usuario autenticado
+    const currentUserId = await getCurrentUserId(request);
     
     if (!currentUserId) {
       return NextResponse.json(
@@ -25,19 +26,7 @@ export async function GET() {
       );
     }
 
-    // Verificar si el usuario es administrador
-    const currentUser = await prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { role: true }
-    });
-
-    if (currentUser?.role !== 'ADMIN') {
-      return NextResponse.json(
-        { message: 'No autorizado' },
-        { status: 401 }
-      );
-    }
-
+    // Obtener todos los usuarios sin importar el rol
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -53,8 +42,6 @@ export async function GET() {
 
     return NextResponse.json(users);
   } catch (error) {
-    // En un entorno de producción, podríamos usar un servicio de logging
-    // o enviar el error a un servicio de monitoreo
     return NextResponse.json(
       { message: 'Error interno del servidor' },
       { status: 500 }
@@ -70,8 +57,6 @@ export async function POST(request: Request) {
     try {
       isUserAdmin = await isAdmin(request);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error al verificar permisos de admin:', error);
       return NextResponse.json(
         { message: 'Error al verificar permisos', details: error instanceof Error ? error.message : 'Error desconocido' },
         { status: 401 }
@@ -79,8 +64,6 @@ export async function POST(request: Request) {
     }
 
     if (!isUserAdmin) {
-      // eslint-disable-next-line no-console
-      console.error('Usuario no tiene permisos de admin');
       return NextResponse.json(
         { message: 'No autorizado' },
         { status: 401 }
@@ -88,16 +71,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json() as unknown;
-    // eslint-disable-next-line no-console
-    console.log('Datos recibidos para crear usuario:', JSON.stringify(body));
-    
-    // Type assertion with proper interface
     const { name, email, password, role } = body as CreateUserRequest;
 
     // Validaciones básicas
     if (!name || !email || !password || !role) {
-      // eslint-disable-next-line no-console
-      console.error('Validación fallida - campos faltantes:', { name, email, password: !!password, role });
       return NextResponse.json(
         { message: 'Todos los campos son requeridos' },
         { status: 400 }
@@ -107,16 +84,11 @@ export async function POST(request: Request) {
     // Verificar si el email ya existe
     const existingUser = await findUserByEmailPrisma(email);
     if (existingUser) {
-      // eslint-disable-next-line no-console
-      console.error('Email ya existe:', email);
       return NextResponse.json(
         { message: 'El correo electrónico ya está en uso' },
         { status: 400 }
       );
     }
-
-    // eslint-disable-next-line no-console
-    console.log('Iniciando creación de usuario con Prisma:', email);
     
     try {
       // Intentar crear con Prisma
@@ -127,17 +99,9 @@ export async function POST(request: Request) {
         role: role === 'ADMIN' || role === 'USER' ? role : 'USER'
       });
       
-      // eslint-disable-next-line no-console
-      console.log('Usuario creado exitosamente con Prisma:', newUser.id);
       return NextResponse.json(newUser, { status: 201 });
     } catch (prismaError) {
-      // eslint-disable-next-line no-console
-      console.error('Error al crear usuario con Prisma:', prismaError);
-      
       // Fallback al método original (JSON)
-      // eslint-disable-next-line no-console
-      console.log('Intentando crear usuario en JSON como fallback...');
-      
       // Encriptar la contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
       
@@ -153,17 +117,12 @@ export async function POST(request: Request) {
       };
       
       const savedUser = addUser(jsonUser);
-      // eslint-disable-next-line no-console
-      console.log('Usuario guardado en JSON como fallback:', savedUser.id);
       
       // Devolver el usuario creado (sin la contraseña)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _unused, ...userWithoutPassword } = savedUser;
+      const { password: _, ...userWithoutPassword } = savedUser;
       return NextResponse.json(userWithoutPassword, { status: 201 });
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error detallado al crear usuario:', error);
     return NextResponse.json(
       { 
         message: 'Error al crear usuario', 

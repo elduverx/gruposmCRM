@@ -245,13 +245,10 @@ export default function DynamicMap({
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("address");
   const [filterFloor, setFilterFloor] = useState<string>("");
-  const [uniqueFloors, setUniqueFloors] = useState<string[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodingProgress, setGeocodingProgress] = useState(0);
   const [showGeocodingControls, setShowGeocodingControls] = useState(false);
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
-  const [floors, setFloors] = useState<string[]>([]);
+  const [availableFloors, setAvailableFloors] = useState<string[]>([]);
   
   // Memoized data source based on props
   const dataSource = useMemo(() => {
@@ -526,8 +523,6 @@ export default function DynamicMap({
     
     // Si no hay suficiente zoom, limitamos el número de marcadores
     if (currentZoom < 13) {
-      // eslint-disable-next-line no-console
-      console.log(`Zoom level too low (${currentZoom}), showing only zone selector`);
       setVisibleMarkers([]);
       return;
     }
@@ -541,9 +536,6 @@ export default function DynamicMap({
         isPointInPolygon([marker.lat, marker.lng], polygonCoords)
       );
       
-      // eslint-disable-next-line no-console
-      console.log(`Filtered to ${filtered.length} markers within polygon`);
-      
       // Si no hay resultados dentro del polígono, no mostramos nada
       if (filtered.length === 0) {
         setVisibleMarkers([]);
@@ -551,12 +543,13 @@ export default function DynamicMap({
       }
       
       // Extraer pisos únicos para el selector de filtro
-      const floors = filtered
+      const uniqueFloors = filtered
         .map(item => item.floor || "")
         .filter(Boolean)
         .filter((value, index, self) => self.indexOf(value) === index)
         .sort();
       
+      setAvailableFloors(uniqueFloors);
       return;
     } else if (currentZoom < 15) {
       // Si no hay polígono y el zoom es bajo, mostramos un número limitado
@@ -1020,7 +1013,7 @@ export default function DynamicMap({
                 </select>
               </div>
               
-              {uniqueFloors.length > 0 && (
+              {availableFloors.length > 0 && (
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700 mb-1">Filtrar por planta:</label>
                   <select 
@@ -1029,7 +1022,7 @@ export default function DynamicMap({
                     onChange={(e) => setFilterFloor(e.target.value)}
                   >
                     <option value="">Todas las plantas</option>
-                    {uniqueFloors.map(floor => (
+                    {availableFloors.map(floor => (
                       <option key={floor} value={floor}>{floor}</option>
                     ))}
                   </select>

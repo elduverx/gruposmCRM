@@ -231,7 +231,10 @@ export default function UserList({ users, onUsersChange, isAdmin }: UserListProp
         {filteredUsers.map((user) => (
           <li key={user.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
             <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
+              <div 
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => router.push(`/dashboard/users/${user.id}`)}
+              >
                 <p className="text-sm font-medium text-indigo-600 truncate">
                   {user.name}
                 </p>
