@@ -11,7 +11,14 @@ export async function GET() {
   }
 
   try {
-    const count = await prisma.property.count();
+    const count = await prisma.property.count({
+      where: {
+        AND: [
+          { latitude: { not: null } },
+          { longitude: { not: null } }
+        ]
+      }
+    });
     return NextResponse.json({ count });
   } catch (error) {
     // Log error internally without exposing details to client

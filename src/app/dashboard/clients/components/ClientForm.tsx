@@ -43,14 +43,11 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
     const fetchInitialProperties = async () => {
       setIsLoading(true);
       try {
-        const propertiesData = await getProperties(1, 20, '');
-        if (propertiesData) {
-          setProperties(propertiesData.properties);
-          setFilteredProperties(propertiesData.properties);
-          setTotalProperties(propertiesData.total);
-        }
+        const { properties: propertiesData, total } = await getProperties(1, 20, '');
+        setProperties(propertiesData);
+        setFilteredProperties(propertiesData);
+        setTotalProperties(total);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('Error fetching properties:', error);
       } finally {
         setIsLoading(false);
@@ -64,21 +61,18 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   useEffect(() => {
     const searchTimeout = setTimeout(async () => {
       if (searchTerm.trim() === '') {
-        const propertiesData = await getProperties(1, 20, '');
-        if (propertiesData) {
-          setProperties(propertiesData.properties);
-          setFilteredProperties(propertiesData.properties);
-        }
+        const { properties: propertiesData, total } = await getProperties(1, 20, '');
+        setProperties(propertiesData);
+        setFilteredProperties(propertiesData);
+        setTotalProperties(total);
       } else {
         setIsLoading(true);
         try {
-          const propertiesData = await getProperties(1, 20, searchTerm);
-          if (propertiesData) {
-            setProperties(propertiesData.properties);
-            setFilteredProperties(propertiesData.properties);
-          }
+          const { properties: propertiesData, total } = await getProperties(1, 20, searchTerm);
+          setProperties(propertiesData);
+          setFilteredProperties(propertiesData);
+          setTotalProperties(total);
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.error('Error searching properties:', error);
         } finally {
           setIsLoading(false);
@@ -182,7 +176,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
             <span className="ml-2 text-sm text-gray-500">Buscando inmuebles...</span>
           </div>
-        ) : properties.length > 0 ? (
+        ) : (
           <div className="space-y-2">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -226,10 +220,6 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
                 Mostrando {filteredProperties.length} de {totalProperties} inmuebles
               </p>
             )}
-          </div>
-        ) : (
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-500">No hay inmuebles disponibles</p>
           </div>
         )}
       </div>
