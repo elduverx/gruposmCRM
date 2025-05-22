@@ -60,6 +60,86 @@ export async function getZoneById(id: string): Promise<Zone | null> {
   }
 }
 
+// Función para calcular el bounding box de un polígono
+function getBoundingBox(coordinates: { lat: number; lng: number }[]): {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+} {
+  return coordinates.reduce(
+    (box, coord) => ({
+      minLat: Math.min(box.minLat, coord.lat),
+      maxLat: Math.max(box.maxLat, coord.lat),
+      minLng: Math.min(box.minLng, coord.lng),
+      maxLng: Math.max(box.maxLng, coord.lng),
+    }),
+    {
+      minLat: coordinates[0].lat,
+      maxLat: coordinates[0].lat,
+      minLng: coordinates[0].lng,
+      maxLng: coordinates[0].lng,
+    }
+  );
+}
+
+// Función para procesar propiedades en lotes
+async function processPropertiesInBatches(
+  properties: any[],
+  zoneId: string,
+  zoneName: string,
+  coordinates: { lat: number; lng: number }[],
+  batchSize: number = 50
+) {
+  const propertyIds: string[] = [];
+  const activities: any[] = [];
+
+  // Procesar propiedades en lotes
+  for (let i = 0; i < properties.length; i += batchSize) {
+    const batch = properties.slice(i, i + batchSize);
+    
+    // Filtrar propiedades que están dentro del polígono
+    const propertiesInZone = batch.filter(property => {
+      if (!property.latitude || !property.longitude) return false;
+      return isPointInPolygon(
+        [property.latitude, property.longitude],
+        coordinates.map(coord => [coord.lat, coord.lng])
+      );
+    });
+
+    // Acumular IDs y actividades
+    propertiesInZone.forEach(property => {
+      propertyIds.push(property.id);
+      activities.push({
+        type: 'PROPERTY_ASSIGNED',
+        description: `Propiedad ${property.address} asignada a zona ${zoneName}`,
+        relatedId: property.id,
+        relatedType: 'PROPERTY',
+        metadata: {
+          propertyAddress: property.address,
+          zoneName: zoneName,
+          zoneId: zoneId
+        }
+      });
+    });
+  }
+
+  // Actualizar todas las propiedades en una sola operación
+  if (propertyIds.length > 0) {
+    await prisma.property.updateMany({
+      where: {
+        id: { in: propertyIds }
+      },
+      data: { zoneId }
+    });
+
+    // Registrar todas las actividades en una sola operación
+    await Promise.all(activities.map(activity => logActivity(activity)));
+  }
+
+  return propertyIds.length;
+}
+
 export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedAt'>): Promise<Zone> {
   try {
     // Crear la zona
@@ -72,7 +152,7 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
       },
     });
 
-    // Registrar la actividad
+    // Registrar la actividad de creación
     await logActivity({
       type: 'ZONE_CREATED',
       description: `Nueva zona creada: ${zone.name}`,
@@ -85,46 +165,32 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
       }
     });
 
-    // Obtener todas las propiedades con coordenadas
+    // Calcular el bounding box de la zona
+    const boundingBox = getBoundingBox(data.coordinates);
+
+    // Obtener propiedades dentro del bounding box
     const properties = await prisma.property.findMany({
       where: {
         AND: [
           { latitude: { not: null } },
-          { longitude: { not: null } }
+          { longitude: { not: null } },
+          { latitude: { gte: boundingBox.minLat } },
+          { latitude: { lte: boundingBox.maxLat } },
+          { longitude: { gte: boundingBox.minLng } },
+          { longitude: { lte: boundingBox.maxLng } }
         ]
       }
     });
 
-    // Para cada propiedad, verificar si está dentro de la zona
-    for (const property of properties) {
-      if (property.latitude && property.longitude) {
-        const isInZone = isPointInPolygon(
-          [property.latitude, property.longitude],
-          data.coordinates.map(coord => [coord.lat, coord.lng])
-        );
+    // Procesar propiedades en lotes
+    const assignedCount = await processPropertiesInBatches(
+      properties,
+      zone.id,
+      zone.name,
+      data.coordinates
+    );
 
-        if (isInZone) {
-          // Asignar la propiedad a la zona
-          await prisma.property.update({
-            where: { id: property.id },
-            data: { zoneId: zone.id }
-          });
-
-          // Registrar la actividad de asignación
-          await logActivity({
-            type: 'PROPERTY_ASSIGNED',
-            description: `Propiedad ${property.address} asignada a zona ${zone.name}`,
-            relatedId: property.id,
-            relatedType: 'PROPERTY',
-            metadata: {
-              propertyAddress: property.address,
-              zoneName: zone.name,
-              zoneId: zone.id
-            }
-          });
-        }
-      }
-    }
+    console.log(`Asignadas ${assignedCount} propiedades a la zona ${zone.name}`);
     
     revalidatePath('/dashboard/zones');
     
