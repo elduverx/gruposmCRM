@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getAddressFromCoordinates } from '@/utils/geocoding';
-import { createProperty, updateProperty, getProperty } from '../actions';
-import { PropertyType, PropertyCreateInput } from '@/types/property';
+import { createProperty, updateProperty, getProperty, getProperties } from '../actions';
+import { PropertyType, PropertyCreateInput, Property } from '@/types/property';
 import { getZones, Zone } from '../../zones/actions';
 import { getUsersForSelect } from '../../users/actions';
 import { toast } from 'sonner';
+import { findZoneForCoordinates } from '@/utils/zoneUtils';
+import debounce from 'lodash/debounce';
 
 // Coordenadas de Camí Real 87, Catarroja
 const CATARROJA_COORDS = {
@@ -167,6 +169,24 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     zoneId: null,
     responsibleId: null
   });
+  const [zoneSearchTerm, setZoneSearchTerm] = useState('');
+  const [zoneSearchResults, setZoneSearchResults] = useState<Property[]>([]);
+  const [showZoneResults, setShowZoneResults] = useState(false);
+  const zoneSearchRef = useRef<HTMLDivElement>(null);
+
+  // Efecto para cerrar el dropdown cuando se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (zoneSearchRef.current && !zoneSearchRef.current.contains(event.target as Node)) {
+        setShowZoneResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Función para determinar si un punto está dentro de un polígono
   const isPointInPolygon = (point: { lat: number; lng: number }, polygon: { lat: number; lng: number }[]): boolean => {
@@ -203,8 +223,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         const zonesData = await getZones();
         setZones(zonesData);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading zones:', error);
+        toast.error('Error al cargar las zonas');
       }
     };
     
@@ -214,8 +233,7 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
         const usersData = await getUsersForSelect();
         setUsers(usersData);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading users:', error);
+        toast.error('Error al cargar los usuarios');
       }
     };
     
@@ -345,6 +363,55 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
     }
   };
 
+  // Función para buscar propiedades por zona con debounce
+  const debouncedSearch = useCallback(
+    debounce(async (searchTerm: string) => {
+      if (!searchTerm.trim()) {
+        setZoneSearchResults([]);
+        setShowZoneResults(false);
+        return;
+      }
+
+      try {
+        const { properties } = await getProperties(1, 10, searchTerm);
+        setZoneSearchResults(properties);
+        setShowZoneResults(true);
+      } catch (error) {
+        console.error('Error searching properties:', error);
+        toast.error('Error al buscar propiedades');
+      }
+    }, 300),
+    []
+  );
+
+  // Manejar cambios en la búsqueda de zona
+  const handleZoneSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setZoneSearchTerm(value);
+    debouncedSearch(value);
+  };
+
+  // Limpiar el debounce al desmontar
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  // Seleccionar una propiedad de los resultados
+  const handlePropertySelect = (property: Property) => {
+    setFormData(prev => ({
+      ...prev,
+      address: property.address,
+      population: property.population,
+      latitude: property.latitude,
+      longitude: property.longitude,
+      zoneId: property.zoneId
+    }));
+    setShowZoneResults(false);
+    setZoneSearchTerm('');
+  };
+
   // renderizar la sección del mapa solo en el cliente
   const renderMap = () => {
     if (!isClient) {
@@ -393,6 +460,40 @@ export function PropertyFormPage({ propertyId }: PropertyFormPageProps) {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Dirección y Población */}
               <div className="space-y-4">
+                {/* Búsqueda por zona */}
+                <div ref={zoneSearchRef}>
+                  <label htmlFor="zoneSearch" className="block text-sm font-medium text-gray-700">
+                    Buscar por zona
+                  </label>
+                  <div className="mt-1 relative">
+                    <input
+                      type="text"
+                      id="zoneSearch"
+                      placeholder="Buscar propiedades por zona..."
+                      value={zoneSearchTerm}
+                      onChange={handleZoneSearchChange}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                    {showZoneResults && zoneSearchResults.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
+                        {zoneSearchResults.map((property) => (
+                          <div
+                            key={property.id}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => handlePropertySelect(property)}
+                          >
+                            <div className="font-medium">{property.address}</div>
+                            <div className="text-sm text-gray-500">{property.population}</div>
+                            {property.zone && (
+                              <div className="text-sm text-blue-600">Zona: {property.zone.name}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700">
                     Dirección

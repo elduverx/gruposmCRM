@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { OperationType, PropertyType, PropertyAction } from '@/types/property';
+import { PropertyType, PropertyAction } from '@/types/property';
+import { PropertyStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,7 @@ interface PropertyInput {
   ownerName: string;
   ownerPhone: string;
   type: typeof PropertyType[keyof typeof PropertyType];
-  status: typeof OperationType[keyof typeof OperationType];
+  status: PropertyStatus;
   action: typeof PropertyAction[keyof typeof PropertyAction];
   isOccupied?: boolean;
   occupiedBy?: string;
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!Object.values(OperationType).includes(data.status)) {
+    if (!Object.values(PropertyStatus).includes(data.status)) {
       return NextResponse.json(
         { error: 'Estado de inmueble inválido' },
         { status: 400 }

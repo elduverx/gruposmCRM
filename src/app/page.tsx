@@ -56,7 +56,7 @@ export default function Home() {
         ]);
 
         setStats([
-          { name: "Total Inmuebles", value: properties.count.toString(), icon: BuildingOfficeIcon },
+          { name: "Inmuebles Localizados", value: properties.count.toString(), icon: BuildingOfficeIcon },
           { name: "Total Clientes", value: clients.count.toString(), icon: UserGroupIcon },
           { name: "Encargos Pendientes", value: assignments.count.toString(), icon: ClipboardDocumentListIcon },
           { name: "Noticias Recientes", value: news.count.toString(), icon: NewspaperIcon },

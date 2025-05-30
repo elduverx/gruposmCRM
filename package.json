@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
+    "update-coordinates": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/scripts/updatePropertyCoordinates.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -32,6 +33,7 @@
     "@turf/turf": "^6.5.0",
     "@types/google.maps": "^3.54.10",
     "@types/lodash": "^4.17.16",
+    "@types/node-fetch": "^2.6.12",
     "@types/papaparse": "^5.3.15",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^2.4.3",
@@ -42,6 +44,7 @@
     "csv-parse": "^5.6.0",
     "csv-stringify": "^6.5.2",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
@@ -50,8 +53,9 @@
     "lucide-react": "^0.487.0",
     "next": "^14.2.28",
     "next-auth": "^4.24.11",
+    "node-fetch": "^2.7.0",
     "papaparse": "^5.5.2",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.4",
     "postcss-import": "^16.1.0",
     "postcss-nesting": "^12.1.5",
     "prisma": "^5.10.2",
@@ -87,6 +91,7 @@
     "glob": "^10.3.10",
     "lru-cache": "^10.2.0",
     "rimraf": "^5.0.5",
+    "tsx": "^4.19.4",
     "typescript": "^5.3.3"
   },
   "engines": {

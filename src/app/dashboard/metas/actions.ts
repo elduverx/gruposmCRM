@@ -63,34 +63,6 @@ interface RawUserActivity {
   goalTitle?: string;
 }
 
-// Type guard functions
-function isRawUserGoal(obj: unknown): obj is RawUserGoal {
-  if (obj === null || typeof obj !== 'object') return false;
-  const goal = obj as Record<string, unknown>;
-  return (
-    typeof goal.id === 'string' &&
-    typeof goal.userId === 'string' &&
-    typeof goal.title === 'string' &&
-    typeof goal.targetCount === 'number' &&
-    typeof goal.currentCount === 'number' &&
-    typeof goal.startDate === 'string' &&
-    typeof goal.isCompleted === 'boolean' &&
-    typeof goal.category === 'string'
-  );
-}
-
-function isRawUserActivity(obj: unknown): obj is RawUserActivity {
-  if (obj === null || typeof obj !== 'object') return false;
-  const activity = obj as Record<string, unknown>;
-  return (
-    typeof activity.id === 'string' &&
-    typeof activity.userId === 'string' &&
-    typeof activity.type === 'string' &&
-    typeof activity.timestamp === 'string' &&
-    typeof activity.points === 'number'
-  );
-}
-
 // Obtener todas las metas
 export async function getUserGoals(): Promise<UserGoal[]> {
   try {

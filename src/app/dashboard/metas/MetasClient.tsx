@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import confetti from 'canvas-confetti';
 import useSound from 'use-sound';
+import { toast } from 'sonner';
 
 interface MetasClientProps {
   initialGoals: UserGoal[];
@@ -32,7 +33,6 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(null);
-  const [goalContributors, setGoalContributors] = useState<{[key: string]: number}>({});
   const [selectedStatCard, setSelectedStatCard] = useState<'goals' | 'completed' | 'activities' | null>(null);
   const [newGoalData, setNewGoalData] = useState<CreateUserGoalInput>({
     title: '',
@@ -126,9 +126,12 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
           }
         });
         
-        setGoalContributors(contributors);
+        // Actualizar el estado de contribuidores si es necesario
+        if (Object.keys(contributors).length > 0) {
+          // Aquí puedes usar los contribuidores si es necesario
+        }
       } catch (error) {
-        console.error('Error al cargar contribuidores:', error);
+        toast.error('Error al cargar contribuidores');
       }
     };
 

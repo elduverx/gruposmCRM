@@ -37,8 +37,7 @@ export async function getZones(): Promise<Zone[]> {
       coordinates: JSON.parse(zone.coordinates as string),
     }));
   } catch (error) {
-    console.error('Error fetching zones:', error);
-    throw new Error('Error al cargar las zonas');
+    throw new Error(`Error al cargar las zonas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -55,8 +54,7 @@ export async function getZoneById(id: string): Promise<Zone | null> {
       coordinates: JSON.parse(zone.coordinates as string),
     };
   } catch (error) {
-    console.error('Error fetching zone:', error);
-    throw new Error('Error al cargar la zona');
+    throw new Error(`Error al cargar la zona: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -83,9 +81,16 @@ function getBoundingBox(coordinates: { lat: number; lng: number }[]): {
   );
 }
 
+interface Property {
+  id: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 // Función para procesar propiedades en lotes
 async function processPropertiesInBatches(
-  properties: any[],
+  properties: Property[],
   zoneId: string,
   zoneName: string,
   coordinates: { lat: number; lng: number }[],

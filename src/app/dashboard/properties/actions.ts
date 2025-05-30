@@ -307,47 +307,68 @@ export async function getProperties(
   zoneId?: string
 ): Promise<{ properties: Property[]; total: number }> {
   try {
-    // Construir la consulta base
-    const where = {
-      ...(searchTerm 
-        ? {
-            OR: [
-              { address: { contains: searchTerm } },
-              { population: { contains: searchTerm } },
-              { ownerName: { contains: searchTerm } },
-              { ownerPhone: { contains: searchTerm } }
-            ]
-          }
-        : {}),
-      ...(zoneId ? { zoneId } : {})
+    const skip = (page - 1) * limit;
+    
+    // Construir la condición where
+    const whereCondition = {
+      AND: [
+        searchTerm ? {
+          OR: [
+            { address: { contains: searchTerm, mode: 'insensitive' } },
+            { population: { contains: searchTerm, mode: 'insensitive' } },
+            { ownerName: { contains: searchTerm, mode: 'insensitive' } }
+          ]
+        } : {},
+        zoneId ? { zoneId } : {}
+      ]
     };
-
-    // Obtener el total de propiedades que coinciden con el filtro
-    const total = await prisma.property.count({ where });
-
-    // Obtener las propiedades con paginación
-    const properties = await prisma.property.findMany({
-      where,
-      include: {
-        zone: true,
-        activities: {
-          orderBy: { date: 'desc' },
-          take: 1
+    
+    // Ejecutar las consultas en paralelo
+    const [properties, total] = await Promise.all([
+      prisma.property.findMany({
+        skip,
+        take: limit,
+        where: whereCondition,
+        orderBy: {
+          [sortBy]: sortOrder
         },
-        responsibleUser: true
-      },
-      orderBy: { [sortBy]: sortOrder },
-      skip: (page - 1) * limit,
-      take: limit
-    });
+        include: {
+          zone: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          responsibleUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          activities: true,
+          assignments: true,
+          clients: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          dpv: true
+        }
+      }),
+      prisma.property.count({
+        where: whereCondition
+      })
+    ]);
     
     return {
       properties: properties.map(mapProperty),
       total
     };
   } catch (error) {
-    console.error('Error fetching properties:', error);
-    throw new Error('Error al obtener las propiedades');
+    throw new Error(`Error al obtener propiedades: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 

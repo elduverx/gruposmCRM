@@ -77,8 +77,6 @@ export default function PropertiesClient() {
             if (!zonesResponse.ok) {
               throw new Error('Failed to fetch zones');
             }
-            const zonesData = await zonesResponse.json() as Zone[];
-            
             // Only show assigned zones in the filter
             setZones(userZonesData);
           } else {
@@ -247,54 +245,31 @@ export default function PropertiesClient() {
 
   // Memoized filtered and sorted properties
   const filteredAndSortedProperties = useMemo(() => {
-    // Log para depuración
-    console.log('Total de propiedades:', properties.length);
-    if (filters.zoneId) {
-      console.log('Filtrando por zoneId:', filters.zoneId);
-      console.log('Propiedades con esta zona:', properties.filter(p => p.zoneId === filters.zoneId).length);
-    }
-    
-    // First apply filters
+    // Apply filters
     const filtered = properties.filter(property => {
-      // Apply search query filter
-      const searchLower = searchQuery.toLowerCase();
       const matchesSearch = searchQuery === '' || 
-        property.address.toLowerCase().includes(searchLower) ||
-        property.ownerName.toLowerCase().includes(searchLower) ||
-        property.population.toLowerCase().includes(searchLower);
+        property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        property.population.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Apply type filter
       const matchesType = filters.type === '' || property.type === filters.type;
-      
-      // Apply status filter
       const matchesStatus = filters.status === '' || property.status === filters.status;
-      
-      // Apply action filter
       const matchesAction = filters.action === '' || property.action === filters.action;
+      const matchesIsOccupied = filters.isOccupied === null || property.isOccupied === filters.isOccupied;
+      const matchesZone = filters.zoneId === '' || property.zoneId === filters.zoneId;
       
-      // Apply occupied filter
-      const matchesOccupied = filters.isOccupied === null || 
-        property.isOccupied === filters.isOccupied;
-      
-      // Apply zone filter - Fix para manejar tanto zoneId como zone.id
-      const matchesZone = filters.zoneId === '' || 
-                         property.zoneId === filters.zoneId || 
-                         (property.zone && property.zone.id === filters.zoneId);
-      
-      return matchesSearch && matchesType && matchesStatus && 
-             matchesAction && matchesOccupied && matchesZone;
+      return matchesSearch && matchesType && matchesStatus && matchesAction && matchesIsOccupied && matchesZone;
     });
     
-    // También logueamos el resultado del filtrado
-    console.log('Propiedades filtradas:', filtered.length);
-    
-    // Then apply sorting
-    return filtered.sort((a, b) => {
+    // Apply sorting
+    filtered.sort((a, b) => {
       const aValue = a[sortBy as keyof Property];
       const bValue = b[sortBy as keyof Property];
       
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
+      if (sortBy === 'isLocated') {
+        const aBool = aValue === true ? 1 : 0;
+        const bBool = bValue === true ? 1 : 0;
+        return sortOrder === 'asc' ? aBool - bBool : bBool - aBool;
+      }
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortOrder === 'asc' 
@@ -302,12 +277,21 @@ export default function PropertiesClient() {
           : bValue.localeCompare(aValue);
       }
       
-      // For numbers or other types
-      return sortOrder === 'asc'
-        ? (aValue < bValue ? -1 : aValue > bValue ? 1 : 0)
-        : (aValue > bValue ? -1 : aValue < bValue ? 1 : 0);
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortOrder === 'asc' 
+          ? aValue.getTime() - bValue.getTime()
+          : bValue.getTime() - aValue.getTime();
+      }
+      
+      return 0;
     });
-  }, [properties, searchQuery, sortBy, sortOrder, filters]);
+    
+    return filtered;
+  }, [properties, searchQuery, filters, sortBy, sortOrder]);
 
   // Calculate pagination
   const totalItems = filteredAndSortedProperties.length;

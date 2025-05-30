@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PropertyCreateInput, PropertyType, PropertyAction, OperationType } from '@/types/property';
+import { PropertyStatus } from '@prisma/client';
 import { 
   HomeIcon, 
   UserIcon, 
@@ -182,9 +183,11 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
                 className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 required
               >
-                {Object.values(OperationType).map((status) => (
+                {Object.values(PropertyStatus).map((status) => (
                   <option key={status} value={status}>
-                    {status === 'SALE' ? 'Venta' : 'Alquiler'}
+                    {status === 'SIN_EMPEZAR' ? 'Sin empezar' : 
+                     status === 'EMPEZADA' ? 'Empezada' : 
+                     status === 'SOLD' ? 'Vendida' : status}
                   </option>
                 ))}
               </select>

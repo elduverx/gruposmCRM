@@ -7,6 +7,7 @@ import ClientForm from './components/ClientForm';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import SearchBar from './components/SearchBar';
+import Link from 'next/link';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -148,7 +149,9 @@ export default function ClientsPage() {
               {filteredClients.map((client) => (
                 <tr key={client.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {client.name}
+                    <Link href={`/dashboard/clients/${client.id}`} className="text-primary-600 hover:text-primary-900">
+                      {client.name}
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {client.email}

@@ -703,7 +703,7 @@ export default function InicioPage() {
               <BuildingOfficeIcon className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Inmuebles</p>
+              <p className="text-sm font-medium text-gray-500">Inmuebles Localizados</p>
               <p className="text-2xl font-semibold text-gray-900">{stats.properties}</p>
             </div>
           </div>

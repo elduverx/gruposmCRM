@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { Client, ClientFormData } from '@/types/client';
+import { Property, Assignment } from '@/types/property';
 
 export async function getClients(): Promise<Client[]> {
   try {
@@ -82,6 +83,49 @@ export async function deleteClient(id: string): Promise<void> {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error deleting client:', error);
+    throw error;
+  }
+}
+
+export async function getClientById(id: string): Promise<Client & { properties: Property[]; assignments: Assignment[] }> {
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id },
+      include: {
+        properties: {
+          include: {
+            zone: true,
+            activities: true,
+            assignments: true,
+            dpv: true,
+            clients: true,
+            responsibleUser: true
+          }
+        },
+        assignments: {
+          include: {
+            property: {
+              include: {
+                zone: true,
+                activities: true,
+                assignments: true,
+                dpv: true,
+                clients: true,
+                responsibleUser: true
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    return client as unknown as Client & { properties: Property[]; assignments: Assignment[] };
+  } catch (error) {
+    console.error('Error fetching client:', error);
     throw error;
   }
 } 

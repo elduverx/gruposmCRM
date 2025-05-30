@@ -15,7 +15,8 @@ export async function GET() {
       where: {
         AND: [
           { latitude: { not: null } },
-          { longitude: { not: null } }
+          { longitude: { not: null } },
+          { isLocated: true }
         ]
       }
     });

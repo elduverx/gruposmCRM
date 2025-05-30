@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Property } from '@/types/property';
 import { getProperties } from '@/app/dashboard/properties/actions';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
 
 interface ClientFormProps {
   initialData?: {
@@ -32,7 +33,6 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [address, setAddress] = useState(initialData?.address || '');
   const [relatedProperties, setRelatedProperties] = useState<string[]>(initialData?.properties || []);
-  const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -44,11 +44,10 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
       setIsLoading(true);
       try {
         const { properties: propertiesData, total } = await getProperties(1, 20, '');
-        setProperties(propertiesData);
         setFilteredProperties(propertiesData);
         setTotalProperties(total);
       } catch (error) {
-        console.error('Error fetching properties:', error);
+        toast.error('Error al cargar las propiedades');
       } finally {
         setIsLoading(false);
       }
@@ -62,18 +61,16 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
     const searchTimeout = setTimeout(async () => {
       if (searchTerm.trim() === '') {
         const { properties: propertiesData, total } = await getProperties(1, 20, '');
-        setProperties(propertiesData);
         setFilteredProperties(propertiesData);
         setTotalProperties(total);
       } else {
         setIsLoading(true);
         try {
           const { properties: propertiesData, total } = await getProperties(1, 20, searchTerm);
-          setProperties(propertiesData);
           setFilteredProperties(propertiesData);
           setTotalProperties(total);
         } catch (error) {
-          console.error('Error searching properties:', error);
+          toast.error('Error al buscar propiedades');
         } finally {
           setIsLoading(false);
         }

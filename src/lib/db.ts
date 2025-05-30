@@ -36,8 +36,7 @@ const ensureDataDir = () => {
     }
     return true;
   } catch (error) {
-    console.error('Error al crear el directorio de datos:', error);
-    return false;
+    throw new DatabaseError('Error al crear el directorio de datos', error);
   }
 };
 

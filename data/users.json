@@ -61,5 +61,23 @@
     "role": "USER",
     "createdAt": "2025-04-14T19:24:55.946Z",
     "updatedAt": "2025-04-14T19:24:55.946Z"
+  },
+  {
+    "id": "1748562361637",
+    "name": "Admin2",
+    "email": "admin2@example.com",
+    "password": "$2a$10$i1PIBjoQlpGnbupZdPH1penq5f914CbHi95oW2TFKnfUi34EEpFYW",
+    "role": "ADMIN",
+    "createdAt": "2025-05-29T23:46:01.638Z",
+    "updatedAt": "2025-05-29T23:46:01.638Z"
+  },
+  {
+    "id": "1748562663762",
+    "name": "Usuario",
+    "email": "usuario@gruposm.com",
+    "password": "$2a$10$TbKhtt99jBh9JEc83GsvMuZRYYwJ3tGOWFqQg1TlS/Pssz6W6LAXm",
+    "role": "ADMIN",
+    "createdAt": "2025-05-29T23:51:03.764Z",
+    "updatedAt": "2025-05-29T23:51:03.764Z"
   }
 ]

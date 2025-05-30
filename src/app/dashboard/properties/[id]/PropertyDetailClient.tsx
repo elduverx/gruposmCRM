@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
 import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews, deleteAssignment } from '../actions';
-import { PlusIcon, CheckIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
 import { Dialog } from '@headlessui/react';
@@ -72,7 +72,7 @@ export default function PropertyDetailClient({
         const zonesData = await getZones();
         setZones(zonesData);
       } catch (error) {
-        console.error('Error loading zones:', error);
+        toast.error('Error al cargar las zonas');
       }
     };
     loadZones();

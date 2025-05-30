@@ -28,7 +28,7 @@ model Property {
   id              String         @id @default(cuid())
   address         String
   population      String
-  status          String         @default("SALE")
+  status          PropertyStatus @default(SIN_EMPEZAR)
   action          PropertyAction @default(IR_A_DIRECCION)
   ownerName       String
   ownerPhone      String
@@ -307,4 +307,10 @@ enum BaseProperty_type {
   OFICINA
   GARAJE
   TRASTERO
+}
+
+enum PropertyStatus {
+  SIN_EMPEZAR
+  EMPEZADA
+  SOLD
 }
