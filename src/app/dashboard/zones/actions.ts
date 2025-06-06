@@ -97,7 +97,6 @@ async function processPropertiesInBatches(
   batchSize: number = 50
 ) {
   const propertyIds: string[] = [];
-  const activities: any[] = [];
 
   // Procesar propiedades en lotes
   for (let i = 0; i < properties.length; i += batchSize) {
@@ -112,20 +111,9 @@ async function processPropertiesInBatches(
       );
     });
 
-    // Acumular IDs y actividades
+    // Acumular IDs
     propertiesInZone.forEach(property => {
       propertyIds.push(property.id);
-      activities.push({
-        type: 'PROPERTY_ASSIGNED',
-        description: `Propiedad ${property.address} asignada a zona ${zoneName}`,
-        relatedId: property.id,
-        relatedType: 'PROPERTY',
-        metadata: {
-          propertyAddress: property.address,
-          zoneName: zoneName,
-          zoneId: zoneId
-        }
-      });
     });
   }
 
@@ -137,9 +125,6 @@ async function processPropertiesInBatches(
       },
       data: { zoneId }
     });
-
-    // Registrar todas las actividades en una sola operación
-    await Promise.all(activities.map(activity => logActivity(activity)));
   }
 
   return propertyIds.length;

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
 import { logActivity } from '@/lib/activityLogger';
+import { getCurrentUserId } from '@/lib/auth';
 
 // Type guards for database results
 interface RawProperty {
@@ -475,7 +476,16 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
   try {
     const activities = await prisma.activity.findMany({
       where: { propertyId },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     });
 
     if (!Array.isArray(activities)) {
@@ -497,7 +507,12 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
         notes: activity.notes,
         date: date.toLocaleDateString('es-ES'),
         createdAt: createdAt.toISOString(),
-        updatedAt: updatedAt.toISOString()
+        updatedAt: updatedAt.toISOString(),
+        user: activity.user ? {
+          id: activity.user.id,
+          name: activity.user.name,
+          email: activity.user.email
+        } : null
       };
     });
   } catch (error) {
@@ -507,10 +522,62 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
 
 export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>): Promise<Activity | null> {
   try {
+    // Validar datos requeridos
+    if (!data.propertyId || !data.type || !data.status || !data.date) {
+      throw new Error('Faltan campos requeridos: propertyId, type, status y date son obligatorios');
+    }
+
+    // Validar que la propiedad existe
+    const propertyExists = await prisma.property.findUnique({
+      where: { id: data.propertyId }
+    });
+    if (!propertyExists) {
+      throw new Error(`La propiedad con ID ${data.propertyId} no existe`);
+    }
+
+    // Asegurar que la fecha es válida
+    let activityDate: Date;
+    try {
+      activityDate = new Date(data.date);
+      if (isNaN(activityDate.getTime())) {
+        throw new Error('Fecha inválida');
+      }
+    } catch {
+      throw new Error('El formato de fecha es inválido');
+    }
+
+    // Crear la actividad
+    // Get current user ID for the activity
+    const currentUserId = await getCurrentUserId();
+    if (!currentUserId) {
+      throw new Error('No hay un usuario autenticado');
+    }
+
     const activity = await prisma.activity.create({
       data: {
-        ...data,
-        date: new Date(data.date)
+        type: data.type,
+        status: data.status,
+        client: data.client || null,
+        notes: data.notes || null,
+        date: activityDate,
+        property: {
+          connect: {
+            id: data.propertyId
+          }
+        },
+        user: {
+          connect: {
+            id: currentUserId
+          }
+        }
+      },
+      include: {
+        property: {
+          select: {
+            id: true,
+            address: true
+          }
+        }
       }
     });
     
@@ -520,25 +587,27 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       return null;
     }
 
-    // Asegurarse de que las fechas sean válidas
-    const date = activity.date ? new Date(activity.date) : new Date();
-    const createdAt = activity.createdAt ? new Date(activity.createdAt) : new Date();
-    const updatedAt = activity.updatedAt ? new Date(activity.updatedAt) : new Date();
-
+    // Formatear fechas para la respuesta
     return {
       ...activity,
-      date: date.toLocaleString('es-ES', {
+      date: activity.date.toLocaleString('es-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       }),
-      createdAt: createdAt.toISOString(),
-      updatedAt: updatedAt.toISOString()
+      createdAt: activity.createdAt.toISOString(),
+      updatedAt: activity.updatedAt.toISOString(),
+      property: activity.property
     };
   } catch (error) {
-    throw new Error('Error creating activity');
+    // Mejorar el mensaje de error
+    console.error('Error al crear actividad:', error);
+    if (error instanceof Error) {
+      throw new Error(`Error al crear actividad: ${error.message}`);
+    }
+    throw new Error('Error al crear actividad: Error desconocido');
   }
 }
 
@@ -618,7 +687,7 @@ export async function createPropertyNews(propertyId: string, data: {
         action: data.action,
         valuation: data.valuation ? 'true' : 'false',
         priority: data.priority,
-        responsible: data.responsible,
+        responsible: data.responsable,
         value: numericValue,
         precioSM: data.valuation ? numericPrecioSM : null,
         precioCliente: data.valuation ? numericPrecioCliente : null,

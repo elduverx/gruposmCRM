@@ -11,4 +11,9 @@ export interface Activity {
   createdAt: string;
   updatedAt: string;
   property: Property | null;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
 } 

@@ -4,6 +4,24 @@ import { es } from 'date-fns/locale';
 import { Card } from '@/components/ui/card';
 import { Phone, Calendar, Mail, Building2, MessageSquare } from 'lucide-react';
 
+export interface Activity {
+  id: string;
+  propertyId: string;
+  type: string;
+  status: string;
+  client: string | null;
+  notes: string | null;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  property: Property | null;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+}
+
 interface ActivityListProps {
   activities: Activity[];
 }
@@ -48,7 +66,14 @@ export function ActivityList({ activities }: ActivityListProps) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800">{activity.type}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {activity.type}
+                      {activity.type.toLowerCase() === 'llamada' && activity.user?.name && (
+                        <span className="text-sm font-normal text-gray-600 ml-2">
+                          por {activity.user.name}
+                        </span>
+                      )}
+                    </h3>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                       {isValidDate 
                         ? format(activityDate, 'dd MMM yyyy, HH:mm', { locale: es })
@@ -81,4 +106,4 @@ export function ActivityList({ activities }: ActivityListProps) {
       })}
     </div>
   );
-} 
+}

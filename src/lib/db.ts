@@ -197,12 +197,14 @@ export const findUserByEmail = (email: string): User | undefined => {
 // Find a user by ID
 export const findUserById = (id: string): User | undefined => {
   try {
+    // getUsers() ya valida que el resultado sea un array
     const users = getUsers();
-    if (!Array.isArray(users)) {
-      throw new DatabaseError('getUsers no devolvió un array');
-    }
     return users.find(u => u.id === id);
   } catch (error) {
+    // Propagar el error original si viene de getUsers()
+    if (error instanceof DatabaseError) {
+      throw error;
+    }
     throw new DatabaseError('Error al buscar usuario por ID', error);
   }
 }; 
