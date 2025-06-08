@@ -132,72 +132,106 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Propiedad
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha de inicio
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha de fin
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAssignments.map((assignment) => {
-                const property = properties.find(p => p.id === assignment.propertyId);
-                return (
-                  <tr key={assignment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <Link href={`/dashboard/properties/${assignment.propertyId}`} className="text-primary-600 hover:text-primary-900">
-                        {property?.address || 'Propiedad no encontrada'}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        assignment.type === 'SALE' ? 'bg-blue-100 text-blue-800' :
-                        assignment.type === 'RENT' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {assignment.type === 'SALE' ? 'Venta' :
-                         assignment.type === 'RENT' ? 'Alquiler' :
-                         assignment.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assignment.createdAt ? new Date(assignment.createdAt).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assignment.exclusiveUntil ? new Date(assignment.exclusiveUntil).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(assignment)}
-                        className="text-primary-600 hover:text-primary-900 mr-3"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(assignment.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Propiedad
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Precio
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Origen
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha de inicio
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Exclusividad hasta
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Comisiones
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAssignments.map((assignment) => {
+                  const property = properties.find(p => p.id === assignment.propertyId);
+                  return (
+                    <tr key={assignment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <Link href={`/dashboard/properties/${assignment.propertyId}`} className="text-primary-600 hover:text-primary-900">
+                          <div className="font-medium">{property?.address || 'Propiedad no encontrada'}</div>
+                          <div className="text-xs text-gray-500">{property?.population || ''}</div>
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {assignment.client?.name || 'Cliente no encontrado'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          assignment.type === 'SALE' ? 'bg-blue-100 text-blue-800' :
+                          assignment.type === 'RENT' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {assignment.type === 'SALE' ? 'Venta' :
+                           assignment.type === 'RENT' ? 'Alquiler' :
+                           assignment.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(assignment.price)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {assignment.origin}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {assignment.createdAt ? new Date(assignment.createdAt).toLocaleDateString('es-ES') : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {assignment.exclusiveUntil ? new Date(assignment.exclusiveUntil).toLocaleDateString('es-ES') : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="space-y-1">
+                          <div className="text-xs">
+                            Vendedor: {assignment.sellerFeeValue}{assignment.sellerFeeType === 'PERCENTAGE' ? '%' : '€'}
+                          </div>
+                          <div className="text-xs">
+                            Comprador: {assignment.buyerFeeValue}{assignment.buyerFeeType === 'PERCENTAGE' ? '%' : '€'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(assignment)}
+                          className="text-primary-600 hover:text-primary-900 mr-3"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(assignment.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -214,7 +248,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white rounded-xl shadow-lg">
+          <Dialog.Panel className="mx-auto w-full max-w-[90%] bg-white rounded-xl shadow-lg">
             <div className="flex justify-between items-center p-6 border-b">
               <Dialog.Title className="text-lg font-medium">
                 {selectedAssignment ? 'Editar Encargo' : 'Nuevo Encargo'}
@@ -290,4 +324,4 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
       </Dialog>
     </div>
   );
-} 
+}

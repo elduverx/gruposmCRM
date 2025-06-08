@@ -206,6 +206,7 @@ export interface PropertyNews {
   precioCliente: number | null;
   createdAt: Date;
   updatedAt: Date;
+  isDone: boolean;
   property: {
     id: string;
     address: string;

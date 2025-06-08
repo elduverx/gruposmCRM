@@ -767,30 +767,97 @@ export async function createAssignment(data: {
   exclusiveUntil: Date;
   origin: string;
   clientId: string;
+  responsibleId?: string;
   sellerFeeType: string;
   sellerFeeValue: number;
   buyerFeeType: string;
   buyerFeeValue: number;
   propertyId: string;
+  notes?: string;
+  estimatedEndDate?: Date;
+  requiredDocuments?: string[];
+  documentsStatus?: Record<string, string>;
+  specialConditions?: string;
 }): Promise<Assignment | null> {
   try {
-    const assignment = await prisma.assignment.create({
-      data: {
-        type: data.type,
-        price: data.price,
-        exclusiveUntil: data.exclusiveUntil,
-        origin: data.origin,
-        clientId: data.clientId,
-        sellerFeeType: data.sellerFeeType,
-        sellerFeeValue: data.sellerFeeValue,
-        buyerFeeType: data.buyerFeeType,
-        buyerFeeValue: data.buyerFeeValue,
-        propertyId: data.propertyId
-      },
-      include: {
-        client: true,
-        property: true
+    console.log('Iniciando creación de encargo:', { 
+      propertyId: data.propertyId,
+      clientId: data.clientId,
+      type: data.type,
+      price: data.price,
+      exclusiveUntil: data.exclusiveUntil
+    });
+
+    // Iniciar una transacción para asegurar la consistencia de los datos
+    const result = await prisma.$transaction(async (tx) => {
+      // Verificar que la propiedad existe y obtener sus detalles
+      const propertyExists = await tx.property.findUnique({
+        where: { id: data.propertyId },
+        select: { 
+          id: true,
+          address: true,
+          status: true,
+          isSold: true
+        }
+      });
+      
+      if (!propertyExists) {
+        throw new Error(`La propiedad con ID ${data.propertyId} no existe`);
       }
+
+      if (propertyExists.isSold || propertyExists.status === 'SOLD') {
+        throw new Error(`La propiedad ${propertyExists.address} ya está vendida`);
+      }
+
+      // Verificar que el cliente existe
+      const clientExists = await tx.client.findUnique({
+        where: { id: data.clientId },
+        select: { 
+          id: true,
+          name: true,
+          email: true,
+          hasRequest: true
+        }
+      });
+
+      if (!clientExists) {
+        throw new Error(`El cliente con ID ${data.clientId} no existe`);
+      }
+
+      // Verificar si ya existe un encargo activo para esta propiedad
+      const existingAssignment = await tx.assignment.findFirst({
+        where: {
+          propertyId: data.propertyId,
+          exclusiveUntil: {
+            gt: new Date()
+          }
+        }
+      });
+
+      if (existingAssignment) {
+        throw new Error(`Ya existe un encargo activo para esta propiedad hasta ${new Date(existingAssignment.exclusiveUntil).toLocaleDateString('es-ES')}`);
+      }
+
+      // Crear el encargo
+      return await tx.assignment.create({
+        data: {
+          type: data.type,
+          price: data.price,
+          exclusiveUntil: data.exclusiveUntil,
+          origin: data.origin,
+          clientId: data.clientId,
+          responsibleId: data.responsibleId,
+          sellerFeeType: data.sellerFeeType,
+          sellerFeeValue: data.sellerFeeValue,
+          buyerFeeType: data.buyerFeeType,
+          buyerFeeValue: data.buyerFeeValue,
+          propertyId: data.propertyId
+        },
+        include: {
+          client: true,
+          property: true
+        }
+      });
     });
 
     // Revalidar todas las rutas relevantes
@@ -798,26 +865,39 @@ export async function createAssignment(data: {
     revalidatePath('/dashboard/assignments');
     revalidatePath('/dashboard/properties');
     revalidatePath('/dashboard');
-
+    
+    // Mapear la respuesta al formato esperado
     return {
-      ...assignment,
-      exclusiveUntil: assignment.exclusiveUntil.toISOString(),
-      createdAt: assignment.createdAt.toISOString(),
-      updatedAt: assignment.updatedAt.toISOString(),
-      client: assignment.client ? {
-        id: assignment.client.id,
-        name: assignment.client.name,
-        email: assignment.client.email,
-        phone: assignment.client.phone
+      id: result.id,
+      type: result.type,
+      price: result.price,
+      exclusiveUntil: result.exclusiveUntil.toISOString(),
+      origin: result.origin,
+      clientId: result.clientId,
+      sellerFeeType: result.sellerFeeType,
+      sellerFeeValue: result.sellerFeeValue,
+      buyerFeeType: result.buyerFeeType,
+      buyerFeeValue: result.buyerFeeValue,
+      propertyId: result.propertyId,
+      createdAt: result.createdAt.toISOString(),
+      updatedAt: result.updatedAt.toISOString(),
+      client: result.client ? {
+        id: result.client.id,
+        name: result.client.name,
+        email: result.client.email,
+        phone: result.client.phone
       } : undefined,
-      property: assignment.property ? {
-        id: assignment.property.id,
-        address: assignment.property.address,
-        population: assignment.property.population
+      property: result.property ? {
+        id: result.property.id,
+        address: result.property.address,
+        population: result.property.population
       } : undefined
     };
   } catch (error) {
-    throw new Error('Error creating assignment');
+    console.error('Error al crear el encargo:', error);
+    throw error instanceof Error 
+      ? new Error(`Error al crear el encargo: ${error.message}`) 
+      : new Error('Error al crear el encargo');
   }
 }
 
@@ -877,10 +957,17 @@ export async function updateAssignment(id: string, data: {
   exclusiveUntil: Date;
   origin: string;
   clientId: string;
+  responsibleId?: string;
   sellerFeeType: string;
   sellerFeeValue: number;
   buyerFeeType: string;
   buyerFeeValue: number;
+  status?: string;
+  notes?: string;
+  estimatedEndDate?: Date;
+  requiredDocuments?: string[];
+  documentsStatus?: Record<string, string>;
+  specialConditions?: string;
 }): Promise<Assignment | null> {
   try {
     const assignment = await prisma.assignment.update({
@@ -891,10 +978,22 @@ export async function updateAssignment(id: string, data: {
         exclusiveUntil: data.exclusiveUntil,
         origin: data.origin,
         clientId: data.clientId,
+        responsibleId: data.responsibleId,
         sellerFeeType: data.sellerFeeType,
         sellerFeeValue: data.sellerFeeValue,
         buyerFeeType: data.buyerFeeType,
-        buyerFeeValue: data.buyerFeeValue
+        buyerFeeValue: data.buyerFeeValue,
+        status: data.status,
+        notes: data.notes,
+        estimatedEndDate: data.estimatedEndDate,
+        requiredDocuments: data.requiredDocuments ? JSON.stringify(data.requiredDocuments) : null,
+        documentsStatus: data.documentsStatus ? JSON.stringify(data.documentsStatus) : null,
+        specialConditions: data.specialConditions
+      },
+      include: {
+        client: true,
+        property: true,
+        responsibleUser: true
       }
     });
     

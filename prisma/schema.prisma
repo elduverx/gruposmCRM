@@ -93,24 +93,33 @@ model News {
 }
 
 model Assignment {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  propertyId     String
-  clientId       String
-  buyerFeeType   String
-  buyerFeeValue  Float
-  exclusiveUntil DateTime
-  origin         String
-  price          Float
-  sellerFeeType  String
-  sellerFeeValue Float
-  type           String
-  client         Client   @relation(fields: [clientId], references: [id])
-  property       Property @relation(fields: [propertyId], references: [id])
+  id                    String    @id @default(cuid())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  propertyId           String
+  clientId             String
+  responsibleId        String?
+  buyerFeeType         String
+  buyerFeeValue        Float
+  exclusiveUntil       DateTime
+  origin               String
+  price                Float
+  sellerFeeType        String
+  sellerFeeValue       Float
+  type                 String
+  status               String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  notes                String?   @db.Text
+  estimatedEndDate     DateTime?
+  requiredDocuments    Json?     // Array de documentos requeridos
+  documentsStatus      Json?     // Estado de cada documento
+  specialConditions    String?   @db.Text
+  client              Client    @relation(fields: [clientId], references: [id])
+  property            Property  @relation(fields: [propertyId], references: [id])
+  responsibleUser     User?     @relation(fields: [responsibleId], references: [id])
 
   @@index([propertyId], map: "Assignment_propertyId_fkey")
   @@index([clientId], map: "Assignment_clientId_fkey")
+  @@index([responsibleId], map: "Assignment_responsibleId_fkey")
 }
 
 model Zone {
@@ -170,6 +179,7 @@ model PropertyNews {
   precioSM        Float?
   commissionType  String   @default("percentage")
   commissionValue Float    @default(3)
+  isDone          Boolean  @default(false)
   property        Property @relation(fields: [propertyId], references: [id])
 
   @@index([propertyId])

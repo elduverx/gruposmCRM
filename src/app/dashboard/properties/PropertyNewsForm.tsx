@@ -6,6 +6,7 @@ import { createPropertyNews, getPropertyNews } from './actions';
 import { PropertyNews } from '@/types/property';
 import { useRouter } from 'next/navigation';
 import { useUsers } from '@/hooks/useUsers';
+import { HomeIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
 interface PropertyNewsFormProps {
   propertyId: string;
@@ -142,107 +143,125 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
         : formData.precioCliente - formData.precioSM) 
     : 0;
 
-  // Si hay noticias existentes, mostrar un mensaje pero permitir continuar
-  if (existingNews) {
-    return (
-      <div className="space-y-6">
-        <div className="p-4 bg-yellow-50 rounded-md">
-          <p className="text-sm font-medium text-yellow-800">
+  return (
+    <form onSubmit={handleSubmit} className="w-full space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto px-6">
+      {/* Encabezado */}
+      <div className="border-b border-gray-200 pb-4 sticky top-0 bg-white z-10">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <HomeIcon className="h-5 w-5 text-indigo-600" />
+          Crear Noticia de Propiedad
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Complete los detalles de la noticia para la propiedad
+        </p>
+      </div>
+
+      {existingNews && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-700">
             Ya existe una noticia para esta propiedad. Puedes crear otra si lo necesitas.
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Tipo</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              >
-                <option value="DPV">DPV</option>
-                <option value="PVA">PVA</option>
-              </select>
-            </div>
+      )}
 
-            <div className="col-span-1 md:col-span-2">
-              <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
-                Acción
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* Información Principal */}
+        <div className="xl:col-span-8 space-y-6">
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6">
+            <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-6">
+              <BuildingOfficeIcon className="h-5 w-5 text-indigo-600" />
+              Información Principal
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="DPV">DPV</option>
+                  <option value="PVA">PVA</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Acción</label>
+                <select
+                  name="action"
+                  value={formData.action}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="Venta">Venta</option>
+                  <option value="Alquiler">Alquiler</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                <select
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="HIGH">Alta</option>
+                  <option value="LOW">Baja</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
+                <select
+                  name="responsible"
+                  value={formData.responsible}
+                  onChange={handleChange}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {users?.map((user) => (
+                    <option key={user.id} value={user.name || ''}>
+                      {user.name || 'Sin nombre'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel lateral - Valoración */}
+        <div className="xl:col-span-4">
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sticky top-[100px]">
+            <div className="flex items-center mb-6">
+              <input
+                type="checkbox"
+                id="valuation"
+                name="valuation"
+                checked={formData.valuation}
+                onChange={handleChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="valuation" className="ml-2 text-sm font-medium text-gray-900">
+                Ha sido valorado
               </label>
-              <select
-                name="action"
-                id="action"
-                value={formData.action}
-                onChange={handleChange}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              >
-                <option value="Venta">Venta</option>
-                <option value="Alquiler">Alquiler</option>
-              </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Prioridad</label>
-              <select
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              >
-                <option value="HIGH">Alta</option>
-                <option value="LOW">Baja</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Responsable</label>
-              <select
-                name="responsible"
-                value={formData.responsible}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              >
-                <option value="">Seleccionar responsable</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.name || ''}>
-                    {user.name || 'Sin nombre'}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="valuation"
-              name="valuation"
-              checked={formData.valuation}
-              onChange={handleChange}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
-              Ha sido valorado
-            </label>
-          </div>
-
-          {formData.valuation ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {formData.valuation && (
+              <div className="space-y-6">
                 <div>
-                  <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700 mb-1">
-                    Precio Cliente
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio Cliente</label>
                   <div className="relative rounded-md shadow-sm">
                     <input
                       type="number"
                       name="precioCliente"
-                      id="precioCliente"
                       value={formData.precioCliente || ''}
                       onChange={handleChange}
                       className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -253,15 +272,13 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
                     </div>
                   </div>
                 </div>
+
                 <div>
-                  <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
-                    Precio SM
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio SM</label>
                   <div className="relative rounded-md shadow-sm">
                     <input
                       type="number"
                       name="precioSM"
-                      id="precioSM"
                       value={formData.precioSM || ''}
                       onChange={handleChange}
                       className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -272,209 +289,48 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-md">
-                <p className="text-sm font-medium text-gray-700">Beneficio: <span className="text-green-600 font-bold">€{beneficio.toLocaleString('es-ES')}</span></p>
-              </div>
-            </>
-          ) : (
-            <div>
-              <label htmlFor="value" className="block text-sm font-medium text-gray-700 mb-1">
-                Valor
-              </label>
-              <div className="relative rounded-md shadow-sm">
-                <input
-                  type="number"
-                  name="value"
-                  id="value"
-                  value={formData.value}
-                  onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="0"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">€</span>
+
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-gray-700">
+                    Beneficio: <span className="text-green-600 font-bold">€{beneficio.toLocaleString('es-ES')}</span>
+                  </p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {error && (
-            <div className="p-3 bg-red-50 rounded-md">
-              <p className="text-sm font-medium text-red-700">{error}</p>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creando...' : 'Crear Noticia'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Tipo</label>
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="DPV">DPV</option>
-            <option value="PVA">PVA</option>
-          </select>
-        </div>
-
-        <div className="col-span-1 md:col-span-2">
-          <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
-            Acción
-          </label>
-          <select
-            name="action"
-            id="action"
-            value={formData.action}
-            onChange={handleChange}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="Venta">Venta</option>
-            <option value="Alquiler">Alquiler</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Prioridad</label>
-          <select
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="HIGH">Alta</option>
-            <option value="LOW">Baja</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Responsable</label>
-          <select
-            name="responsible"
-            value={formData.responsible}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            <option value="">Seleccionar responsable</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.name || ''}>
-                {user.name || 'Sin nombre'}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          id="valuation"
-          name="valuation"
-          checked={formData.valuation}
-          onChange={handleChange}
-          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-        />
-        <label htmlFor="valuation" className="ml-2 block text-sm text-gray-900">
-          Ha sido valorado
-        </label>
-      </div>
-
-      {formData.valuation ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="precioCliente" className="block text-sm font-medium text-gray-700 mb-1">
-                Precio Cliente
-              </label>
-              <div className="relative rounded-md shadow-sm">
-                <input
-                  type="number"
-                  name="precioCliente"
-                  id="precioCliente"
-                  value={formData.precioCliente || ''}
-                  onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="0"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">€</span>
+            {!formData.valuation && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                <div className="relative rounded-md shadow-sm">
+                  <input
+                    type="number"
+                    name="value"
+                    value={formData.value}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="0"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">€</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div>
-              <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
-                Precio SM
-              </label>
-              <div className="relative rounded-md shadow-sm">
-                <input
-                  type="number"
-                  name="precioSM"
-                  id="precioSM"
-                  value={formData.precioSM || ''}
-                  onChange={handleChange}
-                  className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="0"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">€</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="p-3 bg-gray-50 rounded-md">
-            <p className="text-sm font-medium text-gray-700">Beneficio: <span className="text-green-600 font-bold">€{beneficio.toLocaleString('es-ES')}</span></p>
-          </div>
-        </>
-      ) : (
-        <div>
-          <label htmlFor="value" className="block text-sm font-medium text-gray-700 mb-1">
-            Valor
-          </label>
-          <div className="relative rounded-md shadow-sm">
-            <input
-              type="number"
-              name="value"
-              id="value"
-              value={formData.value}
-              onChange={handleChange}
-              className="block w-full rounded-md border-gray-300 pl-3 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              placeholder="0"
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">€</span>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {error && (
-        <div className="p-3 bg-red-50 rounded-md">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm font-medium text-red-700">{error}</p>
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={loading}>
+      <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-4 pb-6 px-4 -mx-6">
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Creando...' : 'Crear Noticia'}
         </Button>
       </div>
     </form>
   );
-} 
+}

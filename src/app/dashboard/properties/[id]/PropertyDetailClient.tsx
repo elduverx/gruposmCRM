@@ -463,140 +463,131 @@ export default function PropertyDetailClient({
 
         {/* Noticias y Encargos en columnas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Noticias */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-blue-600">Noticias</h2>
-              <button 
-                onClick={() => setIsNewsFormOpen(true)}
-                className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
-                title="Crear noticia"
-              >
-                <PlusIcon className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {news.length > 0 ? (
-                news.map((item) => (
-                  <div key={item.id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{item.type}</h3>
-                        <p className="text-sm text-gray-500">{item.action}</p>
-                      </div>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        item.priority === 'HIGH' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        <span className="font-medium">Responsable:</span> {item.responsible || 'No asignado'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        <span className="font-medium">Valoración:</span>{' '}
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          item.valuation ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {item.valuation ? 'Sí' : 'No'}
-                        </span>
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        <span className="font-medium">Precio:</span>{' '}
-                        {item.valuation === 'true' ? (
-                          <>
-                            <span className="font-medium">SM:</span> {formatNumber(item.precioSM || 0)}€{' '}
-                            <span className="font-medium">Cliente:</span> {formatNumber(item.precioCliente || 0)}€
-                          </>
-                        ) : (
-                          `${formatNumber(item.value || 0)}€`
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 py-4">No hay noticias para esta propiedad</p>
-              )}
-            </div>
-          </div>
-
-          {/* Encargos - Solo mostrar si hay noticias */}
-          {news.length > 0 && (
+          {assignments.length === 0 ? (
+            // Mostrar noticias solo si no hay encargos
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-blue-600">Encargos</h2>
+                <h2 className="text-xl font-semibold text-blue-600">Noticias</h2>
                 <button 
-                  onClick={() => setIsAssignmentFormOpen(true)}
+                  onClick={() => setIsNewsFormOpen(true)}
                   className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
-                  title="Crear encargo"
+                  title="Crear noticia"
                 >
                   <PlusIcon className="h-5 w-5" />
                 </button>
               </div>
               
               <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                {assignments.length > 0 ? (
-                  assignments.map((assignment) => (
-                    <div key={assignment.id} className="bg-gray-50 p-4 rounded-lg">
+                {news.length > 0 ? (
+                  news.map((item) => (
+                    <div key={item.id} className="bg-gray-50 rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium text-gray-900">
-                            {assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}  {formatNumber(assignment.price)}€
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Cliente: {assignment.client?.name || 'Sin cliente'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Fecha límite: {assignment.exclusiveUntil}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Origen: {assignment.origin}
-                          </p>
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <div>
-                              <p className="text-xs font-medium text-gray-500">Comisión vendedor:</p>
-                              <p className="text-sm">
-                                {assignment.sellerFeeType === 'PERCENTAGE' 
-                                  ? `${formatNumber(assignment.sellerFeeValue)}€ (3%)` 
-                                  : `${formatNumber(assignment.sellerFeeValue)}€ (fijo)`}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500">Comisión comprador:</p>
-                              <p className="text-sm">
-                                {assignment.buyerFeeType === 'PERCENTAGE' 
-                                  ? `${formatNumber(assignment.buyerFeeValue)}€ (3%)` 
-                                  : `${formatNumber(assignment.buyerFeeValue)}€ (fijo)`}
-                              </p>
-                            </div>
-                          </div>
+                          <h3 className="text-lg font-medium text-gray-900">{item.type}</h3>
+                          <p className="text-sm text-gray-500">{item.action}</p>
                         </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditAssignment(assignment)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAssignment(assignment.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          item.priority === 'HIGH' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">
+                          <span className="font-medium">Responsable:</span> {item.responsible || 'No asignado'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {item.valuation ? (
+                            <>
+                              <span className="font-medium">SM:</span> {formatNumber(item.precioSM || 0)}€{' '}
+                              <span className="font-medium">Cliente:</span> {formatNumber(item.precioCliente || 0)}€
+                            </>
+                          ) : (
+                            `${formatNumber(item.value || 0)}€`
+                          )}
+                        </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500">No hay encargos para esta propiedad</p>
+                  <p className="text-center text-gray-500 py-4">No hay noticias para esta propiedad</p>
                 )}
               </div>
             </div>
-          )}
+          ) : null}
+
+          {/* Encargos */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-blue-600">Encargos</h2>
+              <button 
+                onClick={() => setIsAssignmentFormOpen(true)}
+                className="inline-flex items-center justify-center p-2 rounded-full bg-green-600 text-white hover:bg-green-700"
+                title="Crear encargo"
+              >
+                <PlusIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {assignments.length > 0 ? (
+                assignments.map((assignment) => (
+                  <div key={assignment.id} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}  {formatNumber(assignment.price)}€
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Cliente: {assignment.client?.name || 'Sin cliente'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Fecha límite: {assignment.exclusiveUntil}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Origen: {assignment.origin}
+                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">Comisión vendedor:</p>
+                            <p className="text-sm">
+                              {assignment.sellerFeeType === 'PERCENTAGE' 
+                                ? `${formatNumber(assignment.sellerFeeValue)}€ (3%)` 
+                                : `${formatNumber(assignment.sellerFeeValue)}€ (fijo)`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">Comisión comprador:</p>
+                            <p className="text-sm">
+                              {assignment.buyerFeeType === 'PERCENTAGE' 
+                                ? `${formatNumber(assignment.buyerFeeValue)}€ (3%)` 
+                                : `${formatNumber(assignment.buyerFeeValue)}€ (fijo)`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditAssignment(assignment)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAssignment(assignment.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500">No hay encargos para esta propiedad</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -808,4 +799,4 @@ export default function PropertyDetailClient({
       </Dialog>
     </div>
   );
-} 
+}
