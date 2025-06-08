@@ -24,6 +24,7 @@ interface UserActivity {
   description: string;
   timestamp: string;
   points: number;
+  relatedType?: string;
   goalId?: string | null;
   goalTitle?: string | null;
   user?: {
@@ -34,10 +35,10 @@ interface UserActivity {
 }
 
 interface ActivityStats {
-  total: number;
-  completed: number;
-  inProgress: number;
-  points: number;
+  activities: number;
+  dpvs: number;
+  news: number;
+  assignments: number;
 }
 
 export default function UsersPage() {
@@ -97,12 +98,17 @@ export default function UsersPage() {
           const activities = await activitiesResponse.json();
           activitiesByUser[user.id] = activities;
 
-          // Calcular estadísticas
+          // Separar actividades por tipo
+          const propertyActivities = activities.filter(a => a.type === 'ACTIVIDAD' || a.relatedType === 'PROPERTY_ACTIVITY');
+          const dpvActivities = activities.filter(a => a.type === 'DPV' || a.relatedType === 'PROPERTY_DPV');
+          const newsActivities = activities.filter(a => a.type === 'NOTICIA' || a.relatedType === 'PROPERTY_NEWS');
+          const assignmentActivities = activities.filter(a => a.type === 'ENCARGO' || a.relatedType === 'PROPERTY_ASSIGNMENT');
+
           statsByUser[user.id] = {
-            total: activities.length,
-            completed: activities.filter((a: UserActivity) => a.goalId).length,
-            inProgress: activities.filter((a: UserActivity) => !a.goalId).length,
-            points: activities.reduce((acc: number, curr: UserActivity) => acc + (curr.points || 0), 0)
+            activities: propertyActivities.length, // Solo contar actividades de propiedades
+            dpvs: dpvActivities.length,
+            news: newsActivities.length,
+            assignments: assignmentActivities.length
           };
         }
       }
@@ -263,41 +269,41 @@ export default function UsersPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                       <div className="flex items-center">
-                        <ChartBarIcon className="h-5 w-5 text-blue-600 mr-2" />
-                        <h3 className="text-sm font-medium text-blue-900">Total</h3>
+                        <CalendarIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <h3 className="text-sm font-medium text-blue-900">Actividades</h3>
                       </div>
                       <p className="text-2xl font-bold text-blue-600 mt-2">
-                        {stats[user.id]?.total || 0}
+                        {stats[user.id]?.activities || 0}
                       </p>
                     </div>
 
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                       <div className="flex items-center">
-                        <CalendarIcon className="h-5 w-5 text-green-600 mr-2" />
-                        <h3 className="text-sm font-medium text-green-900">Completadas</h3>
+                        <ChartBarIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-sm font-medium text-green-900">DPVs</h3>
                       </div>
                       <p className="text-2xl font-bold text-green-600 mt-2">
-                        {stats[user.id]?.completed || 0}
+                        {stats[user.id]?.dpvs || 0}
                       </p>
                     </div>
 
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                       <div className="flex items-center">
                         <ClockIcon className="h-5 w-5 text-yellow-600 mr-2" />
-                        <h3 className="text-sm font-medium text-yellow-900">En Progreso</h3>
+                        <h3 className="text-sm font-medium text-yellow-900">Noticias</h3>
                       </div>
                       <p className="text-2xl font-bold text-yellow-600 mt-2">
-                        {stats[user.id]?.inProgress || 0}
+                        {stats[user.id]?.news || 0}
                       </p>
                     </div>
 
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                       <div className="flex items-center">
                         <ChartBarIcon className="h-5 w-5 text-purple-600 mr-2" />
-                        <h3 className="text-sm font-medium text-purple-900">Puntos</h3>
+                        <h3 className="text-sm font-medium text-purple-900">Encargos</h3>
                       </div>
                       <p className="text-2xl font-bold text-purple-600 mt-2">
-                        {stats[user.id]?.points || 0}
+                        {stats[user.id]?.assignments || 0}
                       </p>
                     </div>
                   </div>

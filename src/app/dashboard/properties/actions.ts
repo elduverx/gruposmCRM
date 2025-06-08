@@ -5,6 +5,7 @@ import { Property, PropertyCreateInput, Activity, DPV, Assignment } from '@/type
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { PropertyNewsWithProperty } from '@/types/prisma';
+import { ActivityType } from '@prisma/client';
 import { logActivity } from '@/lib/activityLogger';
 import { getCurrentUserId } from '@/lib/auth';
 
@@ -407,7 +408,7 @@ export async function createProperty(data: PropertyCreateInput): Promise<Propert
 
     // Registrar la actividad
     await logActivity({
-      type: 'PROPERTY_CREATED',
+      type: 'OTROS' as ActivityType,
       description: `Nueva propiedad creada: ${property.address}`,
       relatedId: property.id,
       relatedType: 'PROPERTY',
@@ -453,7 +454,7 @@ export async function deleteProperty(id: string): Promise<boolean> {
 
     // Registrar la actividad
     await logActivity({
-      type: 'PROPERTY_DELETED',
+      type: 'OTROS' as ActivityType,
       description: `Propiedad eliminada: ${property.address}`,
       relatedId: property.id,
       relatedType: 'PROPERTY',
@@ -516,58 +517,40 @@ export async function getActivitiesByPropertyId(propertyId: string): Promise<Act
       };
     });
   } catch (error) {
-    throw new Error('Error getting activities');
+    console.error('Error detallado al obtener actividades:', error);
+    throw new Error(`Error getting activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>): Promise<Activity | null> {
   try {
-    // Validar datos requeridos
-    if (!data.propertyId || !data.type || !data.status || !data.date) {
-      throw new Error('Faltan campos requeridos: propertyId, type, status y date son obligatorios');
-    }
+    const activityDate = typeof data.date === 'string' ? new Date(data.date) : data.date;
 
-    // Validar que la propiedad existe
-    const propertyExists = await prisma.property.findUnique({
-      where: { id: data.propertyId }
-    });
-    if (!propertyExists) {
-      throw new Error(`La propiedad con ID ${data.propertyId} no existe`);
-    }
-
-    // Asegurar que la fecha es válida
-    let activityDate: Date;
-    try {
-      activityDate = new Date(data.date);
-      if (isNaN(activityDate.getTime())) {
-        throw new Error('Fecha inválida');
-      }
-    } catch {
-      throw new Error('El formato de fecha es inválido');
-    }
-
-    // Crear la actividad
-    // Get current user ID for the activity
     const currentUserId = await getCurrentUserId();
     if (!currentUserId) {
       throw new Error('No hay un usuario autenticado');
     }
 
+    // Validate that type is a valid ActivityType
+    if (!Object.values(ActivityType).includes(data.type)) {
+      throw new Error(`Tipo de actividad inválido: ${data.type}. Valores permitidos: ${Object.values(ActivityType).join(', ')}`);
+    }
+
     const activity = await prisma.activity.create({
       data: {
-        type: data.type,
+        type: data.type, // ActivityType is now properly typed
         status: data.status,
         client: data.client || null,
         notes: data.notes || null,
         date: activityDate,
-        property: {
-          connect: {
-            id: data.propertyId
-          }
-        },
         user: {
           connect: {
             id: currentUserId
+          }
+        },
+        property: {
+          connect: {
+            id: data.propertyId
           }
         }
       },
@@ -577,37 +560,55 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
             id: true,
             address: true
           }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
         }
       }
     });
-    
+
+    // Log user activity
+    try {
+      await logActivity({
+        type: data.type,
+        description: `Nueva actividad creada: ${data.type} para ${activity.property.address}`,
+        relatedId: activity.id,
+        relatedType: 'PROPERTY_ACTIVITY',
+        metadata: {
+          propertyId: data.propertyId,
+          type: data.type,
+          status: data.status,
+          date: activityDate
+        },
+        points: 1
+      });
+    } catch (logError) {
+      // Log the error but don't fail the activity creation
+      console.error('Error al registrar la actividad en el historial:', logError);
+    }
+
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
 
     if (!activity) {
       return null;
     }
 
-    // Formatear fechas para la respuesta
     return {
       ...activity,
-      date: activity.date.toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
       createdAt: activity.createdAt.toISOString(),
       updatedAt: activity.updatedAt.toISOString(),
-      property: activity.property
+      date: activity.date.toISOString(),
     };
   } catch (error) {
-    // Mejorar el mensaje de error
-    console.error('Error al crear actividad:', error);
+    console.error('Error creating activity:', error);
     if (error instanceof Error) {
-      throw new Error(`Error al crear actividad: ${error.message}`);
+      throw new Error(`Error creating activity: ${error.message}`);
     }
-    throw new Error('Error al crear actividad: Error desconocido');
+    throw new Error('Error creating activity: Unknown error');
   }
 }
 
@@ -638,16 +639,89 @@ export async function getDPVByPropertyId(propertyId: string): Promise<DPV | null
 
 export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id' | 'createdAt' | 'updatedAt'>): Promise<DPV | null> {
   try {
+    // Validar datos requeridos
+    if (!propertyId) {
+      throw new Error('El ID de la propiedad es requerido');
+    }
+
+    // Validar que links sea un array
+    if (!Array.isArray(data.links)) {
+      throw new Error('El campo links debe ser un array de strings');
+    }
+
+    // Convertir y validar valores numéricos
+    let currentPrice: number | null = null;
+    if (data.currentPrice !== null && data.currentPrice !== undefined) {
+      const numValue = Number(data.currentPrice);
+      if (isNaN(numValue)) {
+        throw new Error('El precio actual debe ser un número válido');
+      }
+      currentPrice = numValue;
+    }
+
+    let estimatedValue: number | null = null;
+    if (data.estimatedValue !== null && data.estimatedValue !== undefined) {
+      const numValue = Number(data.estimatedValue);
+      if (isNaN(numValue)) {
+        throw new Error('El valor estimado debe ser un número válido');
+      }
+      estimatedValue = numValue;
+    }
+
     const dpv = await prisma.dPV.upsert({
       where: { propertyId },
       create: {
         ...data,
-        propertyId
+        currentPrice,
+        estimatedValue,
+        propertyId,
+        links: Array.isArray(data.links) ? data.links : []
       },
-      update: data
+      update: {
+        ...data,
+        currentPrice,
+        estimatedValue,
+        links: Array.isArray(data.links) ? data.links : []
+      },
+      include: {
+        property: {
+          select: {
+            address: true
+          }
+        }
+      }
     });
     
+    // Log user activity with consistent DPV type
+    try {
+      await logActivity({
+        type: 'DPV' as ActivityType,
+        description: `DPV ${dpv.id ? 'actualizado' : 'creado'} para ${dpv.property.address}`,
+        relatedId: dpv.id,
+        relatedType: 'PROPERTY_DPV',
+        metadata: {
+          propertyId,
+          currentPrice: data.currentPrice,
+          estimatedValue: data.estimatedValue,
+          realEstate: data.realEstate,
+          links: data.links
+        },
+        points: 3 // Puntos fijos por DPV
+      });
+    } catch (logError) {
+      // Just log the error but don't fail the DPV operation
+      // This ensures DPV is created/updated even if activity logging fails
+      console.error('Error al registrar la actividad del DPV:', logError);
+      if (process.env.NODE_ENV === 'development') {
+        // In development, log the full error for debugging
+        console.error('Stack trace:', logError instanceof Error ? logError.stack : '');
+      }
+      // Log to your error tracking service if needed
+      // reportError(logError);
+    }
+
     revalidatePath(`/dashboard/properties/${propertyId}`);
+    revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
 
     // Asegurar que links sea un array de strings
     const links = Array.isArray(dpv.links) 
@@ -661,53 +735,70 @@ export async function createOrUpdateDPV(propertyId: string, data: Omit<DPV, 'id'
       updatedAt: dpv.updatedAt.toISOString()
     };
   } catch (error) {
-    throw new Error('Error creating/updating DPV');
+    console.error('Error al crear/actualizar DPV:', error);
+    if (error instanceof Error) {
+      throw new Error(`Error al crear/actualizar DPV: ${error.message}`);
+    }
+    throw new Error('Error al crear/actualizar DPV: Error desconocido');
   }
 }
 
-export async function createPropertyNews(propertyId: string, data: {
-  type: string;
-  action: string;
-  valuation: boolean;
-  priority: 'HIGH' | 'LOW';
-  responsible: string;
-  value: number;
-  precioSM: number | null;
-  precioCliente: number | null;
-}) {
-  try {
-    // Convert numeric values to ensure they're numbers, not strings
-    const numericValue = typeof data.value === 'string' ? parseFloat(data.value) : data.value;
-    const numericPrecioSM = data.precioSM !== null ? (typeof data.precioSM === 'string' ? parseFloat(data.precioSM) : data.precioSM) : null;
-    const numericPrecioCliente = data.precioCliente !== null ? (typeof data.precioCliente === 'string' ? parseFloat(data.precioCliente) : data.precioCliente) : null;
-
-    const news = await prisma.propertyNews.create({
-      data: {
-        type: data.type,
-        action: data.action,
-        valuation: data.valuation ? 'true' : 'false',
-        priority: data.priority,
-        responsible: data.responsable,
-        value: numericValue,
-        precioSM: data.valuation ? numericPrecioSM : null,
-        precioCliente: data.valuation ? numericPrecioCliente : null,
-        propertyId: propertyId,
-      },
-    });
-
-    revalidatePath(`/dashboard/properties/${propertyId}`);
-    return news;
-  } catch (error) {
-    throw new Error('Error creating property news');
-  }
-}
-
+// Funciones para noticias de propiedades
 export async function getPropertyNews(propertyId: string): Promise<PropertyNewsWithProperty[]> {
   try {
     const news = await prisma.propertyNews.findMany({
       where: { propertyId },
       orderBy: { createdAt: 'desc' },
-      distinct: ['propertyId'],
+      include: {
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true,
+            zoneId: true
+          }
+        }
+      }
+    });
+    return news;
+  } catch (error) {
+    throw new Error('Error getting property news');
+  }
+}
+
+export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'id' | 'createdAt' | 'updatedAt' | 'property'>): Promise<PropertyNewsWithProperty> {
+  try {
+    // Validate required propertyId
+    if (!data.propertyId) {
+      throw new Error('propertyId is required');
+    }
+
+    // Convert value to number and validate
+    const numericValue = data.value !== undefined && data.value !== null 
+      ? typeof data.value === 'string' 
+        ? parseFloat(data.value) 
+        : Number(data.value)
+      : 0;
+
+    if (isNaN(numericValue)) {
+      throw new Error('Invalid value provided. Must be a valid number.');
+    }
+
+    const news = await prisma.propertyNews.create({
+      data: {
+        type: data.type,          // Default DPV added in schema
+        action: data.action,      // Default Venta added in schema
+        valuation: data.valuation, // Default No added in schema
+        priority: data.priority,   // Default LOW added in schema
+        responsible: data.responsible, // Default Sin asignar added in schema
+        value: numericValue,
+        propertyId: data.propertyId,
+        precioSM: data.precioSM || null,
+        precioCliente: data.precioCliente || null,
+        commissionType: data.commissionType,   // Default percentage added in schema
+        commissionValue: data.commissionValue, // Default 3 added in schema
+        isDone: false
+      },
       include: {
         property: {
           select: {
@@ -720,303 +811,164 @@ export async function getPropertyNews(propertyId: string): Promise<PropertyNewsW
       }
     });
 
-    // Corregir los problemas de seguridad de tipos
-    return news.map(item => {
-      // Asegurarse de que item es un objeto válido
-      if (!item || typeof item !== 'object') {
-        return null;
-      }
-      
-      // Validar y convertir los valores
-      const value = typeof item.value === 'string' ? parseFloat(item.value) : (item.value || 0);
-      const precioSM = item.precioSM !== null ? (typeof item.precioSM === 'string' ? parseFloat(item.precioSM) : item.precioSM) : null;
-      const precioCliente = item.precioCliente !== null ? (typeof item.precioCliente === 'string' ? parseFloat(item.precioCliente) : item.precioCliente) : null;
-      
-      // Crear un objeto seguro con las propiedades necesarias
-      const safeItem: PropertyNewsWithProperty = {
-        id: item.id || '',
-        propertyId: item.propertyId || '',
-        type: item.type || '',
-        action: item.action || '',
-        valuation: typeof item.valuation === 'string' ? item.valuation === 'true' : Boolean(item.valuation),
-        priority: item.priority === 'HIGH' ? 'HIGH' : 'LOW',
-        responsible: item.responsible || '',
-        value: value,
-        precioSM: precioSM,
-        precioCliente: precioCliente,
-        createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt || Date.now()),
-        updatedAt: item.updatedAt instanceof Date ? item.updatedAt : new Date(item.updatedAt || Date.now()),
-        property: {
-          id: item.property?.id || '',
-          address: item.property?.address || '',
-          population: item.property?.population || '',
-          zoneId: item.property?.zoneId || ''
-        }
-      };
-      
-      return safeItem;
-    }).filter(Boolean) as PropertyNewsWithProperty[];
-  } catch (error) {
-    throw new Error('Error getting property news');
-  }
-}
-
-export async function createAssignment(data: {
-  type: string;
-  price: number;
-  exclusiveUntil: Date;
-  origin: string;
-  clientId: string;
-  responsibleId?: string;
-  sellerFeeType: string;
-  sellerFeeValue: number;
-  buyerFeeType: string;
-  buyerFeeValue: number;
-  propertyId: string;
-  notes?: string;
-  estimatedEndDate?: Date;
-  requiredDocuments?: string[];
-  documentsStatus?: Record<string, string>;
-  specialConditions?: string;
-}): Promise<Assignment | null> {
-  try {
-    console.log('Iniciando creación de encargo:', { 
-      propertyId: data.propertyId,
-      clientId: data.clientId,
-      type: data.type,
-      price: data.price,
-      exclusiveUntil: data.exclusiveUntil
-    });
-
-    // Iniciar una transacción para asegurar la consistencia de los datos
-    const result = await prisma.$transaction(async (tx) => {
-      // Verificar que la propiedad existe y obtener sus detalles
-      const propertyExists = await tx.property.findUnique({
-        where: { id: data.propertyId },
-        select: { 
-          id: true,
-          address: true,
-          status: true,
-          isSold: true
-        }
-      });
-      
-      if (!propertyExists) {
-        throw new Error(`La propiedad con ID ${data.propertyId} no existe`);
-      }
-
-      if (propertyExists.isSold || propertyExists.status === 'SOLD') {
-        throw new Error(`La propiedad ${propertyExists.address} ya está vendida`);
-      }
-
-      // Verificar que el cliente existe
-      const clientExists = await tx.client.findUnique({
-        where: { id: data.clientId },
-        select: { 
-          id: true,
-          name: true,
-          email: true,
-          hasRequest: true
-        }
-      });
-
-      if (!clientExists) {
-        throw new Error(`El cliente con ID ${data.clientId} no existe`);
-      }
-
-      // Verificar si ya existe un encargo activo para esta propiedad
-      const existingAssignment = await tx.assignment.findFirst({
-        where: {
+    // Log activity
+    try {
+      await logActivity({
+        type: 'NOTICIA' as ActivityType,
+        description: `Nueva noticia creada: ${news.type} para ${news.property.address}`,
+        relatedId: news.id,
+        relatedType: 'PROPERTY_NEWS',
+        metadata: {
           propertyId: data.propertyId,
-          exclusiveUntil: {
-            gt: new Date()
-          }
-        }
-      });
-
-      if (existingAssignment) {
-        throw new Error(`Ya existe un encargo activo para esta propiedad hasta ${new Date(existingAssignment.exclusiveUntil).toLocaleDateString('es-ES')}`);
-      }
-
-      // Crear el encargo
-      return await tx.assignment.create({
-        data: {
           type: data.type,
-          price: data.price,
-          exclusiveUntil: data.exclusiveUntil,
-          origin: data.origin,
-          clientId: data.clientId,
-          responsibleId: data.responsibleId,
-          sellerFeeType: data.sellerFeeType,
-          sellerFeeValue: data.sellerFeeValue,
-          buyerFeeType: data.buyerFeeType,
-          buyerFeeValue: data.buyerFeeValue,
-          propertyId: data.propertyId
+          action: data.action,
+          priority: data.priority
         },
-        include: {
-          client: true,
-          property: true
-        }
+        points: 2
       });
-    });
+    } catch (logError) {
+      // Log the error but don't fail the news creation
+      console.error('Error al registrar la actividad de la noticia:', logError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Stack trace:', logError instanceof Error ? logError.stack : '');
+      }
+    }
 
-    // Revalidar todas las rutas relevantes
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
-    revalidatePath('/dashboard/assignments');
-    revalidatePath('/dashboard/properties');
-    revalidatePath('/dashboard');
-    
-    // Mapear la respuesta al formato esperado
-    return {
-      id: result.id,
-      type: result.type,
-      price: result.price,
-      exclusiveUntil: result.exclusiveUntil.toISOString(),
-      origin: result.origin,
-      clientId: result.clientId,
-      sellerFeeType: result.sellerFeeType,
-      sellerFeeValue: result.sellerFeeValue,
-      buyerFeeType: result.buyerFeeType,
-      buyerFeeValue: result.buyerFeeValue,
-      propertyId: result.propertyId,
-      createdAt: result.createdAt.toISOString(),
-      updatedAt: result.updatedAt.toISOString(),
-      client: result.client ? {
-        id: result.client.id,
-        name: result.client.name,
-        email: result.client.email,
-        phone: result.client.phone
-      } : undefined,
-      property: result.property ? {
-        id: result.property.id,
-        address: result.property.address,
-        population: result.property.population
-      } : undefined
-    };
+    revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
+    return news;
   } catch (error) {
-    console.error('Error al crear el encargo:', error);
-    throw error instanceof Error 
-      ? new Error(`Error al crear el encargo: ${error.message}`) 
-      : new Error('Error al crear el encargo');
+    console.error('Error creating property news:', error);
+    if (error instanceof Error) {
+      throw new Error(`Error creating property news: ${error.message}`);
+    }
+    throw new Error('Error creating property news: Unknown error');
   }
 }
 
+// Funciones para encargos
 export async function getAssignmentsByPropertyId(propertyId: string): Promise<Assignment[]> {
   try {
     const assignments = await prisma.assignment.findMany({
       where: { propertyId },
+      orderBy: { createdAt: 'desc' },
       include: {
-        client: true,
-        property: true
-      },
-      orderBy: { createdAt: 'desc' }
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
+      }
     });
 
     return assignments.map(assignment => ({
       ...assignment,
-      exclusiveUntil: assignment.exclusiveUntil.toISOString(),
       createdAt: assignment.createdAt.toISOString(),
       updatedAt: assignment.updatedAt.toISOString(),
-      client: assignment.client ? {
-        id: assignment.client.id,
-        name: assignment.client.name,
-        email: assignment.client.email,
-        phone: assignment.client.phone
-      } : undefined,
-      property: assignment.property ? {
-        id: assignment.property.id,
-        address: assignment.property.address,
-        population: assignment.property.population
-      } : undefined
+      exclusiveUntil: assignment.exclusiveUntil.toISOString()
     }));
   } catch (error) {
     throw new Error('Error getting assignments');
   }
 }
 
-export async function getAssignments(): Promise<Assignment[]> {
+export async function createAssignment(data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Assignment> {
   try {
-    const assignments = await prisma.assignment.findMany({
-      orderBy: {
-        createdAt: 'desc'
+    const assignment = await prisma.assignment.create({
+      data: {
+        type: data.type,
+        price: data.price,
+        exclusiveUntil: new Date(data.exclusiveUntil),
+        origin: data.origin,
+        clientId: data.clientId,
+        propertyId: data.propertyId,
+        sellerFeeType: data.sellerFeeType,
+        sellerFeeValue: data.sellerFeeValue,
+        buyerFeeType: data.buyerFeeType,
+        buyerFeeValue: data.buyerFeeValue
       },
       include: {
-        client: true,
-        property: true
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
       }
     });
-    return assignments;
+
+    // Log activity
+    try {
+      await logActivity({
+        type: 'ENCARGO' as ActivityType,
+        description: `Nuevo encargo creado: ${assignment.type} para ${data.propertyId}`,
+        relatedId: assignment.id,
+        relatedType: 'PROPERTY_ASSIGNMENT',
+        metadata: {
+          propertyId: data.propertyId,
+          type: data.type,
+          price: data.price,
+          clientId: data.clientId
+        },
+        points: 2
+      });
+    } catch (logError) {
+      // Log the error but don't fail the assignment creation
+      console.error('Error al registrar la actividad del encargo:', logError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Stack trace:', logError instanceof Error ? logError.stack : '');
+      }
+    }
+
+    // Revalidar rutas afectadas
+    revalidatePath(`/dashboard/properties/${data.propertyId}`);
+    revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
+    return {
+      ...assignment,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString(),
+      exclusiveUntil: assignment.exclusiveUntil.toISOString()
+    };
   } catch (error) {
-    throw new Error('Error getting assignments');
+    console.error('Error creating assignment:', error);
+    if (error instanceof Error) {
+      throw new Error(`Error creating assignment: ${error.message}`);
+    }
+    throw new Error('Error creating assignment: Unknown error');
   }
 }
 
-export async function updateAssignment(id: string, data: {
-  type: string;
-  price: number;
-  exclusiveUntil: Date;
-  origin: string;
-  clientId: string;
-  responsibleId?: string;
-  sellerFeeType: string;
-  sellerFeeValue: number;
-  buyerFeeType: string;
-  buyerFeeValue: number;
-  status?: string;
-  notes?: string;
-  estimatedEndDate?: Date;
-  requiredDocuments?: string[];
-  documentsStatus?: Record<string, string>;
-  specialConditions?: string;
-}): Promise<Assignment | null> {
+export async function updateAssignment(id: string, data: Partial<Assignment>): Promise<Assignment> {
   try {
     const assignment = await prisma.assignment.update({
       where: { id },
       data: {
-        type: data.type,
-        price: data.price,
-        exclusiveUntil: data.exclusiveUntil,
-        origin: data.origin,
-        clientId: data.clientId,
-        responsibleId: data.responsibleId,
-        sellerFeeType: data.sellerFeeType,
-        sellerFeeValue: data.sellerFeeValue,
-        buyerFeeType: data.buyerFeeType,
-        buyerFeeValue: data.buyerFeeValue,
-        status: data.status,
-        notes: data.notes,
-        estimatedEndDate: data.estimatedEndDate,
-        requiredDocuments: data.requiredDocuments ? JSON.stringify(data.requiredDocuments) : null,
-        documentsStatus: data.documentsStatus ? JSON.stringify(data.documentsStatus) : null,
-        specialConditions: data.specialConditions
+        ...data,
+        exclusiveUntil: data.exclusiveUntil ? new Date(data.exclusiveUntil) : undefined
       },
       include: {
-        client: true,
-        property: true,
-        responsibleUser: true
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
       }
     });
-    
-    // Revalidar todas las rutas relevantes
+
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
-    revalidatePath('/dashboard/assignments');
-    revalidatePath('/dashboard/properties');
-    revalidatePath('/dashboard');
-    
     return {
-      id: assignment.id,
-      type: assignment.type,
-      price: assignment.price,
-      exclusiveUntil: assignment.exclusiveUntil,
-      origin: assignment.origin,
-      clientId: assignment.clientId,
-      sellerFeeType: assignment.sellerFeeType,
-      sellerFeeValue: assignment.sellerFeeValue,
-      buyerFeeType: assignment.buyerFeeType,
-      buyerFeeValue: assignment.buyerFeeValue,
-      propertyId: assignment.propertyId,
+      ...assignment,
       createdAt: assignment.createdAt.toISOString(),
-      updatedAt: assignment.updatedAt.toISOString()
+      updatedAt: assignment.updatedAt.toISOString(),
+      exclusiveUntil: assignment.exclusiveUntil.toISOString()
     };
   } catch (error) {
     throw new Error('Error updating assignment');
@@ -1026,17 +978,43 @@ export async function updateAssignment(id: string, data: {
 export async function deleteAssignment(id: string): Promise<boolean> {
   try {
     const assignment = await prisma.assignment.delete({
-      where: { id }
+      where: { id },
+      include: {
+        property: {
+          select: {
+            id: true,
+            address: true
+          }
+        }
+      }
     });
-    
-    // Revalidar todas las rutas relevantes
+
+    // Log activity
+    try {
+      await logActivity({
+        type: 'ENCARGO' as ActivityType,
+        description: `Encargo eliminado: ${assignment.type} para ${assignment.property.address}`,
+        relatedId: assignment.id,
+        relatedType: 'PROPERTY_ASSIGNMENT',
+        metadata: {
+          propertyId: assignment.propertyId,
+          type: assignment.type
+        },
+        points: 1
+      });
+    } catch (logError) {
+      // Log the error but don't fail the assignment deletion
+      console.error('Error al registrar la actividad de eliminación del encargo:', logError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Stack trace:', logError instanceof Error ? logError.stack : '');
+      }
+    }
+
+    // Revalidar rutas afectadas
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
-    revalidatePath('/dashboard/assignments');
-    revalidatePath('/dashboard/properties');
-    revalidatePath('/dashboard');
-    
+    revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
     return true;
   } catch (error) {
-    throw new Error('Error deleting assignment');
+    return false;
   }
 }

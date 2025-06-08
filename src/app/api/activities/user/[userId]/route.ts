@@ -23,7 +23,8 @@ export async function GET(
       return new NextResponse('No autorizado', { status: 401 });
     }
 
-    const activities = await prisma.userActivity.findMany({
+    // Obtener actividades de usuario
+    const userActivities = await prisma.userActivity.findMany({
       where: {
         userId: params.userId
       },
@@ -32,10 +33,50 @@ export async function GET(
       }
     });
 
-    return NextResponse.json(activities);
+    // Obtener actividades de propiedades
+    const propertyActivities = await prisma.activity.findMany({
+      where: {
+        userId: params.userId
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      include: {
+        property: {
+          select: {
+            address: true
+          }
+        }
+      }
+    });
+
+    // Transformar actividades de propiedades al formato de UserActivity
+    const transformedPropertyActivities = propertyActivities.map(activity => ({
+      id: activity.id,
+      userId: activity.userId,
+      type: activity.type,
+      description: `${activity.type} para la propiedad ${activity.property?.address || 'desconocida'}`,
+      timestamp: activity.date.toISOString(),
+      points: 1,
+      relatedId: activity.propertyId,
+      relatedType: activity.type.toUpperCase() === 'DPV' ? 'PROPERTY_DPV' : 'PROPERTY_ACTIVITY',
+      metadata: JSON.stringify({
+        status: activity.status,
+        client: activity.client,
+        notes: activity.notes
+      })
+    }));
+
+    // Combinar ambos tipos de actividades y ordenar por fecha
+    const allActivities = [...userActivities, ...transformedPropertyActivities].sort((a, b) => {
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return NextResponse.json(allActivities);
   } catch (error) {
-    // En un entorno de producción, podríamos usar un servicio de logging
-    // o enviar el error a un servicio de monitoreo
+    console.error('Error getting user activities:', error);
     return new NextResponse('Error interno del servidor', { status: 500 });
   }
-} 
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity } from '@/types/property';
+import { Activity, ActivityType } from '@/types/activity';
 
 interface ActivityFormProps {
   propertyId: string;
@@ -10,7 +10,7 @@ interface ActivityFormProps {
 }
 
 export default function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
-  const [type, setType] = useState<Activity['type']>('Llamada');
+  const [type, setType] = useState<ActivityType>(ActivityType.LLAMADA);
   const [date, setDate] = useState(() => {
     const now = new Date();
     return now.toISOString().slice(0, 16); // Formato YYYY-MM-DDThh:mm
@@ -42,8 +42,13 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
           onChange={(e) => setType(e.target.value as Activity['type'])}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
-          <option value="Llamada">Llamada</option>
-          <option value="Contacto Directo">Contacto Directo</option>
+          <option value={ActivityType.LLAMADA}>Llamada</option>
+          <option value={ActivityType.VISITA}>Visita</option>
+          <option value={ActivityType.DPV}>DPV</option>
+          <option value={ActivityType.NOTICIA}>Noticia</option>
+          <option value={ActivityType.ENCARGO}>Encargo</option>
+          <option value={ActivityType.EMAIL}>Email</option>
+          <option value={ActivityType.OTROS}>Otros</option>
         </select>
       </div>
 

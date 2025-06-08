@@ -21,9 +21,21 @@ export function DPVForm({ initialData, onSubmit, isLoading }: DPVFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Filtrar y validar links
+    const validLinks = formData.links
+      .filter(link => link.trim() !== '')
+      .filter(link => {
+        try {
+          new URL(link);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    
     await onSubmit({
       ...formData,
-      links: formData.links.filter(link => link.trim() !== ''),
+      links: validLinks,
       currentPrice: formData.currentPrice ? Number(formData.currentPrice) : null,
       estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : null,
     });

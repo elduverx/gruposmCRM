@@ -63,11 +63,20 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
     try {
       // Convertir valuation de string a boolean
       const newsData = {
-        ...formData,
-        valuation: formData.valuation === 'Si'
+        type: formData.type,
+        action: formData.action,
+        valuation: formData.valuation, // Keep as string
+        priority: formData.priority,
+        responsible: formData.responsible || 'Sin asignar',
+        value: formData.value || 0,
+        propertyId, // Include propertyId in the data object
+        precioSM: formData.precioSM,
+        precioCliente: formData.precioCliente,
+        commissionType: 'percentage', // Default values
+        commissionValue: 3
       };
       
-      await createPropertyNews(propertyId, newsData);
+      await createPropertyNews(newsData);
       toast.success('Noticia creada correctamente');
       onSuccess(formData);
     } catch (error) {

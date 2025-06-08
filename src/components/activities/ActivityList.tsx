@@ -20,6 +20,7 @@ export interface Activity {
     name: string | null;
     email: string;
   } | null;
+  relatedType?: string;
 }
 
 interface ActivityListProps {
@@ -27,8 +28,13 @@ interface ActivityListProps {
 }
 
 export function ActivityList({ activities }: ActivityListProps) {
-  const getActivityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
+  const getActivityIcon = (activity: Activity) => {
+    // Si es una actividad DPV, mostrar un icono especial
+    if (activity.relatedType === 'PROPERTY_DPV') {
+      return <Building2 className="h-5 w-5 text-green-500" />;
+    }
+    
+    switch (activity.type.toLowerCase()) {
       case 'llamada':
         return <Phone className="h-5 w-5 text-blue-500" />;
       case 'visita':
@@ -37,6 +43,8 @@ export function ActivityList({ activities }: ActivityListProps) {
         return <Mail className="h-5 w-5 text-purple-500" />;
       case 'reunión':
         return <MessageSquare className="h-5 w-5 text-orange-500" />;
+      case 'dpv':
+        return <Building2 className="h-5 w-5 text-green-500" />;
       default:
         return <Calendar className="h-5 w-5 text-gray-500" />;
     }
@@ -53,16 +61,19 @@ export function ActivityList({ activities }: ActivityListProps) {
   return (
     <div className="space-y-4">
       {activities.map((activity) => {
-        // Asegurarse de que la fecha sea válida
+            // Asegurarse de que la fecha sea válida
         const activityDate = new Date(activity.date);
         const isValidDate = !isNaN(activityDate.getTime());
+        
+        // Determinar el tipo de visualización según el tipo de actividad
+        const displayType = activity.relatedType === 'PROPERTY_DPV' ? 'DPV' : activity.type;
 
         return (
           <Card key={activity.id} className="overflow-hidden hover:shadow-md transition-shadow duration-200">
             <div className="p-4">
               <div className="flex items-start gap-3">
                 <div className="bg-gray-100 p-2 rounded-full">
-                  {getActivityIcon(activity.type)}
+                  {getActivityIcon(activity)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

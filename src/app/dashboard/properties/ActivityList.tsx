@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Button from '@/components/ui/button';
-import { Activity } from '@/types/property';
+import { Activity, ActivityType } from '@/types/activity';
 
 interface ActivityListProps {
   activities: Activity[];
@@ -10,10 +10,31 @@ interface ActivityListProps {
   isLoading: boolean;
 }
 
+const getActivityTypeDisplay = (type: ActivityType): string => {
+  switch (type) {
+    case ActivityType.LLAMADA:
+      return 'Llamada';
+    case ActivityType.VISITA:
+      return 'Visita';
+    case ActivityType.DPV:
+      return 'DPV';
+    case ActivityType.NOTICIA:
+      return 'Noticia';
+    case ActivityType.ENCARGO:
+      return 'Encargo';
+    case ActivityType.EMAIL:
+      return 'Email';
+    case ActivityType.OTROS:
+      return 'Otros';
+    default:
+      return type;
+  }
+};
+
 export function ActivityList({ activities, onCreateActivity, isLoading }: ActivityListProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
-    type: '',
+    type: ActivityType.LLAMADA,
     status: '',
     date: new Date().toISOString().split('T')[0],
     client: '',
@@ -25,7 +46,7 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
     await onCreateActivity(formData);
     setIsFormOpen(false);
     setFormData({
-      type: '',
+      type: ActivityType.LLAMADA,
       status: '',
       date: new Date().toISOString().split('T')[0],
       client: '',
@@ -62,11 +83,13 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 required
               >
-                <option value="">Seleccionar tipo</option>
-                <option value="Visita">Visita</option>
-                <option value="Llamada">Llamada</option>
-                <option value="Email">Email</option>
-                <option value="Otro">Otro</option>
+                <option value={ActivityType.LLAMADA}>Llamada</option>
+                <option value={ActivityType.VISITA}>Visita</option>
+                <option value={ActivityType.DPV}>DPV</option>
+                <option value={ActivityType.NOTICIA}>Noticia</option>
+                <option value={ActivityType.ENCARGO}>Encargo</option>
+                <option value={ActivityType.EMAIL}>Email</option>
+                <option value={ActivityType.OTROS}>Otros</option>
               </select>
             </div>
 
@@ -138,7 +161,7 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm text-gray-500">{new Date(activity.date).toLocaleDateString()}</p>
-                <p className="font-medium">Tipo: {activity.type}</p>
+                <p className="font-medium">Tipo: {getActivityTypeDisplay(activity.type)}</p>
                 {activity.client && <p className="text-sm">Cliente: {activity.client}</p>}
                 {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
               </div>
@@ -153,4 +176,4 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
       </div>
     </div>
   );
-} 
+}

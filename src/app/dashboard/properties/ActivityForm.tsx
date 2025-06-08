@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity } from '@/types/property';
+import { Activity, ActivityType } from '@/types/activity';
 
 interface ActivityFormProps {
   // propertyId es requerido por el componente padre para asociar la actividad con la propiedad,
@@ -15,7 +15,7 @@ interface ActivityFormProps {
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
   const [formData, setFormData] = useState({
-    type: 'CONTACT',
+    type: ActivityType.LLAMADA,
     status: 'Programada',
     date: new Date().toISOString().split('T')[0],
     client: '',
@@ -49,11 +49,13 @@ export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormPro
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         >
-          <option value="CONTACT">Contacto</option>
-          <option value="VISIT">Visita</option>
-          <option value="OFFER">Oferta</option>
-          <option value="NEGOTIATION">Negociación</option>
-          <option value="OTHER">Otro</option>
+          <option value={ActivityType.LLAMADA}>Llamada</option>
+          <option value={ActivityType.VISITA}>Visita</option>
+          <option value={ActivityType.DPV}>DPV</option>
+          <option value={ActivityType.NOTICIA}>Noticia</option>
+          <option value={ActivityType.ENCARGO}>Encargo</option>
+          <option value={ActivityType.EMAIL}>Email</option>
+          <option value={ActivityType.OTROS}>Otros</option>
         </select>
       </div>
 

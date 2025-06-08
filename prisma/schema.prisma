@@ -19,9 +19,11 @@ model User {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   properties Property[]     @relation("ResponsibleFor")
-  activities UserActivity[]
+  activities Activity[]
+  userActivities UserActivity[]
   goals      UserGoal[]
   zones      Zone[]         @relation("ZoneUsers")
+  assignments Assignment[]  @relation("AssignmentResponsible")
 }
 
 model Property {
@@ -115,7 +117,7 @@ model Assignment {
   specialConditions    String?   @db.Text
   client              Client    @relation(fields: [clientId], references: [id])
   property            Property  @relation(fields: [propertyId], references: [id])
-  responsibleUser     User?     @relation(fields: [responsibleId], references: [id])
+  responsibleUser     User?     @relation("AssignmentResponsible", fields: [responsibleId], references: [id])
 
   @@index([propertyId], map: "Assignment_propertyId_fkey")
   @@index([clientId], map: "Assignment_clientId_fkey")
@@ -135,18 +137,21 @@ model Zone {
 }
 
 model Activity {
-  id         String   @id @default(cuid())
-  type       String
-  status     String   @default("Programada")
+  id         String       @id @default(cuid())
+  type       ActivityType
+  status     String       @default("Programada")
   date       DateTime
   client     String?
   notes      String?
   propertyId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  property   Property @relation(fields: [propertyId], references: [id])
+  userId     String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  property   Property     @relation(fields: [propertyId], references: [id])
+  user       User?        @relation(fields: [userId], references: [id])
 
   @@index([propertyId], map: "Activity_propertyId_fkey")
+  @@index([userId], map: "Activity_userId_fkey")
 }
 
 model DPV {
@@ -166,12 +171,12 @@ model DPV {
 
 model PropertyNews {
   id              String   @id @default(cuid())
-  type            String
-  action          String
-  valuation       String
-  priority        String
-  responsible     String
-  value           Float
+  type            String   @default("DPV")
+  action          String   @default("Venta")
+  valuation       String   @default("No")
+  priority        String   @default("LOW")
+  responsible     String   @default("Sin asignar")
+  value           Float    @default(0)
   propertyId      String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -220,10 +225,10 @@ model UserGoal {
 }
 
 model UserActivity {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   userId      String
   goalId      String?
-  type        String
+  type        ActivityType
   description String?
   timestamp   DateTime  @default(now())
   metadata    Json?
@@ -323,4 +328,14 @@ enum PropertyStatus {
   SIN_EMPEZAR
   EMPEZADA
   SOLD
+}
+
+enum ActivityType {
+  DPV
+  NOTICIA
+  ENCARGO
+  VISITA
+  LLAMADA
+  EMAIL
+  OTROS
 }

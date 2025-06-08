@@ -50,7 +50,8 @@ export async function logActivity({
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      throw new ActivityLoggerError('Usuario no autenticado');
+      console.warn('No hay usuario autenticado, omitiendo registro de actividad');
+      return null;
     }
 
     const activity = await prisma.userActivity.create({
