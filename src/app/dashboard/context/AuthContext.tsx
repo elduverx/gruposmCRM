@@ -24,13 +24,6 @@ interface AuthContextType {
   refreshToken: () => Promise<boolean>;
 }
 
-// Extender el tipo Window para incluir refreshInterval
-declare global {
-  interface Window {
-    refreshInterval?: NodeJS.Timeout;
-  }
-}
-
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -44,12 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     setUser(null);
     setLoading(false);
-    
-    // Limpiar el intervalo de refresco si existe
-    if (window.refreshInterval) {
-      clearInterval(window.refreshInterval);
-    }
-    
     router.push('/login');
   }, [router]);
 
@@ -142,14 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, [fetchUserData, handleLogout]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    const interval = setInterval(refreshToken, 14 * 60 * 1000);
-    window.refreshInterval = interval;
-    
-    return () => clearInterval(interval);
-  }, [user, refreshToken]);
+  // Sin auto-refresh del token
 
   const login = useCallback((token: string, userData: User) => {
     localStorage.setItem('token', token);

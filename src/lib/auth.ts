@@ -88,15 +88,12 @@ export const isAdmin = async (request: Request) => {
   }
 };
 
-// Generar un token JWT
+// Generar un token JWT sin expiración
 export const generateToken = (userId: string, role: string) => {
   try {
   return jwt.sign(
     { userId, role },
-    JWT_SECRET,
-    { 
-      expiresIn: '24h',
-    }
+    JWT_SECRET
   );
   } catch (error) {
     throw new AuthError('Error al generar token', error);
