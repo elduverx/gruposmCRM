@@ -1,5 +1,5 @@
-import { Card } from '../ui/Card';
-import { UserStats as UserStatsType } from '@prisma/client';
+import { Card } from '../ui/card';
+import { UserStats as UserStatsType } from '../../types/stats';
 
 interface UserStatsProps {
   stats: UserStatsType | null;

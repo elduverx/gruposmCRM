@@ -6,8 +6,7 @@ import { JWT_SECRET } from '@/lib/auth';
 import { UserGoal, UserActivity, CreateUserGoalInput, CreateUserActivityInput } from '@/types/user';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import { Prisma } from '@prisma/client';
-import { ActivityType } from '@/types/activity';
+import { Prisma, ActivityType } from '@prisma/client';
 import { updateGoalProgress } from '@/lib/activityLogger';
 
 // Obtener el ID del usuario actual basado en el token de autenticación
@@ -75,39 +74,71 @@ export async function getUserGoals(): Promise<UserGoal[]> {
       return [];
     }
     
-    const goals = await prisma.$queryRaw<RawUserGoal[]>`
-      SELECT g.*, COUNT(a.id) as activityCount
-      FROM UserGoal g 
-      LEFT JOIN UserActivity a ON g.id = a.goalId
-      WHERE g.userId = ${userId}
-      GROUP BY g.id
-      ORDER BY g.createdAt DESC
-    `;
+    const goals = await prisma.userGoal.findMany({
+      where: {
+        userId
+      },
+      include: {
+        activities: {
+          select: {
+            id: true,
+            userId: true,
+            goalId: true,
+            type: true,
+            description: true,
+            timestamp: true,
+            metadata: true,
+            relatedId: true,
+            relatedType: true,
+            points: true
+          },
+          orderBy: {
+            timestamp: 'desc'
+          },
+          take: 5
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-    // Obtener actividades recientes para cada meta
-    const goalsWithActivities = await Promise.all(
-      goals.map(async (goal) => {
-        const activities = await prisma.$queryRaw<RawUserActivity[]>`
-          SELECT * FROM UserActivity 
-          WHERE goalId = ${goal.id}
-          ORDER BY timestamp DESC
-          LIMIT 5
-        `;
-        
-        return {
-          ...goal,
-          createdAt: new Date(goal.createdAt).toISOString(),
-          updatedAt: new Date(goal.updatedAt).toISOString(),
-          startDate: new Date(goal.startDate).toISOString(),
-          endDate: goal.endDate ? new Date(goal.endDate).toISOString() : null,
-          progress: calculateProgress(
-            Number(goal.currentCount), 
-            Number(goal.targetCount)
-          ),
-          activities: activities.map(mapActivityToDTO),
-        };
-      })
-    );
+    // Map each goal to the UserGoal interface with proper types
+    const goalsWithActivities = goals.map(goal => {
+      // Convert activities to UserActivity objects with proper type conversion
+      const activities = goal.activities.map(activity => ({
+        id: activity.id,
+        userId: activity.userId,
+        goalId: activity.goalId,
+        type: activity.type.toString(),
+        description: activity.description,
+        timestamp: activity.timestamp.toISOString(),
+        relatedId: activity.relatedId,
+        relatedType: activity.relatedType,
+        points: activity.points,
+        metadata: activity.metadata as Record<string, unknown> | undefined
+      }));
+
+      // Create a properly typed UserGoal object
+      const userGoal: UserGoal = {
+        id: goal.id,
+        userId: goal.userId,
+        title: goal.title,
+        description: goal.description,
+        targetCount: goal.targetCount,
+        currentCount: goal.currentCount,
+        startDate: goal.startDate.toISOString(),
+        endDate: goal.endDate?.toISOString() || null,
+        isCompleted: goal.isCompleted,
+        category: goal.category, // This is already a GoalCategory enum
+        createdAt: goal.createdAt.toISOString(),
+        updatedAt: goal.updatedAt.toISOString(),
+        progress: calculateProgress(goal.currentCount, goal.targetCount),
+        activities
+      };
+
+      return userGoal;
+    });
 
     return goalsWithActivities;
   } catch (error) {
@@ -176,39 +207,39 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     const activityTimestamp = data.timestamp || new Date();
     
     // Preparar los datos para la creación
-    const activityData = {
-      userId,
-      goalId: data.goalId,
-      type: data.type as ActivityType, // Explicitly cast to ActivityType
-      description: data.description,
-      timestamp: activityTimestamp,
-      relatedId: data.relatedId,
-      relatedType: data.relatedType,
-      points: data.points || 0,
-      metadata: undefined as unknown as Prisma.InputJsonValue
-    };
+    let metadata: Prisma.JsonValue = null;
     
     // Manejar el metadata correctamente
     if (data.metadata !== undefined && data.metadata !== null) {
       if (typeof data.metadata === 'string') {
         // Si ya es una cadena, verificar que sea JSON válido
         try {
-          JSON.parse(data.metadata);
-          activityData.metadata = data.metadata as unknown as Prisma.InputJsonValue;
+          metadata = JSON.parse(data.metadata);
         } catch {
-          activityData.metadata = null as unknown as Prisma.InputJsonValue;
+          metadata = null;
         }
       } else if (typeof data.metadata === 'object') {
-        try {
-          // Si es un objeto, convertirlo a JSON string
-          activityData.metadata = JSON.stringify(data.metadata) as unknown as Prisma.InputJsonValue;
-        } catch {
-          activityData.metadata = null as unknown as Prisma.InputJsonValue;
-        }
+        metadata = data.metadata;
       }
     }
     
-    // Crear la actividad
+    // Crear la actividad con tipos de Prisma correctos
+    const activityData: Prisma.UserActivityCreateInput = {
+      user: { connect: { id: userId } },
+      type: data.type as ActivityType,
+      description: data.description,
+      timestamp: activityTimestamp,
+      relatedId: data.relatedId,
+      relatedType: data.relatedType,
+      points: data.points ?? 0,
+      metadata: metadata as Prisma.InputJsonValue
+    };
+
+    // Añadir la relación con goal si se proporciona
+    if (data.goalId) {
+      activityData.goal = { connect: { id: data.goalId } };
+    }
+
     const newActivity = await prisma.userActivity.create({
       data: activityData
     });
@@ -220,14 +251,18 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     
     revalidatePath('/dashboard/metas');
     
-    // Convertir el timestamp a string y asegurar que metadata sea string o null
-    const activityWithStringTimestamp = {
-      ...newActivity,
+    return {
+      id: newActivity.id,
+      userId: newActivity.userId,
+      goalId: newActivity.goalId,
+      type: newActivity.type.toString(),
+      description: newActivity.description,
       timestamp: newActivity.timestamp.toISOString(),
-      metadata: newActivity.metadata ? JSON.stringify(newActivity.metadata) : null
+      relatedId: newActivity.relatedId,
+      relatedType: newActivity.relatedType,
+      points: newActivity.points,
+      metadata: newActivity.metadata as Record<string, unknown> | undefined
     };
-    
-    return mapActivityToDTO(activityWithStringTimestamp);
   } catch (error) {
     throw new Error(`Error al crear actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -243,16 +278,36 @@ export async function getUserActivities(limit = 50): Promise<UserActivity[]> {
       return [];
     }
     
-    const activities = await prisma.$queryRaw<RawUserActivity[]>`
-      SELECT a.*, g.title as goalTitle 
-      FROM UserActivity a
-      LEFT JOIN UserGoal g ON a.goalId = g.id
-      WHERE a.userId = ${userId}
-      ORDER BY a.timestamp DESC
-      LIMIT ${limit}
-    `;
+    const activities = await prisma.userActivity.findMany({
+      where: {
+        userId
+      },
+      include: {
+        goal: {
+          select: {
+            title: true
+          }
+        }
+      },
+      orderBy: {
+        timestamp: 'desc'
+      },
+      take: limit
+    });
 
-    return activities.map(mapActivityToDTO);
+    return activities.map(activity => ({
+      id: activity.id,
+      userId: activity.userId,
+      goalId: activity.goalId,
+      type: activity.type.toString(),
+      description: activity.description,
+      timestamp: activity.timestamp.toISOString(),
+      relatedId: activity.relatedId,
+      relatedType: activity.relatedType,
+      points: activity.points,
+      metadata: activity.metadata as Record<string, unknown> | undefined,
+      goalTitle: activity.goal?.title
+    }));
   } catch (error) {
     throw new Error(`Error al obtener actividades: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -330,52 +385,68 @@ export async function updateUserActivity(activityId: string, data: Partial<Creat
       throw new Error('No tienes permiso para actualizar esta actividad');
     }
 
-    // Ensure metadata is properly updated when status changes
-    let metadata: Prisma.JsonValue | undefined = undefined;
-    if (data.metadata || activityExists.metadata) {
-      let existingMetadata = {};
-      try {
-        existingMetadata = typeof activityExists.metadata === 'string' 
-          ? JSON.parse(activityExists.metadata)
-          : activityExists.metadata || {};
-      } catch (e) {
-        console.error('Error parsing existing metadata:', e);
+    // Prepare the update data with proper Prisma types
+    const updateData: Prisma.UserActivityUpdateInput = {};
+    
+    // Update basic fields if provided
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.type !== undefined) updateData.type = data.type as ActivityType;
+    if (data.points !== undefined) updateData.points = data.points;
+    if (data.relatedId !== undefined) updateData.relatedId = data.relatedId;
+    if (data.relatedType !== undefined) updateData.relatedType = data.relatedType;
+    if (data.timestamp !== undefined) updateData.timestamp = new Date(data.timestamp);
+    
+    // Update goal relation if provided
+    if ('goalId' in data) {
+      updateData.goal = data.goalId ? { connect: { id: data.goalId } } : { disconnect: true };
+    }
+    
+    // Handle metadata update
+    if (data.metadata !== undefined) {
+      if (data.metadata === null) {
+        updateData.metadata = Prisma.JsonNull;
+      } else {
+        updateData.metadata = typeof data.metadata === 'string'
+          ? JSON.parse(data.metadata)
+          : data.metadata;
       }
-
-      const newMetadata = typeof data.metadata === 'string'
-        ? JSON.parse(data.metadata)
-        : data.metadata || {};
-
-      metadata = {
-        ...existingMetadata,
-        ...newMetadata,
-      };
     }
 
     const updatedActivity = await prisma.userActivity.update({
       where: { id: activityId },
-      data: {
-        ...data,
-        metadata: metadata as Prisma.InputJsonValue,
-        timestamp: data.timestamp ? new Date(data.timestamp) : undefined
+      data: updateData,
+      include: {
+        goal: {
+          select: {
+            title: true
+          }
+        }
       }
     });
 
-    if (activityExists.goalId) {
-      await updateGoalProgress(activityExists.goalId);
+    // Update goal progress if the activity is associated with a goal
+    if (updatedActivity.goalId) {
+      await updateGoalProgress(updatedActivity.goalId);
     }
 
     revalidatePath('/dashboard/metas');
     revalidatePath('/dashboard/progreso/actividades');
 
-    const activityDTO: RawUserActivity = {
-      ...updatedActivity,
+    // Map the activity to the expected DTO format
+    const activityDTO: UserActivity = {
+      id: updatedActivity.id,
+      userId: updatedActivity.userId,
+      goalId: updatedActivity.goalId,
+      type: updatedActivity.type.toString(),
+      description: updatedActivity.description,
       timestamp: updatedActivity.timestamp.toISOString(),
-      metadata: updatedActivity.metadata ? JSON.stringify(updatedActivity.metadata) : null,
-      goalTitle: undefined
+      relatedId: updatedActivity.relatedId,
+      relatedType: updatedActivity.relatedType,
+      points: updatedActivity.points,
+      metadata: updatedActivity.metadata as Record<string, unknown> | undefined
     };
 
-    return mapActivityToDTO(activityDTO);
+    return activityDTO;
   } catch (error) {
     throw new Error(`Error al actualizar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
@@ -388,7 +459,19 @@ function calculateProgress(current: number, target: number): number {
   return progress;
 }
 
-function mapActivityToDTO(activity: RawUserActivity): UserActivity {
+function mapActivityToDTO(activity: {
+  id: string;
+  userId: string;
+  goalId: string | null;
+  type: ActivityType;
+  description: string | null;
+  timestamp: Date;
+  metadata: Prisma.JsonValue;
+  relatedId: string | null;
+  relatedType: string | null;
+  points: number;
+  goalTitle?: string;
+}): UserActivity {
   let parsedMetadata: Record<string, unknown> | undefined;
   
   if (activity.metadata) {
@@ -410,9 +493,9 @@ function mapActivityToDTO(activity: RawUserActivity): UserActivity {
     id: activity.id,
     userId: activity.userId,
     goalId: activity.goalId,
-    type: activity.type,
+    type: activity.type.toString(),
     description: activity.description,
-    timestamp: new Date(activity.timestamp).toISOString(),
+    timestamp: activity.timestamp.toISOString(),
     relatedId: activity.relatedId,
     relatedType: activity.relatedType,
     points: Number(activity.points),

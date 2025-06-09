@@ -1,12 +1,12 @@
-import { Activity as BaseActivity } from '@/types/activity';
+import { Activity as BaseActivity, ActivityType } from '@/types/activity';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card } from '@/components/ui/card';
 import { Phone, Calendar, Mail, Building2, MessageSquare } from 'lucide-react';
 
-interface ExtendedActivity extends BaseActivity {
+type ExtendedActivity = Omit<BaseActivity, 'type'> & {
   relatedType?: string;
-  type: string; // Override type to be string instead of ActivityType
+  type: string | ActivityType;
 }
 
 interface ActivityListProps {

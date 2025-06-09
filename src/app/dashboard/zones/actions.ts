@@ -7,6 +7,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activityLogger';
+import { ActivityType } from '@/types/activity';
 
 export type Zone = {
   id: string;
@@ -144,7 +145,7 @@ export async function createZone(data: Omit<Zone, 'id' | 'createdAt' | 'updatedA
 
     // Registrar la actividad de creación
     await logActivity({
-      type: 'ZONE_CREATED',
+      type: ActivityType.OTROS,
       description: `Nueva zona creada: ${zone.name}`,
       relatedId: zone.id,
       relatedType: 'ZONE',
@@ -225,7 +226,7 @@ export async function updateZone(data: Zone): Promise<Zone> {
 
     // Registrar la actividad
     await logActivity({
-      type: 'ZONE_UPDATED',
+      type: ActivityType.OTROS,
       description: `Zona actualizada: ${zone.name}`,
       relatedId: zone.id,
       relatedType: 'ZONE',
@@ -263,7 +264,7 @@ export async function deleteZone(id: string): Promise<boolean> {
 
     // Registrar la actividad
     await logActivity({
-      type: 'ZONE_DELETED',
+      type: ActivityType.OTROS,
       description: `Zona eliminada: ${zone.name}`,
       relatedId: zone.id,
       relatedType: 'ZONE',
@@ -522,8 +523,7 @@ export async function assignUsersToZone(zoneId: string, userIds: string[]) {
     
     // Log the activity
     await logActivity({
-      // @ts-ignore - Extending the ActivityType with a new value
-      type: 'ZONE_UPDATED', // Changed to use existing activity type
+      type: ActivityType.OTROS,
       description: `Usuarios asignados a zona ${zoneId}`,
       relatedId: zoneId,
       relatedType: 'ZONE',
@@ -566,4 +566,4 @@ export async function getZonesByUserId(userId: string) {
     console.error('Error getting zones for user:', error);
     throw new Error('Error al obtener zonas para el usuario');
   }
-} 
+}

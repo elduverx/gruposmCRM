@@ -192,13 +192,6 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {isAdmin && <AdminBanner />}
-      
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
-        </div>
-      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
@@ -384,7 +377,14 @@ export default function UsersPage() {
         </div>
         <div className="absolute left-0 bottom-0 h-6 w-full bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
       </div>
-
+        
+      {isAdmin && <AdminBanner />}
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p>{error}</p>
+        </div>
+      )}
       <div className="mt-8">
         <UserList users={users} onUsersChange={handleUsersChange} isAdmin={isAdmin} />
       </div>

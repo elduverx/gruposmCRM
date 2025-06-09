@@ -1,0 +1,11 @@
+[
+  {
+    "id": "1",
+    "name": "Admin",
+    "email": "admin@example.com",
+    "password": "$2a$10$2YemIUmTwpSFkh.oL5Zbs.SWKucbDb2pgRYq0zp4bBuDy2.527Tpe",
+    "role": "ADMIN",
+    "createdAt": "2025-06-09T15:23:45.508Z",
+    "updatedAt": "2025-06-09T15:23:45.508Z"
+  }
+]

@@ -33,7 +33,7 @@ export async function logActivity({
   goalId
 }: LogActivityParams) {
   try {
-    const { userId } = await getCurrentUserId();
+    const userId = await getCurrentUserId();
     if (!userId) {
       console.warn('No hay usuario autenticado, omitiendo registro de actividad');
       return null;
@@ -143,10 +143,10 @@ export async function updateGoalProgress(goalId: string): Promise<void> {
 const activityTypeToGoalCategory = {
   DPV: 'DPV',
   NOTICIA: 'NEWS', 
-  ENCARGO: 'ASSIGNMENTS',
-  VISITA: 'VISITS',
-  LLAMADA: 'CALLS',
-  EMAIL: 'COMMUNICATIONS',
+  ENCARGO: 'ASSIGNMENT',
+  VISITA: 'GENERAL',
+  LLAMADA: 'GENERAL',
+  EMAIL: 'GENERAL',
   OTROS: 'GENERAL'
 } as const;
 

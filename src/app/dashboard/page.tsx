@@ -46,6 +46,7 @@ interface InicioStats {
   pendingActivities?: number;
   completedObjectives?: number;
   totalObjectives?: number;
+  salesInProgress?: number;
 }
 
 interface CountResponse {
@@ -226,8 +227,10 @@ export default function InicioPage() {
         goalId: activityFormData.goalId || undefined,
         type: activityFormData.type,
         description: activityFormData.description,
-        metadata: activityFormData.metadata,
-        status: activityFormData.status,
+        metadata: {
+          ...activityFormData.metadata,
+          status: activityFormData.status
+        },
         timestamp: new Date(activityFormData.timestamp)
       });
       
@@ -258,6 +261,7 @@ export default function InicioPage() {
         type: 'MANUAL',
         goalId: '',
         timestamp: new Date().toISOString(),
+        status: 'Pendiente',
         metadata: {
           completed: false,
           priority: 'medium'
@@ -1004,7 +1008,7 @@ export default function InicioPage() {
                   return (
                     <div
                       key={activity.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:border-gray-300 transition-colors duration-200"
                     >
                       <div className="flex items-center">
                         <button
@@ -1062,7 +1066,7 @@ export default function InicioPage() {
                   );
                 })}
               {userActivities.filter(activity => !activity.metadata?.completed).length === 0 && (
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <div className="text-center py-8 border rounded-lg">
                   <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500">No hay actividades pendientes</p>
                   <button
@@ -1224,7 +1228,7 @@ export default function InicioPage() {
                     )}
                     
                     {/* Formulario para nueva actividad */}
-                    <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <div className="space-y-4 border p-4 rounded-lg">
                       <h4 className="font-medium text-gray-900 font-audiowide border-b pb-2">Agregar nueva actividad</h4>
                       
                       <div className="grid grid-cols-2 gap-4">

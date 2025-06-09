@@ -15,6 +15,8 @@ import PropertyForm from '@/components/PropertyForm';
 import { getZones } from '@/app/dashboard/zones/actions';
 import type { Zone } from '@/app/dashboard/zones/actions';
 import { useRouter } from 'next/navigation';
+import { logActivity } from '@/lib/client/activityLogger';
+import type { ActivityType } from '@/types/activity';
 
 interface PropertyDetailClientProps {
   propertyId: string;
@@ -114,24 +116,22 @@ export default function PropertyDetailClient({
       if (result) {
         // Log the activity with proper metadata
         await logActivity({
-          type: newActivity.type,
-          description: `Actividad ${newActivity.status === 'Realizada' ? 'completada' : 'creada'}: ${newActivity.type}`,
+          type: newActivity.type as ActivityType,
+          description: `Nueva actividad: ${newActivity.type} para ${initialProperty.address}`,
           relatedId: result.id,
           relatedType: 'PROPERTY_ACTIVITY',
           metadata: {
-            propertyId: propertyId,
+            propertyId,
             type: newActivity.type,
-            status: newActivity.status === 'Realizada' ? 'completed' : 'pending',
+            status: newActivity.status,
+            client: newActivity.client,
+            notes: newActivity.notes,
             date: newActivity.date
-          },
-          points: 1
+          }
         });
-
-        const activitiesData = await getActivitiesByPropertyId(propertyId);
-        if (activitiesData) {
-          setActivities(activitiesData);
-          toast.success('Actividad creada correctamente');
-        }
+        
+        setActivities(prevActivities => [result, ...prevActivities]);
+        toast.success('Actividad creada exitosamente');
       }
       setIsActivityFormOpen(false);
     } catch (error) {

@@ -335,6 +335,7 @@ enum BaseProperty_type {
   OFICINA
   GARAJE
   TRASTERO
+
 }
 
 enum PropertyStatus {

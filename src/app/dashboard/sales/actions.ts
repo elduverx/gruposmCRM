@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activityLogger';
-import type { ActivityType } from '@/lib/activityLogger';
+import type { ActivityType } from '@/types/activity';
 
 // Definir una interfaz para las propiedades vendidas
 interface SoldProperty {

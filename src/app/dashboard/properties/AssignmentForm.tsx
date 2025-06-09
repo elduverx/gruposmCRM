@@ -285,12 +285,12 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     <>
       <form onSubmit={handleSubmit} className="w-full space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto px-6">
         {/* Encabezado */}
-        <div className="border-b border-gray-200 pb-4 sticky top-0 bg-white/95 backdrop-blur-sm z-10 pt-4 -mt-4 px-4 -mx-4">
-          <h2 className="text-lg font-semibold leading-7 text-gray-900 flex items-center gap-2">
-            <HomeIcon className="h-6 w-6 text-indigo-600" />
+        <div className="border-b border-gray-200 pb-4 sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <HomeIcon className="h-5 w-5 text-indigo-600" />
             {initialData ? 'Editar encargo' : 'Nuevo encargo'}
           </h2>
-          <p className="mt-1 text-sm leading-6 text-gray-600">
+          <p className="mt-1 text-sm text-gray-500">
             Complete los detalles del encargo para {initialData ? 'actualizar' : 'crear'} el registro
           </p>
         </div>
