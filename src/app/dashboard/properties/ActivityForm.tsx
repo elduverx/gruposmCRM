@@ -16,7 +16,7 @@ interface ActivityFormProps {
 export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
   const [formData, setFormData] = useState({
     type: ActivityType.LLAMADA,
-    status: 'Programada',
+    status: 'Pendiente',  // Estado por defecto 'Pendiente'
     date: new Date().toISOString().split('T')[0],
     client: '',
     notes: ''
@@ -24,7 +24,10 @@ export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(formData);
+    await onSubmit({
+      ...formData,
+      property: null
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -63,18 +66,27 @@ export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormPro
         <label htmlFor="status" className="block text-sm font-medium text-gray-700">
           Estado
         </label>
-        <select
-          id="status"
-          name="status"
-          value={formData.status}
-          onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          required
-        >
-          <option value="Programada">Programada</option>
-          <option value="Realizada">Realizada</option>
-          <option value="Cancelada">Cancelada</option>
-        </select>
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => {
+              const newStatus = formData.status === 'Pendiente' ? 'Realizada' : 'Pendiente';
+              handleChange({
+                target: { name: 'status', value: newStatus }
+              } as React.ChangeEvent<HTMLSelectElement>);
+            }}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              formData.status === 'Realizada' ? 'bg-indigo-600' : 'bg-gray-200'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                formData.status === 'Realizada' ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className="text-sm text-gray-500">{formData.status}</span>
+        </div>
       </div>
 
       <div>
@@ -137,4 +149,4 @@ export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormPro
       </div>
     </form>
   );
-} 
+}

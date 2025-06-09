@@ -45,6 +45,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     precioCliente: item.precioCliente,
     createdAt: new Date(item.createdAt),
     updatedAt: new Date(item.updatedAt),
+    isDone: false, // Adding the missing isDone property with a default value
     property: {
       id: item.propertyId,
       address: item.property.address,

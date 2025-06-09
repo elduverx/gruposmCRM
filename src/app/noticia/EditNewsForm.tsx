@@ -16,7 +16,7 @@ interface EditNewsFormProps {
 interface NewsFormData {
   type: string;
   action: string;
-  valuation: boolean;
+  valuation: string;
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
@@ -30,12 +30,12 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
   const [formData, setFormData] = useState<NewsFormData>({
     type: news.type,
     action: news.action,
-    valuation: news.valuation === 'true',
-    priority: news.priority,
+    valuation: news.valuation, // Keep as string
+    priority: news.priority as 'HIGH' | 'LOW',
     responsible: news.responsible || '',
     value: news.value || 0,
-    precioSM: news.precioSM || null,
-    precioCliente: news.precioCliente || null,
+    precioSM: news.precioSM,
+    precioCliente: news.precioCliente,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -44,7 +44,11 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
       const checkbox = e.target as HTMLInputElement;
       setFormData(prev => ({
         ...prev,
-        [name]: checkbox.checked
+        [name]: checkbox.checked ? 'Si' : 'No',
+        ...(name === 'valuation' && !checkbox.checked ? {
+          precioSM: null,
+          precioCliente: null
+        } : {})
       }));
     } else if (type === 'number') {
       setFormData(prev => ({
@@ -141,7 +145,7 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
                     type="checkbox"
                     name="valuation"
                     id="valuation"
-                    checked={formData.valuation}
+                    checked={formData.valuation === 'Si'}
                     onChange={handleChange}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
@@ -191,7 +195,7 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
                 </div>
               </div>
 
-              {formData.valuation && (
+              {formData.valuation === 'Si' && (
                 <>
                   <div>
                     <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
@@ -273,4 +277,4 @@ export default function EditNewsForm({ news, onClose, onSuccess }: EditNewsFormP
       </div>
     </div>
   );
-} 
+}

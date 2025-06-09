@@ -11,14 +11,15 @@ interface ActivityFormProps {
 
 export default function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormProps) {
   const [type, setType] = useState<ActivityType>(ActivityType.LLAMADA);
+  const [status, setStatus] = useState('Pendiente');
   const [date, setDate] = useState(() => {
     const now = new Date();
-    return now.toISOString().slice(0, 16); // Formato YYYY-MM-DDThh:mm
+    return now.toISOString().slice(0, 16); // Format YYYY-MM-DDThh:mm
   });
   const [client, setClient] = useState('');
   const [notes, setNotes] = useState('');
 
-  const handleSubmit = (e: React.FormEvent, status: 'Programada' | 'Realizada') => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       type,
@@ -26,12 +27,13 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
       date,
       client,
       notes,
+      property: null,
       propertyId
     });
   };
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="type" className="block text-sm font-medium text-gray-700">
           Tipo
@@ -50,6 +52,28 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
           <option value={ActivityType.EMAIL}>Email</option>
           <option value={ActivityType.OTROS}>Otros</option>
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+          Estado
+        </label>
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => setStatus(status === 'Pendiente' ? 'Realizada' : 'Pendiente')}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              status === 'Realizada' ? 'bg-blue-600' : 'bg-gray-200'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                status === 'Realizada' ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className="text-sm text-gray-500">{status}</span>
+        </div>
       </div>
 
       <div>
@@ -101,20 +125,12 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
           Cancelar
         </button>
         <button
-          type="button"
-          onClick={(e) => handleSubmit(e, 'Programada')}
+          type="submit"
           className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          Programar
-        </button>
-        <button
-          type="button"
-          onClick={(e) => handleSubmit(e, 'Realizada')}
-          className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-        >
-          Realizar
+          Guardar
         </button>
       </div>
     </form>
   );
-} 
+}

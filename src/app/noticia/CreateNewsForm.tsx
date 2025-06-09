@@ -17,7 +17,7 @@ interface NewsFormData {
   propertyId: string;
   type: string;
   action: string;
-  valuation: boolean;
+  valuation: string; // Changed from boolean to string
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
@@ -35,7 +35,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
     propertyId: '',
     type: 'DPV',
     action: 'Venta',
-    valuation: false,
+    valuation: 'No',
     priority: 'LOW',
     responsible: '',
     value: 0,
@@ -116,7 +116,8 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
     setLoading(true);
 
     try {
-      await createPropertyNews(formData.propertyId, {
+      const newsData = {
+        propertyId: formData.propertyId,
         type: formData.type,
         action: formData.action,
         valuation: formData.valuation,
@@ -125,7 +126,10 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
         value: formData.value,
         precioSM: formData.precioSM,
         precioCliente: formData.precioCliente,
-      });
+        commissionType: 'percentage',
+        commissionValue: 3
+      };
+      await createPropertyNews(newsData);
       toast.success('Noticia creada correctamente');
       onSuccess();
     } catch (error) {
@@ -233,7 +237,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                     type="checkbox"
                     name="valuation"
                     id="valuation"
-                    checked={formData.valuation}
+                    checked={formData.valuation === 'Si'}
                     onChange={handleChange}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
@@ -292,7 +296,7 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
                 </div>
               </div>
 
-              {formData.valuation && (
+              {formData.valuation === 'Si' && (
                 <>
                   <div>
                     <label htmlFor="precioSM" className="block text-sm font-medium text-gray-700 mb-1">
@@ -375,4 +379,4 @@ export default function CreateNewsForm({ onClose, onSuccess }: CreateNewsFormPro
       </div>
     </div>
   );
-} 
+}

@@ -215,7 +215,7 @@ model UserGoal {
   startDate    DateTime       @default(now())
   endDate      DateTime?
   isCompleted  Boolean        @default(false)
-  category     String         @default("GENERAL")
+  category     GoalCategory    @default(GENERAL)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   activities   UserActivity[]
@@ -288,6 +288,19 @@ model BaseProperty {
 enum Role {
   ADMIN
   USER
+}
+
+enum GoalCategory {
+  GENERAL
+  ACTIVITY
+  DPV
+  NEWS
+  BILLED
+  ASSIGNMENT
+  LOCATED_TENANTS
+  ADDED_PHONES
+  EMPTY_PROPERTIES
+  NEW_PROPERTIES
 }
 
 enum PropertyType {

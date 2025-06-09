@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { UserGoal, UserActivity, CreateUserGoalInput, User } from '@/types/user';
+import { GoalCategory, ActivityType } from '@prisma/client';
 import { createUserGoal, createUserActivity, deleteUserGoal } from './actions';
 import { Dialog } from '@headlessui/react';
 import { Spinner } from '@/components/ui/Spinner';
@@ -39,7 +40,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
     description: '',
     targetCount: 5,
     endDate: '',
-    category: 'GENERAL',
+    category: GoalCategory.GENERAL,
   });
   const [userActivityCounts, setUserActivityCounts] = useState<{[key: string]: number}>({});
   const [playCelebration] = useSound('/sounds/celebration.mp3', { volume: 0.5 });
@@ -181,7 +182,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
         description: '',
         targetCount: 5,
         endDate: '',
-        category: 'GENERAL',
+        category: GoalCategory.GENERAL,
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -203,27 +204,22 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       
       const newActivity = await createUserActivity({
         goalId,
-        type: 'MANUAL',
+        type: ActivityType.OTROS, // Using the ActivityType enum from Prisma
         description: `Actividad manual para: ${goalTitle}`,
       });
       
-      // Actualizar la lista de actividades
+      // Update activities list with the new activity
       setActivities([newActivity, ...activities]);
       
-      // Actualizar el progreso de la meta
-      setGoals(goals.map(goal => {
-        if (goal.id === goalId) {
-          const newCount = goal.currentCount + 1;
-          const isCompleted = newCount >= goal.targetCount;
-          return {
-            ...goal,
-            currentCount: newCount,
-            isCompleted,
-            progress: Math.min(Math.floor((newCount / goal.targetCount) * 100), 100),
-          };
-        }
-        return goal;
-      }));
+      // Fetch updated goal to get the new progress
+      const response = await fetch('/api/goals/' + goalId);
+      if (response.ok) {
+        const updatedGoal = await response.json();
+        // Update the goals list with the new goal data
+        setGoals(goals.map(goal => 
+          goal.id === goalId ? updatedGoal : goal
+        ));
+      }
       
     } catch (error) {
       if (error instanceof Error) {
@@ -788,18 +784,21 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700">
                   Categoría
-                </label>
-                <select
+                </label>                  <select
                   id="category"
                   value={newGoalData.category}
-                  onChange={e => setNewGoalData({...newGoalData, category: e.target.value as 'GENERAL' | 'PROPERTY' | 'CLIENT' | 'ASSIGNMENT' | 'NEWS'})}
+                  onChange={e => setNewGoalData({...newGoalData, category: e.target.value as GoalCategory})}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="PROPERTY">Propiedades</option>
-                  <option value="CLIENT">Clientes</option>
-                  <option value="ASSIGNMENT">Encargos</option>
-                  <option value="NEWS">Noticias</option>
+                  <option value={GoalCategory.ACTIVITY}>Actividades</option>
+                  <option value={GoalCategory.DPV}>DPVs</option>
+                  <option value={GoalCategory.NEWS}>Noticias</option>
+                  <option value={GoalCategory.BILLED}>Facturado</option>
+                  <option value={GoalCategory.ASSIGNMENT}>Encargos</option>
+                  <option value={GoalCategory.LOCATED_TENANTS}>Inquilinos Localizados</option>
+                  <option value={GoalCategory.ADDED_PHONES}>Teléfonos Añadidos</option>
+                  <option value={GoalCategory.EMPTY_PROPERTIES}>Propiedades Vacías</option>
+                  <option value={GoalCategory.NEW_PROPERTIES}>Propiedades Nuevas</option>
                 </select>
               </div>
               
@@ -886,4 +885,4 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
       </Dialog>
     </div>
   );
-} 
+}

@@ -112,6 +112,21 @@ export default function PropertyDetailClient({
       });
       
       if (result) {
+        // Log the activity with proper metadata
+        await logActivity({
+          type: newActivity.type,
+          description: `Actividad ${newActivity.status === 'Realizada' ? 'completada' : 'creada'}: ${newActivity.type}`,
+          relatedId: result.id,
+          relatedType: 'PROPERTY_ACTIVITY',
+          metadata: {
+            propertyId: propertyId,
+            type: newActivity.type,
+            status: newActivity.status === 'Realizada' ? 'completed' : 'pending',
+            date: newActivity.date
+          },
+          points: 1
+        });
+
         const activitiesData = await getActivitiesByPropertyId(propertyId);
         if (activitiesData) {
           setActivities(activitiesData);

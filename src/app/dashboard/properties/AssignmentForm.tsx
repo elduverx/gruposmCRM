@@ -15,6 +15,10 @@ import {
   ArrowTrendingUpIcon,
   UserGroupIcon
 } from '@heroicons/react/24/outline';
+import { Dialog } from '@headlessui/react';
+import ClientForm from '@/app/dashboard/clients/components/ClientForm';
+import { createClient } from '@/app/dashboard/clients/actions';
+import { toast } from 'sonner';
 
 interface AssignmentFormProps {
   propertyId: string;
@@ -25,6 +29,7 @@ interface AssignmentFormProps {
 export function AssignmentForm({ propertyId, initialData, onSuccess }: AssignmentFormProps) {
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [formData, setFormData] = useState({
     type: initialData?.type || 'SALE',
     price: initialData?.price || 0,
@@ -182,7 +187,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
       const dataToSubmit = {
         type: formData.type,
         price: parseFloat(formData.price.toString()),
-        exclusiveUntil: new Date(formData.exclusiveUntil),
+        exclusiveUntil: new Date(formData.exclusiveUntil).toISOString(), // Convert Date to ISO string
         origin: formData.origin,
         clientId: formData.clientId,
         sellerFeeType: formData.sellerFeeType,
@@ -239,297 +244,368 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  const handleClientCreated = (newClient: Client) => {
+    setClients(prev => [...prev, newClient]);
+    setFormData(prev => ({ ...prev, clientId: newClient.id }));
+    setIsCreateClientOpen(false);
+    toast.success('Cliente creado exitosamente');
+  };
+
+  const handleCreateClient = async (clientData: any) => {
+    try {
+      const newClient = await createClient(clientData);
+      setClients(prev => [...prev, newClient]);
+      setFormData(prev => ({
+        ...prev,
+        clientId: newClient.id
+      }));
+      setIsCreateClientOpen(false);
+      toast.success('Cliente creado con éxito');
+    } catch (error) {
+      console.error('Error creating client:', error);
+      toast.error('Error al crear el cliente');
+    }
+  };
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const clientsData = await getClients();
+        setClients(clientsData);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching clients:', error);
+      }
+    };
+
+    fetchClients();
+  }, []);
+
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto px-6">
-      {/* Encabezado */}
-      <div className="border-b border-gray-200 pb-4 sticky top-0 bg-white z-10">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <HomeIcon className="h-5 w-5 text-indigo-600" />
-          {initialData ? 'Editar encargo' : 'Nuevo encargo'}
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Complete los detalles del encargo para {initialData ? 'actualizar' : 'crear'} el registro
-        </p>
-      </div>
+    <>
+      <form onSubmit={handleSubmit} className="w-full space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto px-6">
+        {/* Encabezado */}
+        <div className="border-b border-gray-200 pb-4 sticky top-0 bg-white/95 backdrop-blur-sm z-10 pt-4 -mt-4 px-4 -mx-4">
+          <h2 className="text-lg font-semibold leading-7 text-gray-900 flex items-center gap-2">
+            <HomeIcon className="h-6 w-6 text-indigo-600" />
+            {initialData ? 'Editar encargo' : 'Nuevo encargo'}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-gray-600">
+            Complete los detalles del encargo para {initialData ? 'actualizar' : 'crear'} el registro
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-16 gap-8">
-        {/* Columna principal - Información básica */}
-        <div className="xl:col-span-11 space-y-8">
-          {/* Información básica */}
-          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6">
-            <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <BuildingOfficeIcon className="h-5 w-5 text-indigo-600" />
-              Información básica
-            </h3>              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de operación
-                </label>
-                <div className="mt-1 relative">
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    required
-                  >
-                    <option value="SALE">Venta</option>
-                    <option value="RENT">Alquiler</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Precio
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <BanknotesIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                  </div>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 pl-10 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                    min="0"
-                    step="0.01"
-                  />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                    <span className="text-gray-500 sm:text-sm">€</span>
+        <div className="grid grid-cols-1 xl:grid-cols-16 gap-8">
+          {/* Columna principal - Información básica */}
+          <div className="xl:col-span-11 space-y-8">
+            {/* Información básica */}
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6">
+              <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <BuildingOfficeIcon className="h-5 w-5 text-indigo-600" />
+                Información básica
+              </h3>              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de operación
+                  </label>
+                  <div className="mt-1 relative">
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      required
+                    >
+                      <option value="SALE">Venta</option>
+                      <option value="RENT">Alquiler</option>
+                    </select>
                   </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cliente
-                </label>
-                <div className="mt-1 relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Precio
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <BanknotesIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </div>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-10 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required
+                      min="0"
+                      step="0.01"
+                    />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                      <span className="text-gray-500 sm:text-sm">€</span>
+                    </div>
                   </div>
-                  <select
-                    name="clientId"
-                    value={formData.clientId}
-                    onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 pl-10 pr-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  >
-                    <option value="">Selecciona un cliente</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cliente
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </div>
+                    <select
+                      name="clientId"
+                      value={formData.clientId}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-10 pr-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required
+                    >
+                      <option value="">Selecciona un cliente</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha límite de exclusividad
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </div>
+                    <input
+                      type="date"
+                      name="exclusiveUntil"
+                      value={formData.exclusiveUntil}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div  className='col-span-1 lg:col-span-2'>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Origen
+                  </label>
+                  <div className="mt-1 space-x-3 flex items-start">
+                    <div className="flex-1 relative rounded-md shadow-sm">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <ArrowTrendingUpIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </div>
+                      <input
+                        type="text"
+                        name="origin"
+                        value={formData.origin}
+                        onChange={handleChange}
+                        className="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                        placeholder="Ej: Idealista, Portal Inmobiliario, Referido"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateClientOpen(true)}
+                      className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                      <UserIcon className="h-4 w-4 mr-1.5" />
+                      Nuevo Cliente
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha límite de exclusividad
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          {/* Columna lateral - Comisiones */}
+          <div className="xl:col-span-12">
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 md:p-6 sticky top-[100px]">
+              <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <UserGroupIcon className="h-5 w-5 text-indigo-600" />
+                Comisiones
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Comisión vendedor */}
+                <div className="space-y-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900">Comisión vendedor</h4>
+                  <div className="flex space-x-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setSellerFeeIsPercentage(true)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        sellerFeeIsPercentage
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Porcentaje
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSellerFeeIsPercentage(false)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        !sellerFeeIsPercentage
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Fijo
+                    </button>
                   </div>
-                  <input
-                    type="date"
-                    name="exclusiveUntil"
-                    value={formData.exclusiveUntil}
-                    onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
+
+                  {sellerFeeIsPercentage ? (
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
+                      <input
+                        type="number"
+                        name="sellerFeePercentage"
+                        value={formData.sellerFeePercentage}
+                        onChange={handleChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        min="0"
+                        step="0.01"
+                      />
+                      <p className="text-sm text-gray-500 mt-2 p-2 bg-white rounded-md">
+                        Valor calculado: <span className="font-medium text-gray-900">{formatNumber(formData.sellerFeeValue)}€</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <input
+                          type="number"
+                          name="sellerFeeFixed"
+                          value={formData.sellerFeeFixed}
+                          onChange={handleChange}
+                          className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-gray-500 sm:text-sm">€</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Origen
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <ArrowTrendingUpIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                {/* Comisión comprador */}
+                <div className="space-y-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900">Comisión comprador</h4>
+                  <div className="flex space-x-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setBuyerFeeIsPercentage(true)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        buyerFeeIsPercentage
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Porcentaje
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBuyerFeeIsPercentage(false)}
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        !buyerFeeIsPercentage
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Fijo
+                    </button>
                   </div>
-                  <input
-                    type="text"
-                    name="origin"
-                    value={formData.origin}
-                    onChange={handleChange}
-                    className="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                    placeholder="Ej: Idealista, Portal Inmobiliario, Referido"
-                  />
+
+                  {buyerFeeIsPercentage ? (
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
+                      <input
+                        type="number"
+                        name="buyerFeePercentage"
+                        value={formData.buyerFeePercentage}
+                        onChange={handleChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        min="0"
+                        step="0.01"
+                      />
+                      <p className="text-sm text-gray-500 mt-2 p-2 bg-white rounded-md">
+                        Valor calculado: <span className="font-medium text-gray-900">{formatNumber(formData.buyerFeeValue)}€</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <input
+                          type="number"
+                          name="buyerFeeFixed"
+                          value={formData.buyerFeeFixed}
+                          onChange={handleChange}
+                          className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                          <span className="text-gray-500 sm:text-sm">€</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Columna lateral - Comisiones */}
-        <div className="xl:col-span-12">
-          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 md:p-6 sticky top-[100px]">
-            <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <UserGroupIcon className="h-5 w-5 text-indigo-600" />
-              Comisiones
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Comisión vendedor */}
-              <div className="space-y-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900">Comisión vendedor</h4>
-                <div className="flex space-x-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setSellerFeeIsPercentage(true)}
-                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      sellerFeeIsPercentage
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Porcentaje
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSellerFeeIsPercentage(false)}
-                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      !sellerFeeIsPercentage
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Fijo
-                  </button>
-                </div>
-
-                {sellerFeeIsPercentage ? (
-                  <div className="relative">
-                    <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
-                    <input
-                      type="number"
-                      name="sellerFeePercentage"
-                      value={formData.sellerFeePercentage}
-                      onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-sm text-gray-500 mt-2 p-2 bg-white rounded-md">
-                      Valor calculado: <span className="font-medium text-gray-900">{formatNumber(formData.sellerFeeValue)}€</span>
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <input
-                        type="number"
-                        name="sellerFeeFixed"
-                        value={formData.sellerFeeFixed}
-                        onChange={handleChange}
-                        className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                        <span className="text-gray-500 sm:text-sm">€</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Comisión comprador */}
-              <div className="space-y-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900">Comisión comprador</h4>
-                <div className="flex space-x-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setBuyerFeeIsPercentage(true)}
-                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      buyerFeeIsPercentage
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Porcentaje
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBuyerFeeIsPercentage(false)}
-                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      !buyerFeeIsPercentage
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Fijo
-                  </button>
-                </div>
-
-                {buyerFeeIsPercentage ? (
-                  <div className="relative">
-                    <label className="block text-xs font-medium text-gray-700">Porcentaje (%)</label>
-                    <input
-                      type="number"
-                      name="buyerFeePercentage"
-                      value={formData.buyerFeePercentage}
-                      onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-sm text-gray-500 mt-2 p-2 bg-white rounded-md">
-                      Valor calculado: <span className="font-medium text-gray-900">{formatNumber(formData.buyerFeeValue)}€</span>
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">Monto fijo (€)</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <input
-                        type="number"
-                        name="buyerFeeFixed"
-                        value={formData.buyerFeeFixed}
-                        onChange={handleChange}
-                        className="block w-full rounded-md border-gray-300 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                        <span className="text-gray-500 sm:text-sm">€</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-4 pb-6 px-4 -mx-4">
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Guardando...
+              </>
+            ) : initialData ? (
+              'Actualizar'
+            ) : (
+              'Crear'
+            )}
+          </Button>
         </div>
-      </div>
+      </form>
 
-      <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-4 pb-6 px-4 -mx-4">
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Guardando...
-            </>
-          ) : initialData ? (
-            'Actualizar'
-          ) : (
-            'Crear'
-          )}
-        </Button>
-      </div>
-    </form>
+      {/* Modal de Nuevo Cliente */}
+      <Dialog
+        open={isCreateClientOpen}
+        onClose={() => setIsCreateClientOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+          
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
+            <Dialog.Title className="text-lg font-medium mb-4">
+              Nuevo Cliente
+            </Dialog.Title>
+            
+            <ClientForm
+              onSubmit={handleCreateClient}
+              onCancel={() => setIsCreateClientOpen(false)}
+            />
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </>
   );
 }

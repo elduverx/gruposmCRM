@@ -17,7 +17,7 @@ interface PropertyNewsFormProps {
 interface NewsFormData {
   type: string;
   action: string;
-  valuation: boolean;
+  valuation: string;
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
@@ -33,7 +33,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
   const [formData, setFormData] = useState<NewsFormData>({
     type: 'DPV',
     action: 'Venta',
-    valuation: false,
+    valuation: 'No',
     priority: 'LOW',
     responsible: '',
     value: 0,
@@ -72,7 +72,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
       setFormData({
         type: initialData.type,
         action: initialData.action,
-        valuation: initialData.valuation === 'true',
+        valuation: initialData.valuation,
         priority: initialData.priority,
         responsible: initialData.responsible || '',
         value: initialData.value || 0,
@@ -95,11 +95,14 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
         priority: formData.priority,
         responsible: formData.responsible,
         value: formData.value || 0,
-        precioSM: formData.precioSM || 0,
-        precioCliente: formData.precioCliente || 0
+        precioSM: formData.precioSM || null,
+        precioCliente: formData.precioCliente || null,
+        propertyId,
+        commissionType: 'percentage',
+        commissionValue: 3
       };
 
-      await createPropertyNews(propertyId, data);
+      await createPropertyNews(data);
       router.refresh();
       onSuccess?.();
     } catch (err) {
@@ -112,12 +115,11 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
-    if (type === 'checkbox') {
-      const checkbox = e.target as HTMLInputElement;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checkbox.checked,
-        ...(name === 'valuation' && !checkbox.checked ? {
+    if (type === 'checkbox') {        const checkbox = e.target as HTMLInputElement;
+        setFormData(prev => ({
+          ...prev,
+          [name]: checkbox.checked ? 'Si' : 'No',
+          ...(name === 'valuation' && !checkbox.checked ? {
           precioSM: null,
           precioCliente: null
         } : {})
@@ -245,7 +247,7 @@ export default function PropertyNewsForm({ propertyId, onSuccess, initialData }:
                 type="checkbox"
                 id="valuation"
                 name="valuation"
-                checked={formData.valuation}
+                checked={formData.valuation === 'Si'}
                 onChange={handleChange}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />

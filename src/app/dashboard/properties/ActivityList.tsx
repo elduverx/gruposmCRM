@@ -35,7 +35,7 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
     type: ActivityType.LLAMADA,
-    status: '',
+    status: 'Pendiente', // Set default status
     date: new Date().toISOString().split('T')[0],
     client: '',
     notes: '',
@@ -47,7 +47,7 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
     setIsFormOpen(false);
     setFormData({
       type: ActivityType.LLAMADA,
-      status: '',
+      status: 'Pendiente',
       date: new Date().toISOString().split('T')[0],
       client: '',
       notes: '',
@@ -95,18 +95,27 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Estado</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              >
-                <option value="">Seleccionar estado</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Completada">Completada</option>
-                <option value="Cancelada">Cancelada</option>
-              </select>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newStatus = formData.status === 'Pendiente' ? 'Realizada' : 'Pendiente';
+                    handleChange({
+                      target: { name: 'status', value: newStatus }
+                    } as React.ChangeEvent<HTMLSelectElement>);
+                  }}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    formData.status === 'Realizada' ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      formData.status === 'Realizada' ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className="text-sm text-gray-500">{formData.status}</span>
+              </div>
             </div>
 
             <div>
@@ -166,9 +175,9 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
                 {activity.notes && <p className="text-sm mt-1">{activity.notes}</p>}
               </div>
               <span className={`px-2 py-1 text-sm rounded-full ${
-                activity.status === 'Completada' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                activity.status === 'Completada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {activity.status}
+                {activity.status || 'Pendiente'}
               </span>
             </div>
           </div>

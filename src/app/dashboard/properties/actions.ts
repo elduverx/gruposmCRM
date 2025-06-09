@@ -532,9 +532,18 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
     }
 
     // Validate that type is a valid ActivityType
-    if (!Object.values(ActivityType).includes(data.type)) {
-      throw new Error(`Tipo de actividad inválido: ${data.type}. Valores permitidos: ${Object.values(ActivityType).join(', ')}`);
+    const validTypes = ['DPV', 'NOTICIA', 'ENCARGO', 'VISITA', 'LLAMADA', 'EMAIL', 'OTROS'];
+    if (!validTypes.includes(data.type)) {
+      throw new Error(`Tipo de actividad inválido: ${data.type}. Valores permitidos: ${validTypes.join(', ')}`);
     }
+
+    // Set proper metadata for activity status
+    const metadata = {
+      status: data.status === 'Realizada' ? 'completed' : 'pending',
+      date: activityDate.toISOString(),
+      type: data.type,
+      notes: data.notes
+    };
 
     const activity = await prisma.activity.create({
       data: {
@@ -543,6 +552,7 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
         client: data.client || null,
         notes: data.notes || null,
         date: activityDate,
+        metadata: metadata as Prisma.JsonValue,
         user: {
           connect: {
             id: currentUserId
@@ -811,21 +821,53 @@ export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'i
       }
     });
 
-    // Log activity
+    // Obtener metas activas de tipo NEWS del usuario actual y registrar la actividad
     try {
-      await logActivity({
-        type: 'NOTICIA' as ActivityType,
-        description: `Nueva noticia creada: ${news.type} para ${news.property.address}`,
-        relatedId: news.id,
-        relatedType: 'PROPERTY_NEWS',
-        metadata: {
-          propertyId: data.propertyId,
-          type: data.type,
-          action: data.action,
-          priority: data.priority
-        },
-        points: 2
-      });
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const activeNewsGoals = await prisma.userGoal.findMany({
+          where: {
+            userId: userId,
+            category: 'NEWS',
+            isCompleted: false
+          }
+        });
+
+        // Registrar la actividad y enlazarla con cada meta NEWS activa
+        for (const goal of activeNewsGoals) {
+          await logActivity({
+            type: 'NOTICIA' as ActivityType,
+            description: `Nueva noticia creada: ${news.type} para ${news.property.address}`,
+            relatedId: news.id,
+            relatedType: 'PROPERTY_NEWS',
+            metadata: {
+              propertyId: data.propertyId,
+              type: data.type,
+              action: data.action,
+              priority: data.priority
+            },
+            points: 2,
+            goalId: goal.id
+          });
+        }
+
+        // Si no hay metas activas, registrar la actividad sin goalId
+        if (activeNewsGoals.length === 0) {
+          await logActivity({
+            type: 'NOTICIA' as ActivityType,
+            description: `Nueva noticia creada: ${news.type} para ${news.property.address}`,
+            relatedId: news.id,
+            relatedType: 'PROPERTY_NEWS',
+            metadata: {
+              propertyId: data.propertyId,
+              type: data.type,
+              action: data.action,
+              priority: data.priority
+            },
+            points: 2
+          });
+        }
+      }
     } catch (logError) {
       // Log the error but don't fail the news creation
       console.error('Error al registrar la actividad de la noticia:', logError);
@@ -836,6 +878,7 @@ export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'i
 
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
     revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
+    revalidatePath('/dashboard/metas');  // Revalidar la página de metas para actualizar el progreso
     return news;
   } catch (error) {
     console.error('Error creating property news:', error);
@@ -1016,5 +1059,40 @@ export async function deleteAssignment(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     return false;
+  }
+}
+
+export async function getAssignments(): Promise<Assignment[]> {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      include: {
+        property: true,
+        client: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return assignments.map(assignment => ({
+      id: assignment.id,
+      propertyId: assignment.propertyId,
+      clientId: assignment.clientId,
+      type: assignment.type,
+      status: assignment.status,
+      price: assignment.price,
+      origin: assignment.origin,
+      sellerFeeType: assignment.sellerFeeType,
+      sellerFeeValue: assignment.sellerFeeValue,
+      buyerFeeType: assignment.buyerFeeType,
+      buyerFeeValue: assignment.buyerFeeValue,
+      property: assignment.property,
+      client: assignment.client,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString()
+    }));
+  } catch (error) {
+    console.error('Error fetching assignments:', error);
+    throw error;
   }
 }

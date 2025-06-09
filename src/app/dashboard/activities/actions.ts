@@ -23,7 +23,7 @@ export async function getActivities(): Promise<Activity[]> {
       return {
         id: activity.id,
         propertyId: activity.propertyId,
-        type: activity.type,
+        type: activity.type as Activity['type'], // Explicitly cast Prisma enum to our Activity type
         status: activity.status || '',
         client: activity.client,
         notes: activity.notes,

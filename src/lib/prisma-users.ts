@@ -75,6 +75,8 @@ export async function findUserByEmail(email: string) {
   }
 }
 
+import { createDefaultGoalsForUser } from './createDefaultGoals';
+
 // Crear un nuevo usuario
 export async function createUser(userData: CreateUserData) {
   try {
@@ -90,6 +92,9 @@ export async function createUser(userData: CreateUserData) {
         role: userData.role,
       }
     });
+
+    // Crear las metas por defecto para el usuario
+    await createDefaultGoalsForUser(user.id);
     
     // Retornar usuario sin contraseña
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

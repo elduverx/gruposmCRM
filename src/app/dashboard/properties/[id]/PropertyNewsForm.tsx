@@ -70,8 +70,12 @@ export default function PropertyNewsForm({ propertyId, onSuccess, onCancel }: Pr
         responsible: formData.responsible || 'Sin asignar',
         value: formData.value || 0,
         propertyId, // Include propertyId in the data object
-        precioSM: formData.precioSM,
-        precioCliente: formData.precioCliente,
+        precioSM: formData.precioSM || null,
+        precioCliente: formData.precioCliente || null,
+        property: undefined, // Will be added by server
+        createdAt: undefined, // Will be added by server
+        updatedAt: undefined, // Will be added by server
+        id: undefined, // Will be added by server
         commissionType: 'percentage', // Default values
         commissionValue: 3
       };

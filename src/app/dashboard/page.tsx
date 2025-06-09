@@ -11,7 +11,8 @@ import {
   TrophyIcon,
   CheckIcon,
   XMarkIcon,
-  TrashIcon
+  TrashIcon,
+  BanknotesIcon
 } from "@heroicons/react/24/outline";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -27,12 +28,13 @@ import { Dialog } from '@/components/ui/dialog';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
-import { createUserActivity, getUserGoals, getUserActivities } from './metas/actions';
-import { UserGoal, UserActivity } from '@/types/user';
+import { createUserActivity, getUserGoals, getUserActivities, createUserGoal, updateUserActivity } from './metas/actions';
+import { UserGoal, UserActivity, CreateUserGoalInput } from '@/types/user';
 import { Activity } from '@/types/activity';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { EventClickArg, EventInput } from '@fullcalendar/core';
+import { GoalCategory } from '@prisma/client';
 import React from 'react';
 
 interface InicioStats {
@@ -74,9 +76,10 @@ export default function InicioPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activityFormData, setActivityFormData] = useState({
     description: '',
-    type: 'MANUAL',
+    type: 'OTROS',
     goalId: '',
     timestamp: new Date().toISOString(),
+    status: 'Pendiente', // Agregar estado por defecto
     metadata: {
       completed: false,
       priority: 'medium'
@@ -86,7 +89,7 @@ export default function InicioPage() {
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [selectedDateActivities, setSelectedDateActivities] = useState<UserActivity[]>([]);
   const [newActivity, setNewActivity] = useState({
-    type: 'call',
+    type: 'LLAMADA',
     description: '',
     timestamp: new Date().toISOString(),
     goalId: '',
@@ -96,6 +99,16 @@ export default function InicioPage() {
       duration: 30, // Duración en minutos
       reminder: 15 // Recordatorio en minutos antes
     }
+  });
+
+  // Nuevo estado y lógica para el modal de nueva meta
+  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
+  const [newGoalData, setNewGoalData] = useState<CreateUserGoalInput>({
+    title: '',
+    description: '',
+    targetCount: 5,
+    category: GoalCategory.GENERAL,
+    endDate: ''
   });
 
   // Referencia al calendario
@@ -214,6 +227,7 @@ export default function InicioPage() {
         type: activityFormData.type,
         description: activityFormData.description,
         metadata: activityFormData.metadata,
+        status: activityFormData.status,
         timestamp: new Date(activityFormData.timestamp)
       });
       
@@ -533,6 +547,44 @@ export default function InicioPage() {
     }
   };
 
+  // Función para crear una nueva meta
+  const handleCreateGoal = async () => {
+    try {
+      // Validar datos de la nueva meta
+      if (!newGoalData.title.trim()) {
+        alert('El título de la meta es obligatorio');
+        return;
+      }
+      
+      if (!newGoalData.endDate) {
+        alert('La fecha de finalización es obligatoria');
+        return;
+      }
+      
+      // Crear nueva meta
+      const createdGoal = await createUserGoal(newGoalData);
+      
+      // Actualizar lista de metas del usuario
+      setUserGoals([...userGoals, createdGoal]);
+      
+      // Limpiar formulario de nueva meta
+      setNewGoalData({
+        title: '',
+        description: '',
+        targetCount: 5,
+        category: GoalCategory.GENERAL,
+        endDate: ''
+      });
+      
+      setIsNewGoalModalOpen(false);
+      
+      alert('Meta creada correctamente');
+    } catch (error) {
+      console.error("Error al crear meta:", error);
+      alert('Error al crear la meta. Por favor, inténtalo de nuevo.');
+    }
+  };
+
   const goalOptions = userGoals.map(goal => ({
     value: goal.id,
     label: goal.title
@@ -618,11 +670,13 @@ export default function InicioPage() {
               value={activityFormData.type}
               onChange={(e) => setActivityFormData({ ...activityFormData, type: e.target.value })}
               options={[
-                { value: 'call', label: 'Llamada' },
-                { value: 'meeting', label: 'Reunión' },
-                { value: 'email', label: 'Email' },
-                { value: 'visit', label: 'Visita' },
-                { value: 'other', label: 'Otra' }
+                { value: 'LLAMADA', label: 'Llamada' },
+                { value: 'VISITA', label: 'Visita' },
+                { value: 'EMAIL', label: 'Email' },
+                { value: 'DPV', label: 'DPV' },
+                { value: 'NOTICIA', label: 'Noticia' },
+                { value: 'ENCARGO', label: 'Encargo' },
+                { value: 'OTROS', label: 'Otros' }
               ]}
             />
           </div>
@@ -641,6 +695,35 @@ export default function InicioPage() {
                 { value: 'low', label: 'Baja' }
               ]}
             />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Estado</label>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setActivityFormData({
+                  ...activityFormData,
+                  status: activityFormData.status === 'Pendiente' ? 'Realizada' : 'Pendiente',
+                  metadata: { 
+                    ...activityFormData.metadata, 
+                    completed: activityFormData.status === 'Pendiente'
+                  }
+                })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                  activityFormData.status === 'Realizada' ? 'bg-primary-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    activityFormData.status === 'Realizada' ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className="ml-2 text-sm text-gray-500">
+                {activityFormData.status}
+              </span>
+            </div>
           </div>
 
           <div>
@@ -709,20 +792,8 @@ export default function InicioPage() {
           </div>
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center text-sm">
-              <ArrowUpIcon className="h-4 w-4 text-success-500" />
-              <span className="ml-1 text-success-600 font-medium">12%</span>
-              <span className="ml-2 text-gray-500">vs mes anterior</span>
             </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push('/dashboard/properties/new');
-              }}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-            >
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Nuevo inmueble
-            </button>
+          
           </div>
         </div>
 
@@ -737,9 +808,7 @@ export default function InicioPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <ArrowUpIcon className="h-4 w-4 text-success-500" />
-            <span className="ml-1 text-success-600 font-medium">8%</span>
-            <span className="ml-2 text-gray-500">vs mes anterior</span>
+            
           </div>
         </div>
 
@@ -763,18 +832,18 @@ export default function InicioPage() {
           </div>
         </div>
 
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/metas')}>
+        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/sales')}>
           <div className="flex items-center">
             <div className="p-3 rounded-lg bg-warning-50">
-              <ClipboardDocumentListIcon className="h-6 w-6 text-warning-600" />
+              <BanknotesIcon className="h-6 w-6 text-warning-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Pendientes</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.pendingActivities || 0}</p>
+              <p className="text-sm font-medium text-gray-500">Finalizar Ventas</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.salesInProgress || 0}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-gray-500">Actividades registradas</span>
+            <span className="text-gray-500">Ventas en proceso</span>
           </div>
         </div>
       </div>
@@ -938,7 +1007,34 @@ export default function InicioPage() {
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                     >
                       <div className="flex items-center">
-                        <div className={`h-2 w-2 rounded-full ${
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await updateUserActivity(activity.id, {
+                                metadata: {
+                                  ...activity.metadata,
+                                  status: 'Realizada',
+                                  completed: true
+                                }
+                              });
+                              // Actualizar la lista localmente
+                              setUserActivities(prevActivities => 
+                                prevActivities.map(a => 
+                                  a.id === activity.id 
+                                    ? { ...a, metadata: { ...a.metadata, status: 'Realizada', completed: true } }
+                                    : a
+                                )
+                              );
+                            } catch (error) {
+                              console.error('Error al actualizar actividad:', error);
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-6 flex-shrink-0 cursor-pointer rounded-full border-2 border-gray-300 transition-colors duration-200 ease-in-out hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2`}
+                        >
+                          <span className="sr-only">Marcar como realizada</span>
+                        </button>
+                        <div className={`ml-4 h-2 w-2 rounded-full ${
                           activity.metadata?.priority === 'high' ? 'bg-red-500' :
                           activity.metadata?.priority === 'medium' ? 'bg-yellow-500' :
                           'bg-green-500'
@@ -1302,6 +1398,136 @@ export default function InicioPage() {
         </div>
       )}
 
+      {/* Diálogo de Nueva Meta */}
+      {isNewGoalModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4 text-center">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsNewGoalModalOpen(false)} />
+            
+            <div className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+              <div className="absolute right-0 top-0 pr-4 pt-4">
+                <button
+                  type="button"
+                  className="rounded-md bg-white text-gray-400 hover:text-gray-500"
+                  onClick={() => setIsNewGoalModalOpen(false)}
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                </button>
+              </div>
+              
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                  <h3 className="text-lg font-semibold leading-6 text-gray-900 font-audiowide">
+                    Nueva Meta
+                  </h3>
+                  
+                  <div className="mt-4">
+                    <form onSubmit={(e) => { e.preventDefault(); handleCreateGoal(); }} className="space-y-4">
+                      <div>
+                        <label htmlFor="goalTitle" className="block text-sm font-medium text-gray-700">
+                          Título
+                        </label>
+                        <input
+                          type="text"
+                          id="goalTitle"
+                          value={newGoalData.title}
+                          onChange={(e) => setNewGoalData({ ...newGoalData, title: e.target.value })}
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="goalDescription" className="block text-sm font-medium text-gray-700">
+                          Descripción
+                        </label>
+                        <Textarea
+                          id="goalDescription"
+                          value={newGoalData.description}
+                          onChange={(e) => setNewGoalData({ ...newGoalData, description: e.target.value })}
+                          rows={3}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          placeholder="Describe la meta..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="goalTargetCount" className="block text-sm font-medium text-gray-700">
+                            Conteo objetivo
+                          </label>
+                          <input
+                            type="number"
+                            id="goalTargetCount"
+                            value={newGoalData.targetCount}
+                            onChange={(e) => setNewGoalData({ ...newGoalData, targetCount: parseInt(e.target.value) })}
+                            min="1"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="goalCategory" className="block text-sm font-medium text-gray-700">
+                            Categoría
+                          </label>
+                          <Select
+                            id="goalCategory"
+                            value={newGoalData.category}
+                            onChange={(e) => setNewGoalData({ ...newGoalData, category: e.target.value as GoalCategory })}
+                            options={[
+                              { value: GoalCategory.ACTIVITY, label: 'Actividades' },
+                              { value: GoalCategory.DPV, label: 'DPVs' },
+                              { value: GoalCategory.NEWS, label: 'Noticias' },
+                              { value: GoalCategory.ASSIGNMENT, label: 'Encargos' },
+                              { value: GoalCategory.LOCATED_TENANTS, label: 'Inquilinos Localizados' },
+                              { value: GoalCategory.ADDED_PHONES, label: 'Teléfonos Añadidos' },
+                              { value: GoalCategory.EMPTY_PROPERTIES, label: 'Propiedades Vacías' },
+                              { value: GoalCategory.NEW_PROPERTIES, label: 'Propiedades Nuevas' }
+                            ]}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="goalEndDate" className="block text-sm font-medium text-gray-700">
+                          Fecha de finalización
+                        </label>
+                        <input
+                          type="date"
+                          id="goalEndDate"
+                          value={newGoalData.endDate}
+                          onChange={(e) => setNewGoalData({ ...newGoalData, endDate: e.target.value })}
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        />
+                      </div>
+
+                      <div className="mt-5 sm:mt-6 flex justify-end space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsNewGoalModalOpen(false)}
+                          className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          Crear Meta
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reemplazar los estilos CSS personalizados */}
       <style jsx global>{`
         /* Estilos para FullCalendar */
@@ -1441,4 +1667,4 @@ export default function InicioPage() {
       `}</style>
     </div>
   );
-} 
+}

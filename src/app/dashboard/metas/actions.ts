@@ -7,6 +7,8 @@ import { UserGoal, UserActivity, CreateUserGoalInput, CreateUserActivityInput } 
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
+import { ActivityType } from '@/types/activity';
+import { updateGoalProgress } from '@/lib/activityLogger';
 
 // Obtener el ID del usuario actual basado en el token de autenticación
 async function getCurrentUserId(): Promise<{userId: string | null, isAdmin: boolean}> {
@@ -177,7 +179,7 @@ export async function createUserActivity(data: CreateUserActivityInput): Promise
     const activityData = {
       userId,
       goalId: data.goalId,
-      type: data.type,
+      type: data.type as ActivityType, // Explicitly cast to ActivityType
       description: data.description,
       timestamp: activityTimestamp,
       relatedId: data.relatedId,
@@ -307,42 +309,75 @@ export async function deleteUserGoal(goalId: string): Promise<boolean> {
   }
 }
 
-// Actualizar el progreso de una meta
-async function updateGoalProgress(goalId: string): Promise<void> {
+// Actualizar una actividad de usuario
+export async function updateUserActivity(activityId: string, data: Partial<CreateUserActivityInput>): Promise<UserActivity> {
   try {
-    // Contar actividades asociadas a esta meta
-    const count = await prisma.userActivity.count({
-      where: {
-        goalId: goalId
-      }
-    });
+    const {userId, isAdmin} = await getCurrentUserId();
     
-    // Obtener la meta actual
-    const goal = await prisma.userGoal.findUnique({
-      where: {
-        id: goalId
-      }
-    });
-    
-    if (!goal) {
-      throw new Error('Meta no encontrada');
+    if (!userId) {
+      throw new Error('Debes iniciar sesión para actualizar una actividad');
     }
     
-    // Actualizar el contador y verificar si se completó
-    const isCompleted = count >= goal.targetCount;
+    const activityExists = await prisma.userActivity.findUnique({
+      where: { id: activityId }
+    });
     
-    await prisma.userGoal.update({
-      where: {
-        id: goalId
-      },
+    if (!activityExists) {
+      throw new Error('Actividad no encontrada');
+    }
+    
+    if (!isAdmin && activityExists.userId !== userId) {
+      throw new Error('No tienes permiso para actualizar esta actividad');
+    }
+
+    // Ensure metadata is properly updated when status changes
+    let metadata: Prisma.JsonValue | undefined = undefined;
+    if (data.metadata || activityExists.metadata) {
+      let existingMetadata = {};
+      try {
+        existingMetadata = typeof activityExists.metadata === 'string' 
+          ? JSON.parse(activityExists.metadata)
+          : activityExists.metadata || {};
+      } catch (e) {
+        console.error('Error parsing existing metadata:', e);
+      }
+
+      const newMetadata = typeof data.metadata === 'string'
+        ? JSON.parse(data.metadata)
+        : data.metadata || {};
+
+      metadata = {
+        ...existingMetadata,
+        ...newMetadata,
+      };
+    }
+
+    const updatedActivity = await prisma.userActivity.update({
+      where: { id: activityId },
       data: {
-        currentCount: count,
-        isCompleted: isCompleted,
-        updatedAt: new Date()
+        ...data,
+        metadata: metadata as Prisma.InputJsonValue,
+        timestamp: data.timestamp ? new Date(data.timestamp) : undefined
       }
     });
+
+    if (activityExists.goalId) {
+      await updateGoalProgress(activityExists.goalId);
+    }
+
+    revalidatePath('/dashboard/metas');
+    revalidatePath('/dashboard/progreso/actividades');
+
+    const activityDTO: RawUserActivity = {
+      ...updatedActivity,
+      timestamp: updatedActivity.timestamp.toISOString(),
+      metadata: updatedActivity.metadata ? JSON.stringify(updatedActivity.metadata) : null,
+      goalTitle: undefined
+    };
+
+    return mapActivityToDTO(activityDTO);
   } catch (error) {
-    throw new Error(`Error al actualizar progreso: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Error al actualizar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
 
@@ -437,4 +472,4 @@ export async function deleteUserActivity(activityId: string): Promise<boolean> {
   } catch (error) {
     throw new Error(`Error al eliminar actividad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
-} 
+}

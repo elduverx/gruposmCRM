@@ -1,34 +1,20 @@
-import { Activity } from '@/types/activity';
+import { Activity as BaseActivity } from '@/types/activity';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card } from '@/components/ui/card';
 import { Phone, Calendar, Mail, Building2, MessageSquare } from 'lucide-react';
 
-export interface Activity {
-  id: string;
-  propertyId: string;
-  type: string;
-  status: string;
-  client: string | null;
-  notes: string | null;
-  date: string;
-  createdAt: string;
-  updatedAt: string;
-  property: Property | null;
-  user?: {
-    id: string;
-    name: string | null;
-    email: string;
-  } | null;
+interface ExtendedActivity extends BaseActivity {
   relatedType?: string;
+  type: string; // Override type to be string instead of ActivityType
 }
 
 interface ActivityListProps {
-  activities: Activity[];
+  activities: ExtendedActivity[];
 }
 
 export function ActivityList({ activities }: ActivityListProps) {
-  const getActivityIcon = (activity: Activity) => {
+  const getActivityIcon = (activity: ExtendedActivity) => {
     // Si es una actividad DPV, mostrar un icono especial
     if (activity.relatedType === 'PROPERTY_DPV') {
       return <Building2 className="h-5 w-5 text-green-500" />;

@@ -72,7 +72,7 @@ export async function deleteNews(id: string): Promise<boolean> {
 export async function updatePropertyNews(id: string, data: {
   type: string;
   action: string;
-  valuation: boolean;
+  valuation: string;
   priority: 'HIGH' | 'LOW';
   responsible: string;
   value: number;
@@ -90,7 +90,7 @@ export async function updatePropertyNews(id: string, data: {
       data: {
         type: data.type,
         action: data.action,
-        valuation: data.valuation ? 'true' : 'false',
+        valuation: data.valuation,
         priority: data.priority,
         responsible: data.responsible,
         value: numericValue,

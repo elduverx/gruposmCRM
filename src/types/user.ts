@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role, GoalCategory } from '@prisma/client';
 
 export interface User {
   id: string;
@@ -19,7 +19,7 @@ export interface UserGoal {
   startDate: string;
   endDate?: string | null;
   isCompleted: boolean;
-  category: string;
+  category: GoalCategory;
   createdAt: string;
   updatedAt: string;
   activities?: UserActivity[];
@@ -43,7 +43,7 @@ export interface CreateUserGoalInput {
   title: string;
   description?: string;
   targetCount: number;
-  category?: 'GENERAL' | 'PROPERTY' | 'CLIENT' | 'ASSIGNMENT' | 'NEWS';
+  category?: GoalCategory;
   endDate?: string;
 }
 

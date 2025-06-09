@@ -1,39 +1,24 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/auth';
+import { ActivityType } from '@/types/activity';
 
 // Custom error class for activity logging
 class ActivityLoggerError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  constructor(message: string, cause?: unknown) {
     super(message);
     this.name = 'ActivityLoggerError';
+    if (cause instanceof Error) {
+      this.cause = cause;
+    }
   }
 }
-
-export type ActivityType = 
-  | 'PROPERTY_CREATED'
-  | 'PROPERTY_UPDATED'
-  | 'PROPERTY_DELETED'
-  | 'ZONE_CREATED'
-  | 'ZONE_UPDATED'
-  | 'ZONE_DELETED'
-  | 'CLIENT_CREATED'
-  | 'CLIENT_UPDATED'
-  | 'CLIENT_DELETED'
-  | 'TASK_CREATED'
-  | 'TASK_COMPLETED'
-  | 'TASK_UPDATED'
-  | 'TASK_DELETED'
-  | 'NOTE_CREATED'
-  | 'NOTE_UPDATED'
-  | 'NOTE_DELETED'
-  | 'MANUAL';
 
 interface LogActivityParams {
   type: ActivityType;
   description: string;
   relatedId?: string;
   relatedType?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   points?: number;
   goalId?: string;
 }
@@ -48,47 +33,86 @@ export async function logActivity({
   goalId
 }: LogActivityParams) {
   try {
-    const userId = await getCurrentUserId();
+    const { userId } = await getCurrentUserId();
     if (!userId) {
       console.warn('No hay usuario autenticado, omitiendo registro de actividad');
       return null;
     }
 
-    const activity = await prisma.userActivity.create({
-      data: {
+    // Si no se proporcionó un goalId específico, buscar metas activas que correspondan
+    let goalIds: string[] = [];
+    if (!goalId) {
+      goalIds = await findActiveGoalsForActivity(userId, type);
+    } else {
+      goalIds = [goalId];
+    }
+
+    type ActivityCreateInput = {
+      userId: string;
+      type: ActivityType;
+      description: string;
+      relatedId?: string | null;
+      relatedType?: string | null;
+      metadata?: string;
+      points: number;
+      goalId?: string;
+    };
+
+    // Si hay metas activas, crear una actividad por cada meta
+    const activities: Array<any> = []; // Using any temporarily to handle Prisma types
+    for (const gId of goalIds) {
+      const activityData: ActivityCreateInput = {
         userId,
         type,
         description,
-        relatedId,
-        relatedType,
+        relatedId: relatedId || null,
+        relatedType: relatedType || null,
         metadata: metadata ? JSON.stringify(metadata) : undefined,
         points,
-        goalId
-      }
-    });
+        goalId: gId
+      };
 
-    // Si la actividad está asociada a una meta, actualizar el progreso
-    if (goalId) {
-      await updateGoalProgress(goalId);
+      const activity = await prisma.userActivity.create({
+        data: activityData
+      });
+      activities.push(activity);
+
+      // Actualizar el progreso de cada meta
+      await updateGoalProgress(gId);
     }
 
-    return activity;
+    // Si no hay metas activas, crear la actividad sin goalId
+    if (goalIds.length === 0) {
+      const activityData: Omit<ActivityCreateInput, 'goalId'> = {
+        userId,
+        type,
+        description,
+        relatedId: relatedId || null,
+        relatedType: relatedType || null,
+        metadata: metadata ? JSON.stringify(metadata) : undefined,
+        points
+      };
+
+      const activity = await prisma.userActivity.create({
+        data: activityData
+      });
+      activities.push(activity);
+    }
+
+    return activities[0]; // Retornar la primera actividad para mantener compatibilidad
   } catch (error) {
     throw new ActivityLoggerError('Error al registrar actividad', error);
   }
 }
 
-async function updateGoalProgress(goalId: string): Promise<void> {
+export async function updateGoalProgress(goalId: string): Promise<void> {
   try {
-    // Contar actividades asociadas a esta meta
-    const countResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM UserActivity 
-      WHERE goalId = ${goalId}
-    `;
-    
-    const count = Array.isArray(countResult) && countResult.length > 0 && typeof countResult[0] === 'object' && countResult[0] !== null
-      ? Number((countResult[0] as { count: number }).count) 
-      : 0;
+    // Contar actividades asociadas a esta meta usando Prisma count
+    const count = await prisma.userActivity.count({
+      where: {
+        goalId: goalId
+      }
+    });
     
     // Obtener la meta actual
     const goal = await prisma.userGoal.findUnique({
@@ -113,4 +137,40 @@ async function updateGoalProgress(goalId: string): Promise<void> {
   } catch (error) {
     throw new ActivityLoggerError('Error al actualizar progreso de meta', error);
   }
-} 
+}
+
+// Mapeo de tipos de actividad a categorías de metas
+const activityTypeToGoalCategory = {
+  DPV: 'DPV',
+  NOTICIA: 'NEWS', 
+  ENCARGO: 'ASSIGNMENTS',
+  VISITA: 'VISITS',
+  LLAMADA: 'CALLS',
+  EMAIL: 'COMMUNICATIONS',
+  OTROS: 'GENERAL'
+} as const;
+
+// Encuentra metas activas que correspondan al tipo de actividad
+async function findActiveGoalsForActivity(userId: string, activityType: ActivityType): Promise<string[]> {
+  try {
+    const category = activityTypeToGoalCategory[activityType];
+
+    const goals = await prisma.userGoal.findMany({
+      where: {
+        userId: userId,
+        category: category,
+        isCompleted: false,
+        OR: [
+          { endDate: null },
+          { endDate: { gt: new Date() } }
+        ]
+      },
+      select: { id: true }
+    });
+
+    return goals.map(g => g.id);
+  } catch (error) {
+    console.error('Error buscando metas activas:', error);
+    return [];
+  }
+}
