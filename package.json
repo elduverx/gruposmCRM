@@ -70,7 +70,6 @@
     "tailwind-merge": "^2.2.1",
     "tailwindcss": "^3.4.17",
     "tippy.js": "^6.3.7",
-    "ts-node": "^10.9.2",
     "use-sound": "^5.0.0",
     "zod": "^3.24.2"
   },
@@ -91,6 +90,7 @@
     "glob": "^10.3.10",
     "lru-cache": "^10.2.0",
     "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.4",
     "typescript": "^5.3.3"
   },
