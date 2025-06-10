@@ -59,6 +59,12 @@ const defaultGoals: DefaultGoal[] = [
         description: "Identificar y añadir nuevas propiedades",
         targetCount: 12,
         category: GoalCategory.NEW_PROPERTIES
+    },
+    {
+        title: "Inmuebles Localizados",
+        description: "Localizar y verificar inmuebles existentes",
+        targetCount: 10,
+        category: GoalCategory.LOCATED_PROPERTIES
     }
 ];
 

@@ -799,6 +799,7 @@ export default function MetasClient({ initialGoals, initialActivities }: MetasCl
                   <option value={GoalCategory.ADDED_PHONES}>Teléfonos Añadidos</option>
                   <option value={GoalCategory.EMPTY_PROPERTIES}>Propiedades Vacías</option>
                   <option value={GoalCategory.NEW_PROPERTIES}>Propiedades Nuevas</option>
+                  <option value={GoalCategory.LOCATED_PROPERTIES}>Inmuebles Localizados</option>
                 </select>
               </div>
               

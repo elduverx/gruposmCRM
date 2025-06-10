@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Property, Activity, DPV, PropertyNews, Assignment } from '@/types/property';
-import { updateProperty, createActivity, createOrUpdateDPV, getActivitiesByPropertyId, getAssignmentsByPropertyId, getPropertyNews, deleteAssignment } from '../actions';
+import { updateProperty, createActivity, createOrUpdateDPV, getAssignmentsByPropertyId, getPropertyNews, deleteAssignment } from '../actions';
 import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import ActivityForm from '@/components/ActivityForm';
 import DPVForm from '@/components/DPVForm';
@@ -16,7 +16,7 @@ import { getZones } from '@/app/dashboard/zones/actions';
 import type { Zone } from '@/app/dashboard/zones/actions';
 import { useRouter } from 'next/navigation';
 import { logActivity } from '@/lib/client/activityLogger';
-import type { ActivityType } from '@/types/activity';
+import { ActivityType } from '@/types/activity';
 
 interface PropertyDetailClientProps {
   propertyId: string;

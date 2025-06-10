@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PropertyTable from '@/components/properties/PropertyTable';
 import { Property } from '@/types/property';
 import { Activity } from '@/types/property';
+import { ActivityType } from '@/types/activity';
 import { Zone } from '@/types/zone';
 import { useRouter } from 'next/navigation';
 import { PropertyType, OperationType, PropertyAction } from '@/types/property';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/client/activityLogger';
 
 export default function PropertiesClient() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -208,6 +210,23 @@ export default function PropertiesClient() {
           p.id === property.id ? updatedProperty : p
         )
       );
+
+      // Si se marcó como localizado, registrar la actividad
+      if (updatedProperty.isLocated) {
+        await logActivity({
+          type: ActivityType.OTROS,
+          description: `Propiedad marcada como localizada: ${property.address}`,
+          relatedId: property.id,
+          relatedType: 'PROPERTY_LOCATED',
+          metadata: {
+            propertyId: property.id,
+            address: property.address,
+            action: 'mark_as_located'
+          },
+          points: 1
+        });
+      }
+      
       toast.success('Estado de localización actualizado');
     } catch (error) {
       toast.error('Error al actualizar la propiedad');
@@ -557,4 +576,4 @@ export default function PropertiesClient() {
       )}
     </div>
   );
-} 
+}

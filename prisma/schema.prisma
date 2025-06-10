@@ -301,6 +301,7 @@ enum GoalCategory {
   ADDED_PHONES
   EMPTY_PROPERTIES
   NEW_PROPERTIES
+  LOCATED_PROPERTIES
 }
 
 enum PropertyType {
