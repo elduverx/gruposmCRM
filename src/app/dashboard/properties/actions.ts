@@ -941,6 +941,15 @@ export async function createAssignment(data: Omit<Assignment, 'id' | 'createdAt'
             email: true,
             phone: true
           }
+        },
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true,
+            type: true,
+            status: true
+          }
         }
       }
     });
@@ -971,11 +980,19 @@ export async function createAssignment(data: Omit<Assignment, 'id' | 'createdAt'
     // Revalidar rutas afectadas
     revalidatePath(`/dashboard/properties/${data.propertyId}`);
     revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
+    revalidatePath('/dashboard/assignments'); // Revalidar la lista de asignaciones
     return {
       ...assignment,
       createdAt: assignment.createdAt.toISOString(),
       updatedAt: assignment.updatedAt.toISOString(),
-      exclusiveUntil: assignment.exclusiveUntil.toISOString()
+      exclusiveUntil: assignment.exclusiveUntil.toISOString(),
+      property: {
+        id: assignment.property.id,
+        address: assignment.property.address,
+        population: assignment.property.population || '',
+        type: assignment.property.type || '',
+        status: assignment.property.status || ''
+      }
     };
   } catch (error) {
     console.error('Error creating assignment:', error);
@@ -1056,6 +1073,9 @@ export async function deleteAssignment(id: string): Promise<boolean> {
     // Revalidar rutas afectadas
     revalidatePath(`/dashboard/properties/${assignment.propertyId}`);
     revalidatePath('/dashboard/users');  // Revalidar la página de usuarios para actualizar estadísticas
+    revalidatePath('/dashboard/assignments'); // Revalidar la página de assignments
+    revalidatePath('/dashboard/assignments/list'); // Revalidar la lista de asignaciones
+    revalidatePath('/dashboard'); // Revalidar el dashboard por si hay widgets de asignaciones
     return true;
   } catch (error) {
     return false;
@@ -1066,31 +1086,44 @@ export async function getAssignments(): Promise<Assignment[]> {
   try {
     const assignments = await prisma.assignment.findMany({
       include: {
-        property: true,
-        client: true
+        property: {
+          select: {
+            id: true,
+            address: true,
+            population: true,
+            type: true,
+            status: true
+          }
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    return assignments.map(assignment => ({
-      id: assignment.id,
-      propertyId: assignment.propertyId,
-      clientId: assignment.clientId,
-      type: assignment.type,
-      status: assignment.status,
-      price: assignment.price,
-      origin: assignment.origin,
-      sellerFeeType: assignment.sellerFeeType,
-      sellerFeeValue: assignment.sellerFeeValue,
-      buyerFeeType: assignment.buyerFeeType,
-      buyerFeeValue: assignment.buyerFeeValue,
-      property: assignment.property,
-      client: assignment.client,
-      createdAt: assignment.createdAt.toISOString(),
-      updatedAt: assignment.updatedAt.toISOString()
-    }));
+    return assignments.map(assignment => {
+      return {
+        ...assignment,
+        exclusiveUntil: assignment.exclusiveUntil.toISOString(),
+        createdAt: assignment.createdAt.toISOString(),
+        updatedAt: assignment.updatedAt.toISOString(),
+        property: {
+          id: assignment.property.id,
+          address: assignment.property.address,
+          population: assignment.property.population || '',
+          type: assignment.property.type || '',
+          status: assignment.property.status || ''
+        }
+      };
+    });
   } catch (error) {
     console.error('Error fetching assignments:', error);
     throw error;

@@ -21,28 +21,17 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [properties, setProperties] = useState<Property[]>([]);
   const [isPropertySelectorOpen, setIsPropertySelectorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const loadProperties = async () => {
-      try {
-        const propertiesData = await getProperties();
-        setProperties(propertiesData.properties);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading properties:', error);
-      }
-    };
-    loadProperties();
-  }, []);
+  const [properties, setProperties] = useState<Property[]>([]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este encargo?')) {
       const success = await deleteAssignment(id);
       if (success) {
-        setAssignments(assignments.filter(a => a.id !== id));
+        const updatedAssignments = assignments.filter(a => a.id !== id);
+        setAssignments(updatedAssignments);
+        setFilteredAssignments(updatedAssignments);
       }
     }
   };
@@ -87,12 +76,11 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
       setFilteredAssignments(assignments);
     } else {
       const filtered = assignments.filter(assignment => {
-        const property = properties.find(p => p.id === assignment.propertyId);
         return (
-          property?.address.toLowerCase().includes(term.toLowerCase()) ||
-          property?.population.toLowerCase().includes(term.toLowerCase()) ||
+          (assignment.property?.address || '').toLowerCase().includes(term.toLowerCase()) ||
+          (assignment.property?.population || '').toLowerCase().includes(term.toLowerCase()) ||
           assignment.type.toLowerCase().includes(term.toLowerCase()) ||
-          assignment.origin?.toLowerCase().includes(term.toLowerCase())
+          (assignment.origin || '').toLowerCase().includes(term.toLowerCase())
         );
       });
       setFilteredAssignments(filtered);
@@ -167,13 +155,12 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAssignments.map((assignment) => {
-                  const property = properties.find(p => p.id === assignment.propertyId);
                   return (
                     <tr key={assignment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <Link href={`/dashboard/properties/${assignment.propertyId}`} className="text-primary-600 hover:text-primary-900">
-                          <div className="font-medium">{property?.address || 'Propiedad no encontrada'}</div>
-                          <div className="text-xs text-gray-500">{property?.population || ''}</div>
+                          <div className="font-medium">{assignment.property?.address}</div>
+                          <div className="text-xs text-gray-500">{assignment.property?.population}</div>
                         </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
