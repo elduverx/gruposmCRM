@@ -371,6 +371,21 @@ export default function UsersPage() {
                     </div>
                   )}
                 </div>
+
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => router.push(`/dashboard/users/${user.id}`)}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
+                  >
+                    Ver Perfil
+                  </button>
+                  <button
+                    onClick={() => router.push(`/dashboard/users/${user.id}?tab=goals`)}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-green-600 hover:text-green-800 border border-green-200 rounded-md hover:bg-green-50 transition-colors"
+                  >
+                    Ver Metas
+                  </button>
+                </div>
               </div>
             ))}
           </div>
