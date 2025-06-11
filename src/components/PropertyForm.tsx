@@ -5,6 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { createClient, getClients } from '@/app/dashboard/clients/actions';
 import ClientForm from '@/app/dashboard/clients/components/ClientForm';
 import { toast } from 'sonner';
+import { useUsers } from '@/hooks/useUsers';
 import { 
   HomeIcon, 
   UserIcon, 
@@ -13,7 +14,8 @@ import {
   BuildingOfficeIcon, 
   HomeModernIcon, 
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 
 interface PropertyFormProps {
@@ -24,6 +26,7 @@ interface PropertyFormProps {
 }
 
 export default function PropertyForm({ onSubmit, initialData, onCancel, zones }: PropertyFormProps) {
+  const { users: availableUsers } = useUsers();
   const [formData, setFormData] = useState<PropertyCreateInput>({
     address: initialData?.address || '',
     population: initialData?.population || '',
@@ -54,6 +57,7 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const { users } = useUsers();
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -274,6 +278,31 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
                 </select>
               </div>
             </div>
+
+            <div>
+              <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
+                Responsable
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <UsersIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="responsible"
+                  name="responsible"
+                  value={formData.responsible || ''}
+                  onChange={handleInputChange}
+                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {availableUsers.map((user) => (
+                    <option key={user.id} value={user.name}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -438,6 +467,40 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
           </div>
         </div>
 
+        {/* Responsable */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <UsersIcon className="h-5 w-5 mr-2 text-blue-600" />
+            Responsable
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label htmlFor="responsibleId" className="block text-sm font-medium text-gray-700">
+                Responsable
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <UsersIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="responsibleId"
+                  name="responsibleId"
+                  value={formData.responsibleId || ''}
+                  onChange={handleInputChange}
+                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Botones de acción */}
         <div className="flex justify-end space-x-4 pt-4">
           {onCancel && (
@@ -464,19 +527,32 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
         onClose={() => setIsCreateClientOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
-            <Dialog.Title className="text-lg font-medium mb-4">
-              Nuevo Cliente
-            </Dialog.Title>
-            
-            <ClientForm
-              onSubmit={handleCreateClient}
-              onCancel={() => setIsCreateClientOpen(false)}
-            />
-          </Dialog.Panel>
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-sm"></div>
+            <Dialog.Panel className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  ✨ Nuevo Cliente
+                </Dialog.Title>
+                <button
+                  onClick={() => setIsCreateClientOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <ClientForm
+                onSubmit={handleCreateClient}
+                onCancel={() => setIsCreateClientOpen(false)}
+              />
+            </Dialog.Panel>
+          </div>
         </div>
       </Dialog>
     </>

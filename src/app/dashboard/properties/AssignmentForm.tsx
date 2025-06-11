@@ -591,19 +591,32 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         onClose={() => setIsCreateClientOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
           
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white p-6">
-            <Dialog.Title className="text-lg font-medium mb-4">
-              Nuevo Cliente
-            </Dialog.Title>
-            
-            <ClientForm
-              onSubmit={handleCreateClient}
-              onCancel={() => setIsCreateClientOpen(false)}
-            />
-          </Dialog.Panel>
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-sm"></div>
+            <Dialog.Panel className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  ✨ Nuevo Cliente
+                </Dialog.Title>
+                <button
+                  onClick={() => setIsCreateClientOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <ClientForm
+                onSubmit={handleCreateClient}
+                onCancel={() => setIsCreateClientOpen(false)}
+              />
+            </Dialog.Panel>
+          </div>
         </div>
       </Dialog>
     </>

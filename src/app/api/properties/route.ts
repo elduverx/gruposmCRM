@@ -93,14 +93,27 @@ export async function GET(request: Request) {
     const properties = await prisma.property.findMany({
       where,
       include: {
-        zone: true
+        zone: true,
+        responsibleUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
     
-    return NextResponse.json(properties);
+    // Map properties to include responsible field from responsibleUser
+    const mappedProperties = properties.map(property => ({
+      ...property,
+      responsible: property.responsibleUser?.name || null
+    }));
+    
+    return NextResponse.json(mappedProperties);
   } catch (error) {
     return NextResponse.json(
       { error: 'Error fetching properties' },

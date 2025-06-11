@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
 import { getClients } from '../clients/actions';
 import { Client } from '@/types/client';
+import { useUsers } from '@/hooks/useUsers';
 
 interface PropertyFormProps {
   initialData: {
@@ -33,6 +34,7 @@ interface PropertyFormProps {
 }
 
 export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormProps) {
+  const { users } = useUsers();
   const [formData, setFormData] = useState(initialData || {
     id: '',
     address: '',
@@ -241,6 +243,23 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
             <option value="Apartamento">Apartamento</option>
             <option value="Local">Local</option>
             <option value="Oficina">Oficina</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Responsable</label>
+          <select
+            name="responsible"
+            value={formData.responsible || ''}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">Seleccionar responsable</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.name}>
+                {user.name}
+              </option>
+            ))}
           </select>
         </div>
 
