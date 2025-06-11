@@ -75,12 +75,26 @@ export default function SalesClient() {
       // Obtener todas las asignaciones
       const assignmentsData = await getAssignments();
       
-      // Filtrar asignaciones con clientes que tienen pedidos y propiedades no vendidas
+      console.log('Total assignments:', assignmentsData.length);
+      console.log('Sample assignment:', assignmentsData[0]);
+      
+      // Filtrar asignaciones con propiedades no vendidas
+      // Removemos el filtro restrictivo de hasRequest para mostrar más ventas
       const filtered = assignmentsData.filter(assignment => {
-        const clientHasRequest = assignment.client && 'hasRequest' in assignment.client && assignment.client.hasRequest;
-        const propertyNotSold = assignment.property && assignment.property.status !== 'SOLD';
-        return clientHasRequest && propertyNotSold;
+        // Solo verificar que la propiedad no esté vendida
+        const propertyNotSold = !assignment.property?.isSold;
+        
+        console.log(`Assignment ${assignment.id}:`, {
+          propertyNotSold,
+          propertyStatus: assignment.property?.status,
+          propertyIsSold: assignment.property?.isSold,
+          clientHasRequest: assignment.client?.hasRequest
+        });
+        
+        return propertyNotSold && assignment.client && assignment.property;
       });
+      
+      console.log('Filtered assignments:', filtered.length);
       
       setAssignments(filtered);
       setFilteredAssignments(filtered);

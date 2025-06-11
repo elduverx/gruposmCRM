@@ -1083,7 +1083,8 @@ export async function getAssignments(): Promise<Assignment[]> {
             address: true,
             population: true,
             type: true,
-            status: true
+            status: true,
+            isSold: true
           }
         },
         client: {
@@ -1091,7 +1092,8 @@ export async function getAssignments(): Promise<Assignment[]> {
             id: true,
             name: true,
             email: true,
-            phone: true
+            phone: true,
+            hasRequest: true
           }
         }
       },
@@ -1111,8 +1113,16 @@ export async function getAssignments(): Promise<Assignment[]> {
           address: assignment.property.address,
           population: assignment.property.population || '',
           type: assignment.property.type || '',
-          status: assignment.property.status || ''
-        }
+          status: assignment.property.status || '',
+          isSold: assignment.property.isSold || false
+        },
+        client: assignment.client ? {
+          id: assignment.client.id,
+          name: assignment.client.name,
+          email: assignment.client.email,
+          phone: assignment.client.phone,
+          hasRequest: assignment.client.hasRequest || false
+        } : undefined
       };
     });
   } catch (error) {

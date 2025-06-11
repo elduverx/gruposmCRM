@@ -71,6 +71,7 @@ export interface Assignment {
     address: string;
     population: string;
     status?: string;
+    isSold?: boolean;
   };
 }
 
