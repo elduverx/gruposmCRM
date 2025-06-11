@@ -303,37 +303,91 @@ export default function InicioPage() {
 
   // Función para convertir actividades al formato que espera FullCalendar
   const getCalendarEvents = (): EventInput[] => {
-    const userEvents = userActivities.map(activity => ({
-      id: activity.id,
-      title: activity.description || 'Sin descripción',
-      start: activity.timestamp,
-      end: new Date(new Date(activity.timestamp).getTime() + (activity.metadata?.duration || 30) * 60000),
-      extendedProps: {
-        type: 'user',
-        isCompleted: activity.metadata?.completed || false,
-        priority: activity.metadata?.priority || 'medium',
-        description: activity.description || 'Sin descripción',
-        goalId: activity.goalId
-      },
-      backgroundColor: activity.metadata?.completed ? '#9CA3AF' : '#4F46E5',
-      borderColor: activity.metadata?.completed ? '#6B7280' : '#4338CA'
-    }));
+    const userEvents = userActivities.map(activity => {
+      const isCompleted = activity.metadata?.completed || false;
+      const priority = activity.metadata?.priority || 'medium';
+      
+      // Colores dinámicos según el tipo y estado
+      let backgroundColor = '#4F46E5';
+      let borderColor = '#4338CA';
+      
+      if (isCompleted) {
+        backgroundColor = '#9CA3AF';
+        borderColor = '#6B7280';
+      } else {
+        // Colores por tipo de actividad
+        if (activity.type === 'LLAMADA') {
+          backgroundColor = '#3B82F6';
+          borderColor = '#2563EB';
+        } else if (activity.type === 'REUNION') {
+          backgroundColor = '#10B981';
+          borderColor = '#059669';
+        } else if (activity.type === 'EMAIL') {
+          backgroundColor = '#F59E0B';
+          borderColor = '#D97706';
+        } else if (activity.type === 'VISITA') {
+          backgroundColor = '#8B5CF6';
+          borderColor = '#7C3AED';
+        }
+        
+        // Ajustar intensidad según prioridad
+        if (priority === 'high') {
+          backgroundColor = backgroundColor.replace(')', ', 0.9)').replace('#', 'rgba(').replace(/(.{2})/g, '$1,').replace(/,$/, '').replace('rgba(', 'rgba(').replace(/([a-f0-9]{2})/gi, (match) => parseInt(match, 16).toString());
+        }
+      }
 
-    const propertyEvents = activities.map(activity => ({
-      id: `property-${activity.id}`,
-      title: `${activity.type} - ${activity.property?.address || 'Sin dirección'}`,
-      start: activity.date,
-      end: new Date(new Date(activity.date).getTime() + 60 * 60000), // 1 hora por defecto
-      extendedProps: {
-        type: 'property',
-        status: activity.status,
-        client: activity.client || '',
-        notes: activity.notes || '',
-        propertyId: activity.propertyId
-      },
-      backgroundColor: activity.status === 'Completada' ? '#9CA3AF' : '#10B981',
-      borderColor: activity.status === 'Completada' ? '#6B7280' : '#059669'
-    }));
+      return {
+        id: activity.id,
+        title: activity.description || 'Sin descripción',
+        start: activity.timestamp,
+        end: new Date(new Date(activity.timestamp).getTime() + (activity.metadata?.duration || 30) * 60000),
+        extendedProps: {
+          type: 'user',
+          activityType: activity.type.toLowerCase(),
+          isCompleted: isCompleted,
+          priority: priority,
+          description: activity.description || 'Sin descripción',
+          goalId: activity.goalId,
+          reminder: activity.metadata?.reminder || 0
+        },
+        backgroundColor: backgroundColor,
+        borderColor: borderColor,
+        textColor: isCompleted ? '#6B7280' : '#ffffff',
+        classNames: [
+          'modern-event',
+          `priority-${priority}`,
+          isCompleted ? 'completed' : 'pending',
+          `type-${activity.type.toLowerCase()}`
+        ]
+      };
+    });
+
+    const propertyEvents = activities.map(activity => {
+      const isCompleted = activity.status === 'Completada';
+      
+      return {
+        id: `property-${activity.id}`,
+        title: `🏠 ${activity.type} - ${activity.property?.address || 'Sin dirección'}`,
+        start: activity.date,
+        end: new Date(new Date(activity.date).getTime() + 60 * 60000), // 1 hora por defecto
+        extendedProps: {
+          type: 'property',
+          activityType: 'property',
+          status: activity.status,
+          client: activity.client || '',
+          notes: activity.notes || '',
+          propertyId: activity.propertyId,
+          isCompleted: isCompleted
+        },
+        backgroundColor: isCompleted ? '#9CA3AF' : '#10B981',
+        borderColor: isCompleted ? '#6B7280' : '#059669',
+        textColor: '#ffffff',
+        classNames: [
+          'property-event',
+          isCompleted ? 'completed' : 'pending'
+        ]
+      };
+    });
 
     return [...userEvents, ...propertyEvents];
   };
@@ -1005,6 +1059,78 @@ export default function InicioPage() {
               
               {/* Contenido del calendario */}
               <div className="p-6">
+                {/* Barra de navegación temporal y filtros mejorada */}
+                <div className="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-slate-50/80 to-blue-50/80 rounded-2xl border border-white/30 backdrop-blur-sm">
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => {
+                        if (calendarRef.current) {
+                          const calendarApi = calendarRef.current.getApi();
+                          calendarApi.prev();
+                        }
+                      }}
+                      className="p-2 bg-white/80 hover:bg-white rounded-xl shadow-sm transition-all duration-200 hover:shadow-md group"
+                    >
+                      <svg className="w-4 h-4 text-slate-600 group-hover:text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    
+                    <div className="flex items-center px-4 py-2 bg-white/60 rounded-xl border border-white/40 min-w-[180px] justify-center">
+                      <span className="text-sm font-bold text-slate-700" id="calendar-title">
+                        {format(date, "MMMM yyyy", { locale: es })}
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        if (calendarRef.current) {
+                          const calendarApi = calendarRef.current.getApi();
+                          calendarApi.next();
+                        }
+                      }}
+                      className="p-2 bg-white/80 hover:bg-white rounded-xl shadow-sm transition-all duration-200 hover:shadow-md group"
+                    >
+                      <svg className="w-4 h-4 text-slate-600 group-hover:text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {/* Filtros de actividades */}
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center px-3 py-1 bg-white/60 rounded-lg border border-white/40">
+                      <span className="text-xs font-medium text-slate-600 mr-2">Filtrar:</span>
+                      <select 
+                        className="text-xs bg-transparent border-none focus:ring-0 text-slate-700 font-medium"
+                        onChange={(e) => {
+                          // Aquí implementaremos filtro de tipos de actividad
+                          console.log('Filtro seleccionado:', e.target.value);
+                        }}
+                      >
+                        <option value="all">Todas</option>
+                        <option value="call">Llamadas</option>
+                        <option value="meeting">Reuniones</option>
+                        <option value="email">Emails</option>
+                        <option value="visit">Visitas</option>
+                      </select>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        if (calendarRef.current) {
+                          const calendarApi = calendarRef.current.getApi();
+                          calendarApi.today();
+                          setDate(new Date());
+                        }
+                      }}
+                      className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium rounded-lg hover:shadow-md transition-all duration-200 transform hover:scale-105"
+                    >
+                      Hoy
+                    </button>
+                  </div>
+                </div>
+
                 <div className="calendar-container bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50">
                   <FullCalendar
                     ref={calendarRef}
@@ -1017,27 +1143,78 @@ export default function InicioPage() {
                     eventClick={handleEventClick}
                     height="auto"
                     dayMaxEvents={3}
+                    moreLinkClick="popover"
                     eventTimeFormat={{
                       hour: '2-digit',
                       minute: '2-digit',
                       meridiem: false
                     }}
+                    slotMinTime="06:00:00"
+                    slotMaxTime="23:00:00"
+                    nowIndicator={true}
+                    eventDisplay="block"
+                    dayHeaderFormat={{
+                      weekday: 'short',
+                      month: 'numeric',
+                      day: 'numeric'
+                    }}
                     eventClassNames={(arg) => {
-                      const classes = ['transition-all', 'duration-200', 'hover:scale-105'];
+                      const classes = ['transition-all', 'duration-200', 'hover:scale-105', 'cursor-pointer'];
                       
                       if (arg.event.extendedProps.isCompleted) {
-                        classes.push('opacity-60');
+                        classes.push('opacity-60', 'completed-event');
                       }
                       
                       if (arg.event.extendedProps.priority === 'high') {
-                        classes.push('fc-priority-high');
+                        classes.push('fc-priority-high', 'animate-pulse');
                       } else if (arg.event.extendedProps.priority === 'medium') {
                         classes.push('fc-priority-medium');
                       } else {
                         classes.push('fc-priority-low');
                       }
                       
+                      // Añadir clase para tipo de actividad
+                      if (arg.event.extendedProps.type === 'user') {
+                        classes.push('user-activity');
+                      } else {
+                        classes.push('property-activity');
+                      }
+                      
                       return classes;
+                    }}
+                    eventContent={(arg) => {
+                      const isCompleted = arg.event.extendedProps.isCompleted;
+                      const priority = arg.event.extendedProps.priority;
+                      const type = arg.event.extendedProps.type;
+                      
+                      // Iconos por tipo de actividad
+                      const iconMap = {
+                        'call': '📞',
+                        'meeting': '🤝',
+                        'email': '📧',
+                        'visit': '🏠',
+                        'other': '📝'
+                      };
+                      
+                      const activityIcon = iconMap[arg.event.extendedProps.activityType] || '📝';
+                      
+                      return {
+                        html: `
+                          <div class="flex items-center space-x-1 p-1">
+                            <span class="text-xs">${isCompleted ? '✅' : activityIcon}</span>
+                            <span class="text-xs font-medium truncate flex-1">${arg.event.title}</span>
+                            ${priority === 'high' ? '<span class="text-red-500 text-xs">!</span>' : ''}
+                          </div>
+                        `
+                      };
+                    }}
+                    datesSet={(dateInfo) => {
+                      // Actualizar el título cuando cambie la vista
+                      const titleElement = document.getElementById('calendar-title');
+                      if (titleElement) {
+                        titleElement.textContent = format(dateInfo.start, "MMMM yyyy", { locale: es });
+                      }
+                      setDate(dateInfo.start);
                     }}
                   />
                 </div>
