@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
-import SalesClient from './SalesClient';
+import SalesClientCompact from './SalesClientCompact';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,7 +41,7 @@ export default function SalesPage() {
           </div>
         </div>
       }>
-        <SalesClient />
+        <SalesClientCompact />
       </Suspense>
     </div>
   );

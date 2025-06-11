@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Assignment } from '@/types/property';
 import { getAssignments } from '../properties/actions';
 import { markPropertyAsSold, getSoldProperties, revertPropertySale } from './actions';
@@ -15,7 +16,8 @@ import {
   Calendar,
   TrendingUp,
   Award,
-  Clock
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { 
   CheckIcon, 
@@ -57,7 +59,7 @@ interface SoldProperty {
   }>;
 }
 
-export default function SalesClient() {
+export default function SalesClientImproved() {
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
@@ -84,29 +86,13 @@ export default function SalesClient() {
   const fetchPendingAssignments = async () => {
     setLoading(true);
     try {
-      // Obtener todas las asignaciones
       const assignmentsData = await getAssignments();
       
-      console.log('Total assignments:', assignmentsData.length);
-      console.log('Sample assignment:', assignmentsData[0]);
-      
       // Filtrar asignaciones con propiedades no vendidas
-      // Removemos el filtro restrictivo de hasRequest para mostrar más ventas
       const filtered = assignmentsData.filter(assignment => {
-        // Solo verificar que la propiedad no esté vendida
         const propertyNotSold = !assignment.property?.isSold;
-        
-        console.log(`Assignment ${assignment.id}:`, {
-          propertyNotSold,
-          propertyStatus: assignment.property?.status,
-          propertyIsSold: assignment.property?.isSold,
-          clientHasRequest: assignment.client?.hasRequest
-        });
-        
         return propertyNotSold && assignment.client && assignment.property;
       });
-      
-      console.log('Filtered assignments:', filtered.length);
       
       setAssignments(filtered);
       setFilteredAssignments(filtered);
@@ -173,14 +159,12 @@ export default function SalesClient() {
     setProcessingAssignment(selectedAssignment.id);
     
     try {
-      // Usar la acción específica para marcar como vendida
       const success = await markPropertyAsSold(
         selectedAssignment.propertyId,
         selectedAssignment.clientId
       );
       
       if (success) {
-        // Actualizar la lista local
         const updatedAssignments = assignments.filter(
           a => a.id !== selectedAssignment.id
         );
@@ -188,16 +172,11 @@ export default function SalesClient() {
         setAssignments(updatedAssignments);
         setFilteredAssignments(updatedAssignments);
         
-        // Mostrar mensaje de éxito
         setSuccessMessage(`¡Venta finalizada con éxito! La propiedad ha sido marcada como vendida.`);
-        
-        // Cerrar el diálogo
         setConfirmSaleDialogOpen(false);
         
-        // Recargar la página después de un breve retraso
         setTimeout(() => {
           setSuccessMessage(null);
-          // Cambiar a la pestaña de ventas completadas
           setActiveTab('completed');
           fetchSoldProperties();
         }, 3000);
@@ -220,27 +199,19 @@ export default function SalesClient() {
     setProcessingPropertyRevert(selectedProperty.id);
     
     try {
-      // Usar la acción específica para revertir la venta
       const success = await revertPropertySale(selectedProperty.id);
       
       if (success) {
-        // Actualizar la lista local
         const updatedProperties = soldProperties.filter(
           p => p.id !== selectedProperty.id
         );
         
         setSoldProperties(updatedProperties);
-        
-        // Mostrar mensaje de éxito
         setSuccessMessage(`¡Venta revertida con éxito! La propiedad ha sido marcada como no vendida.`);
-        
-        // Cerrar el diálogo
         setConfirmRevertDialogOpen(false);
         
-        // Recargar la página después de un breve retraso
         setTimeout(() => {
           setSuccessMessage(null);
-          // Refrescar las listas
           fetchSoldProperties();
           fetchPendingAssignments();
         }, 3000);
@@ -414,19 +385,34 @@ export default function SalesClient() {
                             <User className="h-5 w-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Información del Cliente</h4>
-                            {assignment.client?.email && (
-                              <div className="flex items-center text-xs text-gray-600 mb-1">
-                                <Mail className="h-3 w-3 mr-2" />
-                                {assignment.client.email}
+                            <h4 className="text-sm font-semibold text-gray-900 mb-3">Información del Cliente</h4>
+                            
+                            {/* Nombre del Cliente - Prominente */}
+                            <div className="bg-white rounded-lg p-3 border border-green-300 mb-3">
+                              <div className="flex items-center space-x-2">
+                                <UserIcon className="h-4 w-4 text-green-600" />
+                                <span className="text-xs font-medium text-gray-500">CLIENTE</span>
                               </div>
-                            )}
-                            {assignment.client?.phone && (
-                              <div className="flex items-center text-xs text-gray-600">
-                                <Phone className="h-3 w-3 mr-2" />
-                                {assignment.client.phone}
-                              </div>
-                            )}
+                              <p className="font-bold text-gray-900 text-base mt-1">
+                                {assignment.client?.name || 'Nombre no disponible'}
+                              </p>
+                            </div>
+
+                            {/* Información de contacto */}
+                            <div className="space-y-2">
+                              {assignment.client?.email && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <Mail className="h-3 w-3 mr-2 text-green-500" />
+                                  <span className="font-medium">{assignment.client.email}</span>
+                                </div>
+                              )}
+                              {assignment.client?.phone && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <Phone className="h-3 w-3 mr-2 text-green-500" />
+                                  <span className="font-medium">{assignment.client.phone}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -511,180 +497,227 @@ export default function SalesClient() {
               </div>
             )
           ) : (
-            // Ventas Completadas
+            // Enhanced Completed Sales
             soldProperties.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No hay ventas completadas</h3>
-                <p className="mt-1 text-sm text-gray-500">
+              <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-green-50 rounded-2xl border-2 border-dashed border-gray-300">
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full p-4 w-20 h-20 mx-auto mb-6">
+                  <CheckIcon className="h-12 w-12 text-white mx-auto" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No hay ventas completadas</h3>
+                <p className="text-gray-600 mb-4 max-w-md mx-auto">
                   No se han encontrado propiedades marcadas como vendidas.
                 </p>
               </div>
             ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {soldProperties.map((property) => (
-                <div 
-                  key={property.id} 
-                  className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-green-50 px-4 py-3 border-b">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-green-900 truncate">
-                        {property.address}
-                      </h3>
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                        Vendida
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start">
-                        <BuildingOfficeIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">Propiedad</h4>
-                          <p className="text-sm text-gray-500">{property.population || 'Población no disponible'}</p>
-                        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                {soldProperties.map((property) => (
+                  <div 
+                    key={property.id} 
+                    className="group bg-gradient-to-br from-white to-green-50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-green-200 transform hover:-translate-y-1"
+                  >
+                    {/* Card Header */}
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold truncate">
+                          {property.address}
+                        </h3>
+                        <span className="bg-white/20 text-xs px-3 py-1 rounded-full font-medium">
+                          ✅ Vendida
+                        </span>
                       </div>
                     </div>
 
-                    {property.assignments && property.assignments.length > 0 && property.assignments[0].client && (
-                      <div className="space-y-2">
-                        <div className="flex items-start">
-                          <User className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900">Cliente</h4>
-                            <p className="text-sm text-gray-500">{property.assignments[0].client.name || 'Nombre no disponible'}</p>
-                            <p className="text-sm text-gray-500">{property.assignments[0].client.email || 'Email no disponible'}</p>
+                    {/* Card Content */}
+                    <div className="p-6 space-y-4">
+                      <div className="bg-gradient-to-r from-gray-50 to-green-50 rounded-xl p-4 border border-green-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <MapPin className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-gray-700">Ubicación</span>
+                        </div>
+                        <p className="text-gray-600">{property.population}</p>
+                      </div>
+
+                      {property.assignments && property.assignments[0]?.client && (
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <User className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-700">Cliente</span>
+                          </div>
+                          
+                          {/* Nombre del Cliente - Prominente */}
+                          <div className="bg-white rounded-lg p-3 border border-blue-300 mb-3">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <UserIcon className="h-3 w-3 text-blue-600" />
+                              <span className="text-xs font-medium text-gray-500">COMPRADOR</span>
+                            </div>
+                            <p className="font-bold text-gray-900 text-base">
+                              {property.assignments[0].client.name || 'Nombre no disponible'}
+                            </p>
+                          </div>
+
+                          {/* Información de contacto */}
+                          <div className="space-y-2">
+                            {property.assignments[0].client.email && (
+                              <div className="flex items-center text-xs text-gray-600">
+                                <Mail className="h-3 w-3 mr-2 text-blue-500" />
+                                <span className="font-medium">{property.assignments[0].client.email}</span>
+                              </div>
+                            )}
                             {property.assignments[0].client.phone && (
-                              <p className="text-sm text-gray-500">{property.assignments[0].client.phone}</p>
+                              <div className="flex items-center text-xs text-gray-600">
+                                <Phone className="h-3 w-3 mr-2 text-blue-500" />
+                                <span className="font-medium">{property.assignments[0].client.phone}</span>
+                              </div>
                             )}
                           </div>
                         </div>
+                      )}
+
+                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Calendar className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-medium text-gray-700">Fecha de venta</span>
+                        </div>
+                        <p className="text-gray-600">{new Date(property.updatedAt).toLocaleDateString('es-ES')}</p>
                       </div>
-                    )}
 
-                    <div className="pt-3 mt-2 border-t text-xs text-gray-500">
-                      <p>Fecha de venta: {new Date(property.updatedAt).toLocaleDateString('es-ES')}</p>
-                    </div>
-
-                    <div className="pt-3 border-t">
-                      <button
-                        onClick={() => handleConfirmRevert(property)}
-                        disabled={processingPropertyRevert === property.id}
-                        className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        {processingPropertyRevert === property.id ? (
-                          <span className="flex items-center justify-center">
-                            <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
-                            Procesando...
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center">
-                            <XMarkIcon className="h-4 w-4 mr-2" />
-                            Revertir venta
-                          </span>
-                        )}
-                      </button>
+                      {/* Revert Button */}
+                      <div className="pt-4">
+                        <button
+                          onClick={() => handleConfirmRevert(property)}
+                          disabled={processingPropertyRevert === property.id}
+                          className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-2"
+                        >
+                          {processingPropertyRevert === property.id ? (
+                            <div className="flex items-center space-x-2">
+                              <ArrowPathIcon className="animate-spin h-5 w-5" />
+                              <span>Procesando...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <XMarkIcon className="h-5 w-5" />
+                              <span>Revertir Venta</span>
+                            </div>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ))}
+                ))}
+              </div>
+            )
+          )}
         </div>
       </div>
 
-      {/* Modal de confirmación de venta */}
+      {/* Enhanced Sale Confirmation Modal */}
       <Dialog
         open={confirmSaleDialogOpen}
         onClose={() => setConfirmSaleDialogOpen(false)}
         className="relative z-50"
-        >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+      >
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-xl shadow-lg p-6">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-              Confirmar finalización de venta
-            </Dialog.Title>
-            
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Está a punto de finalizar la venta de la propiedad:
-              </p>
-              
-              <div className="bg-gray-50 p-3 rounded-md">
-                <p className="font-medium text-gray-900">{selectedAssignment?.property?.address}</p>
-                <p className="text-sm text-gray-500">Cliente: {selectedAssignment?.client?.name}</p>
+          <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-full p-3">
+                <CheckIcon className="h-6 w-6 text-white" />
               </div>
-              
-              <p className="text-sm text-gray-500">
-                Esto marcará la propiedad como vendida y completará el pedido del cliente.
-                ¿Está seguro de que desea continuar?
+              <Dialog.Title className="text-xl font-bold text-gray-900">
+                Confirmar Finalización de Venta
+              </Dialog.Title>
+            </div>
+            
+            <div className="space-y-6">
+              <p className="text-gray-600">
+                Está a punto de finalizar la venta de la siguiente propiedad:
               </p>
               
-              <div className="mt-4 bg-gray-50 p-3 rounded-md">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Detalles del encargo:</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <div className="space-y-4">
+                  {/* Propiedad */}
                   <div>
-                    <span className="text-gray-500">Precio:</span>
-                    <p className="font-medium">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(selectedAssignment?.price || 0)}</p>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <HomeIcon className="h-5 w-5 text-blue-600" />
+                      <h4 className="font-semibold text-gray-900">Propiedad</h4>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-blue-300">
+                      <p className="font-medium text-gray-800">{selectedAssignment?.property?.address}</p>
+                    </div>
                   </div>
+                  
+                  {/* Cliente - Prominente */}
                   <div>
-                    <span className="text-gray-500">Origen:</span>
-                    <p className="font-medium">{selectedAssignment?.origin}</p>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <UserIcon className="h-5 w-5 text-green-600" />
+                      <h4 className="font-semibold text-gray-900">Cliente Comprador</h4>
+                    </div>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-300">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-4 w-4 text-green-600" />
+                        <span className="text-xs font-medium text-gray-500 uppercase">Cliente</span>
+                      </div>
+                      <p className="font-bold text-gray-900 text-lg">
+                        {selectedAssignment?.client?.name || 'Nombre no disponible'}
+                      </p>
+                      {selectedAssignment?.client?.email && (
+                        <p className="text-sm text-gray-600 mt-1 flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {selectedAssignment.client.email}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Comisión vendedor:</span>
-                    <p className="font-medium">
-                      {selectedAssignment?.sellerFeeValue 
-                        ? `${parseFloat(selectedAssignment.sellerFeeValue.toString()).toFixed(2)}${selectedAssignment.sellerFeeType === 'PERCENTAGE' ? '%' : '€'}`
-                        : 'No definido'
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Comisión comprador:</span>
-                    <p className="font-medium">
-                      {selectedAssignment?.buyerFeeValue 
-                        ? `${parseFloat(selectedAssignment.buyerFeeValue.toString()).toFixed(2)}${selectedAssignment.buyerFeeType === 'PERCENTAGE' ? '%' : '€'}`
-                        : 'No definido'
-                      }
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500">Exclusividad hasta:</span>
-                    <p className="font-medium">{selectedAssignment?.exclusiveUntil ? new Date(selectedAssignment.exclusiveUntil).toLocaleDateString('es-ES') : 'N/A'}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500">Tipo de encargo:</span>
-                    <p className="font-medium">{selectedAssignment?.type === 'SALE' ? 'Venta' : 'Alquiler'}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-blue-200">
+                    <div className="bg-white rounded-lg p-3 border">
+                      <span className="text-sm text-gray-500 block mb-1">Precio de Venta:</span>
+                      <p className="font-bold text-green-600 text-lg">
+                        {selectedAssignment?.price 
+                          ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(selectedAssignment.price)
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border">
+                      <span className="text-sm text-gray-500 block mb-1">Tipo de Operación:</span>
+                      <p className="font-semibold text-gray-800">{selectedAssignment?.type === 'SALE' ? '💰 Venta' : '🏠 Alquiler'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Nota:</strong> Esta acción marcará la propiedad como vendida y completará el encargo. 
+                  ¿Está seguro de que desea continuar?
+                </p>
+              </div>
             </div>
             
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-8 flex justify-end space-x-3">
               <button
                 onClick={() => setConfirmSaleDialogOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={processSale}
                 disabled={isSaving}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border border-transparent rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
               >
                 {isSaving ? (
-                  <span className="flex items-center">
-                    <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
-                    Procesando...
-                  </span>
+                  <>
+                    <ArrowPathIcon className="animate-spin h-4 w-4" />
+                    <span>Procesando...</span>
+                  </>
                 ) : (
-                  'Confirmar venta'
+                  <>
+                    <CheckIcon className="h-4 w-4" />
+                    <span>Confirmar Venta</span>
+                  </>
                 )}
               </button>
             </div>
@@ -692,57 +725,79 @@ export default function SalesClient() {
         </div>
       </Dialog>
 
-      {/* Modal de confirmación de reversión de venta */}
+      {/* Enhanced Revert Confirmation Modal */}
       <Dialog
         open={confirmRevertDialogOpen}
         onClose={() => setConfirmRevertDialogOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-xl shadow-lg p-6">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-              Confirmar reversión de venta
-            </Dialog.Title>
-            
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Está a punto de revertir la venta de la propiedad:
-              </p>
-              
-              <div className="bg-gray-50 p-3 rounded-md">
-                <p className="font-medium text-gray-900">{selectedProperty?.address}</p>
-                {selectedProperty?.assignments && selectedProperty.assignments[0]?.client && (
-                  <p className="text-sm text-gray-500">Cliente: {selectedProperty.assignments[0].client.name}</p>
-                )}
+          <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-full p-3">
+                <XMarkIcon className="h-6 w-6 text-white" />
               </div>
-              
-              <p className="text-sm text-gray-500">
-                Esto marcará la propiedad como no vendida y volverá a estar disponible.
-                ¿Está seguro de que desea continuar?
-              </p>
+              <Dialog.Title className="text-xl font-bold text-gray-900">
+                Revertir Venta
+              </Dialog.Title>
             </div>
             
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="space-y-6">
+              <p className="text-gray-600">
+                Está a punto de revertir la venta de la siguiente propiedad:
+              </p>
+              
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 border border-red-200">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <HomeIcon className="h-5 w-5 text-red-600" />
+                    <h4 className="font-semibold text-gray-900">Propiedad</h4>
+                  </div>
+                  <p className="font-medium text-gray-800">{selectedProperty?.address}</p>
+                  {selectedProperty?.assignments && selectedProperty.assignments[0]?.client && (
+                    <>
+                      <div className="flex items-center space-x-2 mt-3">
+                        <UserIcon className="h-5 w-5 text-blue-600" />
+                        <h4 className="font-semibold text-gray-900">Cliente</h4>
+                      </div>
+                      <p className="font-medium text-gray-800">{selectedProperty.assignments[0].client.name}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Advertencia:</strong> Esto marcará la propiedad como no vendida y volverá a estar disponible.
+                  ¿Está seguro de que desea continuar?
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-end space-x-3">
               <button
                 onClick={() => setConfirmRevertDialogOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={processRevert}
                 disabled={isSaving}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 border border-transparent rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
               >
                 {isSaving ? (
-                  <span className="flex items-center">
-                    <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
-                    Procesando...
-                  </span>
+                  <>
+                    <ArrowPathIcon className="animate-spin h-4 w-4" />
+                    <span>Procesando...</span>
+                  </>
                 ) : (
-                  'Revertir venta'
+                  <>
+                    <XMarkIcon className="h-4 w-4" />
+                    <span>Confirmar Reversión</span>
+                  </>
                 )}
               </button>
             </div>
