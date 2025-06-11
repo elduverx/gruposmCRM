@@ -316,9 +316,9 @@ export async function getProperties(
       AND: [
         searchTerm ? {
           OR: [
-            { address: { contains: searchTerm, mode: 'insensitive' } },
-            { population: { contains: searchTerm, mode: 'insensitive' } },
-            { ownerName: { contains: searchTerm, mode: 'insensitive' } }
+            { address: { contains: searchTerm } },
+            { population: { contains: searchTerm } },
+            { ownerName: { contains: searchTerm } }
           ]
         } : {},
         zoneId ? { zoneId } : {}
