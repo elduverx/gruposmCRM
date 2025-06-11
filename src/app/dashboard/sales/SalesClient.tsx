@@ -363,11 +363,21 @@ export default function SalesClient() {
                         </div>
                         <div>
                           <span className="text-gray-500">Comisión vendedor:</span>
-                          <p className="font-medium">{assignment.sellerFeeValue}{assignment.sellerFeeType === 'percentage' ? '%' : '€'}</p>
+                          <p className="font-medium">
+                            {assignment.sellerFeeValue 
+                              ? `${parseFloat(assignment.sellerFeeValue.toString()).toFixed(2)}${assignment.sellerFeeType === 'PERCENTAGE' ? '%' : '€'}`
+                              : 'No definido'
+                            }
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Comisión comprador:</span>
-                          <p className="font-medium">{assignment.buyerFeeValue}{assignment.buyerFeeType === 'percentage' ? '%' : '€'}</p>
+                          <p className="font-medium">
+                            {assignment.buyerFeeValue 
+                              ? `${parseFloat(assignment.buyerFeeValue.toString()).toFixed(2)}${assignment.buyerFeeType === 'PERCENTAGE' ? '%' : '€'}`
+                              : 'No definido'
+                            }
+                          </p>
                         </div>
                         <div className="col-span-2">
                           <span className="text-gray-500">Exclusividad hasta:</span>
@@ -528,11 +538,21 @@ export default function SalesClient() {
                   </div>
                   <div>
                     <span className="text-gray-500">Comisión vendedor:</span>
-                    <p className="font-medium">{selectedAssignment?.sellerFeeValue}{selectedAssignment?.sellerFeeType === 'percentage' ? '%' : '€'}</p>
+                    <p className="font-medium">
+                      {selectedAssignment?.sellerFeeValue 
+                        ? `${parseFloat(selectedAssignment.sellerFeeValue.toString()).toFixed(2)}${selectedAssignment.sellerFeeType === 'PERCENTAGE' ? '%' : '€'}`
+                        : 'No definido'
+                      }
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-500">Comisión comprador:</span>
-                    <p className="font-medium">{selectedAssignment?.buyerFeeValue}{selectedAssignment?.buyerFeeType === 'percentage' ? '%' : '€'}</p>
+                    <p className="font-medium">
+                      {selectedAssignment?.buyerFeeValue 
+                        ? `${parseFloat(selectedAssignment.buyerFeeValue.toString()).toFixed(2)}${selectedAssignment.buyerFeeType === 'PERCENTAGE' ? '%' : '€'}`
+                        : 'No definido'
+                      }
+                    </p>
                   </div>
                   <div className="col-span-2">
                     <span className="text-gray-500">Exclusividad hasta:</span>

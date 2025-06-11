@@ -12,8 +12,27 @@ import {
   CheckIcon,
   XMarkIcon,
   TrashIcon,
-  BanknotesIcon
+  BanknotesIcon,
+  SparklesIcon,
+  FireIcon,
+  StarIcon,
+  ChartBarIcon,
+  RocketLaunchIcon,
+  EyeIcon,
+  BoltIcon,
+  CursorArrowRaysIcon,
+  BookmarkIcon
 } from "@heroicons/react/24/outline";
+import { 
+  BuildingOfficeIcon as BuildingOfficeSolid, 
+  UserGroupIcon as UserGroupSolid, 
+  TrophyIcon as TrophySolid,
+  BanknotesIcon as BanknotesSolid,
+  SparklesIcon as SparklesSolid,
+  FireIcon as FireSolid,
+  StarIcon as StarSolid,
+  ChartBarIcon as ChartBarSolid
+} from "@heroicons/react/24/solid";
 import { useAuth } from './context/AuthContext';
 import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
@@ -28,6 +47,7 @@ import { Dialog } from '@/components/ui/dialog';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
+import AdminBanner from '@/components/users/AdminBanner';
 import { createUserActivity, getUserGoals, getUserActivities, createUserGoal, updateUserActivity } from './metas/actions';
 import { UserGoal, UserActivity, CreateUserGoalInput } from '@/types/user';
 import { Activity } from '@/types/activity';
@@ -629,25 +649,44 @@ export default function InicioPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Mensaje de bienvenida */}
-      <div className="card">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 font-audiowide">Bienvenido, {user?.name}</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Aquí tienes un resumen de tu actividad reciente
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Efectos de fondo modernos */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-indigo-400/10 to-cyan-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-purple-400/5 to-pink-400/5 rounded-full blur-2xl"></div>
+      
+      <div className="relative space-y-8 p-6">
+        {/* Header mejorado con efectos glassmorphism */}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
+                  <SparklesSolid className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-audiowide">
+                    ¡Bienvenido, {user?.name}! ✨
+                  </h1>
+                  <p className="mt-2 text-slate-600 text-lg">
+                    Tu centro de comando inmobiliario inteligente
+                  </p>
+                </div>
+              </div>
+              <button 
+                className="group relative px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                onClick={() => setIsActivityFormOpen(true)}
+              >
+                <div className="flex items-center space-x-2">
+                  <PlusIcon className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                  <span className="font-medium">Nueva Actividad</span>
+                </div>
+                <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+            </div>
           </div>
-          <button 
-            className="btn-primary"
-            onClick={() => setIsActivityFormOpen(true)}
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Nueva actividad
-          </button>
         </div>
-      </div>
 
       {/* Formulario unificado de actividad/meta */}
       <Dialog
@@ -782,72 +821,120 @@ export default function InicioPage() {
         </form>
       </Dialog>
 
-      {/* Tarjetas de estadísticas */}
+      {/* Tarjetas de estadísticas modernas */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/properties')}>
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-primary-50">
-              <BuildingOfficeIcon className="h-6 w-6 text-primary-600" />
+        {/* Inmuebles Card */}
+        <div className="group relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
+               onClick={() => router.push('/dashboard/properties')}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <BuildingOfficeSolid className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">
+                  <ArrowUpIcon className="h-4 w-4 mr-1" />
+                  +12%
+                </div>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Inmuebles Localizados</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.properties}</p>
+            <div>
+              <p className="text-sm font-medium text-slate-600 mb-1">Inmuebles Localizados</p>
+              <p className="text-3xl font-bold text-slate-900 mb-2">{stats.properties}</p>
+              <div className="flex items-center text-sm text-slate-500">
+                <EyeIcon className="h-4 w-4 mr-1" />
+                <span>Propiedades activas</span>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center text-sm">
-            </div>
-          
-          </div>
-        </div>
-
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/clients')}>
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-secondary-50">
-              <UserGroupIcon className="h-6 w-6 text-secondary-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Clientes</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.clients}</p>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            
+            {/* Efecto de brillo */}
+            <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-20 bg-gradient-to-r from-blue-400 to-indigo-600 transition-opacity duration-300"></div>
           </div>
         </div>
 
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/progreso')}>
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-success-50">
-              <TrophyIcon className="h-6 w-6 text-success-600" />
+        {/* Clientes Card */}
+        <div className="group relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
+               onClick={() => router.push('/dashboard/clients')}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <UserGroupSolid className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-medium">
+                  <StarIcon className="h-4 w-4 mr-1" />
+                  Activos
+                </div>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Objetivos</p>
-              <p className="text-2xl font-semibold text-gray-900">
+            <div>
+              <p className="text-sm font-medium text-slate-600 mb-1">Clientes</p>
+              <p className="text-3xl font-bold text-slate-900 mb-2">{stats.clients}</p>
+              <div className="flex items-center text-sm text-slate-500">
+                <BoltIcon className="h-4 w-4 mr-1" />
+                <span>Base de clientes</span>
+              </div>
+            </div>
+            <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-20 bg-gradient-to-r from-emerald-400 to-teal-600 transition-opacity duration-300"></div>
+          </div>
+        </div>
+
+        {/* Objetivos Card */}
+        <div className="group relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
+               onClick={() => router.push('/dashboard/progreso')}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <TrophySolid className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">
+                  <FireSolid className="h-4 w-4 mr-1" />
+                  Meta
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600 mb-1">Objetivos</p>
+              <p className="text-3xl font-bold text-slate-900 mb-2">
                 {Math.round((stats.completedObjectives || 0) / (stats.totalObjectives || 1) * 100)}%
               </p>
+              <div className="flex items-center text-sm text-slate-500">
+                <ChartBarIcon className="h-4 w-4 mr-1" />
+                <span>{stats.completedObjectives || 0} / {stats.totalObjectives || 0} completados</span>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-gray-500">Completados</span>
-            <span className="ml-2 font-medium text-success-600">
-              {stats.completedObjectives || 0} / {stats.totalObjectives || 0}
-            </span>
+            <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-20 bg-gradient-to-r from-amber-400 to-orange-600 transition-opacity duration-300"></div>
           </div>
         </div>
 
-        <div className="card card-hover cursor-pointer" onClick={() => router.push('/dashboard/sales')}>
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-warning-50">
-              <BanknotesIcon className="h-6 w-6 text-warning-600" />
+        {/* Ventas Card */}
+        <div className="group relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
+               onClick={() => router.push('/dashboard/sales')}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <BanknotesSolid className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-right">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium">
+                  <RocketLaunchIcon className="h-4 w-4 mr-1" />
+                  Hot
+                </div>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Finalizar Ventas</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.salesInProgress || 0}</p>
+            <div>
+              <p className="text-sm font-medium text-slate-600 mb-1">Finalizar Ventas</p>
+              <p className="text-3xl font-bold text-slate-900 mb-2">{stats.salesInProgress || 0}</p>
+              <div className="flex items-center text-sm text-slate-500">
+                <CursorArrowRaysIcon className="h-4 w-4 mr-1" />
+                <span>Ventas en proceso</span>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-gray-500">Ventas en proceso</span>
+            <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-20 bg-gradient-to-r from-purple-400 to-pink-600 transition-opacity duration-300"></div>
           </div>
         </div>
       </div>
@@ -856,308 +943,474 @@ export default function InicioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendario - Columna izquierda */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Calendario */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Calendario</h3>
-              <div className="flex items-center space-x-2">
-                <div className="flex border rounded-md shadow-sm overflow-hidden">
-                  <button 
-                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'dayGridMonth' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => setCalendarView('dayGridMonth')}
-                  >
-                    Mes
-                  </button>
-                  <button 
-                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'timeGridWeek' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => setCalendarView('timeGridWeek')}
-                  >
-                    Semana
-                  </button>
-                  <button 
-                    className={`px-3 py-1 text-sm font-medium transition ${calendarView === 'timeGridDay' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => setCalendarView('timeGridDay')}
-                  >
-                    Día
-                  </button>
+          {/* Calendario con diseño moderno */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-500/10 to-blue-500/10 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+            <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300">
+              {/* Header del calendario */}
+              <div className="bg-gradient-to-r from-slate-50/80 to-blue-50/80 p-6 border-b border-white/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gradient-to-r from-slate-500 to-blue-600 p-3 rounded-xl shadow-lg">
+                      <CalendarIcon className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800 font-audiowide">Calendario Inteligente</h3>
+                      <p className="text-slate-600 text-sm">Gestiona tu agenda inmobiliaria</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex border-2 border-white/30 rounded-xl shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+                      <button 
+                        className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${calendarView === 'dayGridMonth' ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' : 'text-slate-700 hover:bg-white/80'}`}
+                        onClick={() => setCalendarView('dayGridMonth')}
+                      >
+                        Mes
+                      </button>
+                      <button 
+                        className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${calendarView === 'timeGridWeek' ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' : 'text-slate-700 hover:bg-white/80'}`}
+                        onClick={() => setCalendarView('timeGridWeek')}
+                      >
+                        Semana
+                      </button>
+                      <button 
+                        className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${calendarView === 'timeGridDay' ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' : 'text-slate-700 hover:bg-white/80'}`}
+                        onClick={() => setCalendarView('timeGridDay')}
+                      >
+                        Día
+                      </button>
+                    </div>
+                    <button 
+                      className="flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm text-slate-700 rounded-xl border border-slate-200 hover:bg-white hover:shadow-lg transition-all duration-300 font-medium"
+                      onClick={() => {
+                        if (calendarRef.current) {
+                          const calendarApi = calendarRef.current.getApi();
+                          calendarApi.today();
+                          setDate(new Date());
+                        }
+                      }}
+                    >
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      Hoy
+                    </button>
+                    <button 
+                      className="text-sm text-blue-600 hover:text-purple-600 font-medium transition-colors duration-200"
+                      onClick={() => router.push('/dashboard/progreso/actividades')}
+                    >
+                      Ver todo →
+                    </button>
+                  </div>
                 </div>
-                <button 
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-                  onClick={() => {
-                    // Resetear la fecha a hoy y actualizar la vista del calendario
-                    if (calendarRef.current) {
-                      const calendarApi = calendarRef.current.getApi();
-                      calendarApi.today();
-                      setDate(new Date());
-                    }
-                  }}
-                >
-                  <CalendarIcon className="h-4 w-4 mr-1" />
-                  Hoy
-                </button>
-                <button 
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                  onClick={() => router.push('/dashboard/progreso/actividades')}
-                >
-                  Ver todo
-                </button>
               </div>
-            </div>
-            <div className="calendar-container">
-              <FullCalendar
-                ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView={calendarView}
-                headerToolbar={false} // Ocultamos la barra de herramientas predeterminada
-                locale={esLocale}
-                events={getCalendarEvents()}
-                dateClick={handleDateClick}
-                eventClick={handleEventClick}
-                height="auto"
-                dayMaxEvents={3}
-                eventTimeFormat={{
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  meridiem: false
-                }}
-                eventClassNames={(arg) => {
-                  const classes = ['transition-opacity'];
-                  
-                  // Añadir clase según si está completada
-                  if (arg.event.extendedProps.isCompleted) {
-                    classes.push('opacity-60');
-                  }
-                  
-                  // Añadir clase según la prioridad
-                  if (arg.event.extendedProps.priority === 'high') {
-                    classes.push('fc-priority-high');
-                  } else if (arg.event.extendedProps.priority === 'medium') {
-                    classes.push('fc-priority-medium');
-                  } else {
-                    classes.push('fc-priority-low');
-                  }
-                  
-                  return classes;
-                }}
-              />
-            </div>
-            
-            {/* Leyenda del calendario */}
-            <div className="mt-4 flex flex-wrap gap-4 text-xs">
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-blue-200 border border-blue-500 mr-1"></div>
-                <span>Llamada</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-green-200 border border-green-500 mr-1"></div>
-                <span>Reunión</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-yellow-200 border border-yellow-500 mr-1"></div>
-                <span>Email</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-purple-200 border border-purple-500 mr-1"></div>
-                <span>Visita</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-gray-200 border border-gray-400 mr-1"></div>
-                <span>Completada</span>
+              
+              {/* Contenido del calendario */}
+              <div className="p-6">
+                <div className="calendar-container bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50">
+                  <FullCalendar
+                    ref={calendarRef}
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                    initialView={calendarView}
+                    headerToolbar={false}
+                    locale={esLocale}
+                    events={getCalendarEvents()}
+                    dateClick={handleDateClick}
+                    eventClick={handleEventClick}
+                    height="auto"
+                    dayMaxEvents={3}
+                    eventTimeFormat={{
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      meridiem: false
+                    }}
+                    eventClassNames={(arg) => {
+                      const classes = ['transition-all', 'duration-200', 'hover:scale-105'];
+                      
+                      if (arg.event.extendedProps.isCompleted) {
+                        classes.push('opacity-60');
+                      }
+                      
+                      if (arg.event.extendedProps.priority === 'high') {
+                        classes.push('fc-priority-high');
+                      } else if (arg.event.extendedProps.priority === 'medium') {
+                        classes.push('fc-priority-medium');
+                      } else {
+                        classes.push('fc-priority-low');
+                      }
+                      
+                      return classes;
+                    }}
+                  />
+                </div>
+                
+                {/* Leyenda del calendario modernizada */}
+                <div className="mt-6 flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center px-3 py-2 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 mr-2 shadow-sm"></div>
+                    <span className="text-blue-800 font-medium">Llamada</span>
+                  </div>
+                  <div className="flex items-center px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 mr-2 shadow-sm"></div>
+                    <span className="text-emerald-800 font-medium">Reunión</span>
+                  </div>
+                  <div className="flex items-center px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 mr-2 shadow-sm"></div>
+                    <span className="text-amber-800 font-medium">Email</span>
+                  </div>
+                  <div className="flex items-center px-3 py-2 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-400 to-purple-600 mr-2 shadow-sm"></div>
+                    <span className="text-purple-800 font-medium">Visita</span>
+                  </div>
+                  <div className="flex items-center px-3 py-2 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-slate-400 to-slate-600 mr-2 shadow-sm"></div>
+                    <span className="text-slate-800 font-medium">Completada</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Actividades Pendientes */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Actividades Pendientes</h3>
-              <div className="flex space-x-2">
-                <button 
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                  onClick={() => router.push('/dashboard/progreso/actividades')}
-                >
-                  Ver todo
-                </button>
-                <button 
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-                  onClick={() => setIsActivityFormOpen(true)}
-                >
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  Nueva actividad
-                </button>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {userActivities
-                .filter(activity => !activity.metadata?.completed)
-                .sort((a, b) => {
-                  // Ordenar por prioridad y fecha
-                  const priorityOrder = { high: 0, medium: 1, low: 2 };
-                  const aPriority = a.metadata?.priority || 'medium';
-                  const bPriority = b.metadata?.priority || 'medium';
-                  
-                  if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
-                    return priorityOrder[aPriority] - priorityOrder[bPriority];
-                  }
-                  
-                  return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-                })
-                .slice(0, 5)
-                .map((activity) => {
-                  const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title;
-                  return (
-                    <div
-                      key={activity.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:border-gray-300 transition-colors duration-200"
+          {/* Actividades Pendientes - Modernizada */}
+          <div className="group relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+            <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 hover:shadow-2xl transition-all duration-300">
+              
+              {/* Header modernizado */}
+              <div className="bg-gradient-to-r from-green-50/80 to-emerald-50/80 rounded-2xl p-6 mb-6 border border-green-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg">
+                      <ClipboardDocumentListIcon className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                        📋 Actividades Pendientes
+                      </h3>
+                      <p className="text-sm text-slate-600">Tareas por completar</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button 
+                      onClick={() => router.push('/dashboard/progreso/actividades')}
+                      className="group/btn relative px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
                     >
-                      <div className="flex items-center">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await updateUserActivity(activity.id, {
-                                metadata: {
-                                  ...activity.metadata,
-                                  status: 'Realizada',
-                                  completed: true
+                      <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 rounded-xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative flex items-center">
+                        <EyeIcon className="h-4 w-4 mr-2" />
+                        Ver todo
+                      </span>
+                    </button>
+                    <button 
+                      onClick={() => setIsActivityFormOpen(true)}
+                      className="group/btn relative px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative flex items-center">
+                        <PlusIcon className="h-4 w-4 mr-2" />
+                        ✨ Nueva actividad
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {/* Lista de actividades modernizada */}
+              <div className="space-y-4">
+                {userActivities
+                  .filter(activity => !activity.metadata?.completed)
+                  .sort((a, b) => {
+                    // Ordenar por prioridad y fecha
+                    const priorityOrder = { high: 0, medium: 1, low: 2 };
+                    const aPriority = a.metadata?.priority || 'medium';
+                    const bPriority = b.metadata?.priority || 'medium';
+                    
+                    if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+                      return priorityOrder[aPriority] - priorityOrder[bPriority];
+                    }
+                    
+                    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+                  })
+                  .slice(0, 5)
+                  .map((activity) => {
+                    const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title;
+                    const priorityColors = {
+                      high: 'from-red-500 to-pink-600',
+                      medium: 'from-amber-500 to-orange-600',
+                      low: 'from-green-500 to-emerald-600'
+                    };
+                    const priorityIcons = {
+                      high: '🔥',
+                      medium: '⚡',
+                      low: '🌱'
+                    };
+                    
+                    return (
+                      <div
+                        key={activity.id}
+                        className="group relative bg-gradient-to-r from-white/60 to-slate-50/60 backdrop-blur-sm rounded-2xl border border-white/30 p-4 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            {/* Checkbox modernizado */}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await updateUserActivity(activity.id, {
+                                    metadata: {
+                                      ...activity.metadata,
+                                      status: 'Realizada',
+                                      completed: true
+                                    }
+                                  });
+                                  // Actualizar la lista localmente
+                                  setUserActivities(prevActivities => 
+                                    prevActivities.map(a => 
+                                      a.id === activity.id 
+                                        ? { ...a, metadata: { ...a.metadata, status: 'Realizada', completed: true } }
+                                        : a
+                                    )
+                                  );
+                                } catch (error) {
+                                  console.error('Error al actualizar actividad:', error);
                                 }
-                              });
-                              // Actualizar la lista localmente
-                              setUserActivities(prevActivities => 
-                                prevActivities.map(a => 
-                                  a.id === activity.id 
-                                    ? { ...a, metadata: { ...a.metadata, status: 'Realizada', completed: true } }
-                                    : a
-                                )
-                              );
-                            } catch (error) {
-                              console.error('Error al actualizar actividad:', error);
-                            }
-                          }}
-                          className={`relative inline-flex h-6 w-6 flex-shrink-0 cursor-pointer rounded-full border-2 border-gray-300 transition-colors duration-200 ease-in-out hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2`}
-                        >
-                          <span className="sr-only">Marcar como realizada</span>
-                        </button>
-                        <div className={`ml-4 h-2 w-2 rounded-full ${
-                          activity.metadata?.priority === 'high' ? 'bg-red-500' :
-                          activity.metadata?.priority === 'medium' ? 'bg-yellow-500' :
-                          'bg-green-500'
-                        }`} />
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                          <div className="flex items-center space-x-2 text-sm text-gray-500">
-                            <span>{format(new Date(activity.timestamp), 'dd/MM/yyyy HH:mm', { locale: es })}</span>
-                            {goalTitle && (
-                              <>
-                                <span>•</span>
-                                <span className="text-primary-600">{goalTitle}</span>
-                              </>
-                            )}
+                              }}
+                              className="group/check relative w-8 h-8 bg-gradient-to-r from-white to-slate-100 rounded-xl border-2 border-slate-300 hover:border-green-500 transition-all duration-300 flex items-center justify-center hover:shadow-lg transform hover:scale-110"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl opacity-0 group-hover/check:opacity-20 transition-opacity duration-300"></div>
+                              <span className="text-lg opacity-0 group-hover/check:opacity-100 transition-opacity duration-300">✓</span>
+                            </button>
+                            
+                            {/* Indicador de prioridad */}
+                            <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${priorityColors[activity.metadata?.priority || 'medium']} shadow-lg`} />
+                            
+                            {/* Contenido de la actividad */}
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <p className="text-sm font-bold text-slate-800">{activity.description}</p>
+                                <span className="text-xs">
+                                  {priorityIcons[activity.metadata?.priority || 'medium']}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-3 text-xs text-slate-600">
+                                <span className="flex items-center">
+                                  <BoltIcon className="h-3 w-3 mr-1" />
+                                  {format(new Date(activity.timestamp), 'dd/MM/yyyy HH:mm', { locale: es })}
+                                </span>
+                                {goalTitle && (
+                                  <span className="flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-lg">
+                                    <BookmarkIcon className="h-3 w-3 mr-1" />
+                                    {goalTitle}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Badge del tipo de actividad */}
+                          <div className="flex items-center space-x-2">
+                            <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl shadow-lg">
+                              {activity.type === 'call' ? '📞 Llamada' : 
+                               activity.type === 'meeting' ? '🤝 Reunión' : 
+                               activity.type === 'email' ? '📧 Email' : 
+                               activity.type === 'visit' ? '🏠 Visita' : '📝 Otra'}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      <div className="px-3 py-1 text-sm font-medium rounded-full bg-primary-100 text-primary-700">
-                        {activity.type === 'call' ? 'Llamada' : 
-                         activity.type === 'meeting' ? 'Reunión' : 
-                         activity.type === 'email' ? 'Email' : 
-                         activity.type === 'visit' ? 'Visita' : 'Otra'}
+                    );
+                  })}
+                
+                {/* Estado vacío modernizado */}
+                {userActivities.filter(activity => !activity.metadata?.completed).length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-3xl blur-sm"></div>
+                      <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8">
+                        <div className="text-6xl mb-4">📋</div>
+                        <h4 className="text-lg font-bold text-slate-700 mb-2 font-audiowide">¡Todo al día!</h4>
+                        <p className="text-slate-500 mb-4">No tienes actividades pendientes</p>
+                        <button
+                          onClick={() => setIsActivityFormOpen(true)}
+                          className="group relative px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <span className="relative flex items-center">
+                            <PlusIcon className="h-5 w-5 mr-2" />
+                            ✨ Crear nueva actividad
+                          </span>
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              {userActivities.filter(activity => !activity.metadata?.completed).length === 0 && (
-                <div className="text-center py-8 border rounded-lg">
-                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500">No hay actividades pendientes</p>
-                  <button
-                    onClick={() => setIsActivityFormOpen(true)}
-                    className="mt-3 text-primary-600 font-medium hover:text-primary-700"
-                  >
-                    Crear una actividad
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Objetivos - Columna derecha */}
-        <div className="card lg:col-span-1">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 font-audiowide">Objetivos</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Progreso de tus metas personales
-              </p>
-            </div>
-            <div className="flex items-center text-sm">
-              <span className="text-gray-500">Progreso:</span>
-              <span className="ml-2 font-medium text-primary-600">
-                {Math.round((stats.completedObjectives || 0) / (stats.totalObjectives || 1) * 100)}%
-              </span>
-            </div>
-          </div>
-          
-          {userGoals.length === 0 ? (
-            <div className="text-center py-6 bg-gray-50 rounded-lg">
-              <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500">Aún no tienes metas creadas</p>
-              <button
-                onClick={() => router.push('/dashboard/metas')}
-                className="mt-3 text-primary-600 font-medium hover:text-primary-700"
-              >
-                Crear una meta
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {userGoals.slice(0, 5).map((goal) => (
-                <div key={goal.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{goal.title}</p>
-                      <p className="text-xs text-gray-500">{goal.description}</p>
-                    </div>
-                    {goal.isCompleted ? (
-                      <div className="bg-green-100 px-2 py-1 rounded-full text-green-800 text-xs font-medium flex items-center">
-                        <CheckIcon className="h-3 w-3 mr-1" />
-                        Completada
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setIsActivityFormOpen(true)}
-                        disabled={isLoading}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                        title="Registrar actividad"
-                      >
-                        <PlusIcon className="h-5 w-5" />
-                      </button>
-                    )}
+        {/* Objetivos - Columna derecha modernizada */}
+        <div className="lg:col-span-1 group relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 hover:shadow-2xl transition-all duration-300">
+            
+            {/* Header modernizado - mejorado responsive */}
+            <div className="bg-gradient-to-r from-purple-50/80 to-pink-50/80 rounded-2xl p-4 sm:p-6 mb-6 border border-purple-100">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-2 sm:p-3 rounded-xl shadow-lg flex-shrink-0">
+                    <TrophyIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span>{goal.currentCount} de {goal.targetCount}</span>
-                    <span>{goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${goal.isCompleted ? 'bg-green-500' : 'bg-primary-600'} rounded-full transition-all duration-500`}
-                      style={{ width: `${goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%` }}
-                    />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide truncate">
+                      🏆 Objetivos
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 truncate">
+                      Progreso de tus metas personales
+                    </p>
                   </div>
                 </div>
-              ))}
-              
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={() => router.push('/dashboard/metas')}
-                  className="text-sm text-primary-600 font-medium hover:text-primary-700 flex items-center"
-                >
-                  Ver todas mis metas
-                </button>
+                <div className="flex-shrink-0">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                      <span className="hidden sm:inline">Progreso global:</span>
+                      <span className="sm:hidden">Progreso:</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 sm:w-12 h-2 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-purple-500 to-pink-600 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.round((stats.completedObjectives || 0) / (stats.totalObjectives || 1) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent whitespace-nowrap">
+                        {Math.round((stats.completedObjectives || 0) / (stats.totalObjectives || 1) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+            {/* Contenido de objetivos modernizado */}
+            {userGoals.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-50/50 to-pink-50/50 rounded-3xl blur-sm"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8">
+                    <div className="text-6xl mb-4">🎯</div>
+                    <h4 className="text-lg font-bold text-slate-700 mb-2 font-audiowide">¡Sin metas aún!</h4>
+                    <p className="text-slate-500 mb-4">Crea tu primera meta para comenzar</p>
+                    <button
+                      onClick={() => router.push('/dashboard/metas')}
+                      className="group relative px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative flex items-center">
+                        <TrophyIcon className="h-5 w-5 mr-2" />
+                        🎯 Crear primera meta
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userGoals.slice(0, 5).map((goal) => (
+                  <div key={goal.id} className="group relative">
+                    <div className="bg-gradient-to-r from-white/60 to-purple-50/60 backdrop-blur-sm rounded-2xl border border-white/30 p-3 sm:p-4 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] overflow-hidden">
+                      
+                      {/* Header de la meta - corregido para evitar desbordamiento */}
+                      <div className="flex items-start justify-between mb-3 gap-2 sm:gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                            <h4 className="text-sm font-bold text-slate-800 line-clamp-2 break-words flex-1 min-w-0">
+                              {goal.title}
+                            </h4>
+                            <div className="flex-shrink-0">
+                              {goal.isCompleted ? (
+                                <span className="px-2 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-xs font-bold rounded-lg flex items-center shadow-lg whitespace-nowrap">
+                                  <CheckIcon className="h-3 w-3 mr-1 flex-shrink-0" />
+                                  <span className="hidden sm:inline">✅ Completada</span>
+                                  <span className="sm:hidden">✅</span>
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-xs font-bold rounded-lg whitespace-nowrap">
+                                  <span className="hidden sm:inline">⏳ En progreso</span>
+                                  <span className="sm:hidden">⏳</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {goal.description && (
+                            <p className="text-xs text-slate-600 line-clamp-2 break-words">
+                              {goal.description}
+                            </p>
+                          )}
+                        </div>
+                        
+                        {!goal.isCompleted && (
+                          <button
+                            onClick={() => setIsActivityFormOpen(true)}
+                            disabled={isLoading}
+                            className="group/btn w-8 h-8 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-600 rounded-xl hover:from-purple-500 hover:to-pink-600 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-110 flex-shrink-0"
+                            title="Registrar actividad"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Progreso de la meta - optimizado para responsive */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <span className="text-slate-600 font-medium truncate min-w-0">
+                            📊 {goal.currentCount} de {goal.targetCount}
+                            <span className="hidden sm:inline"> completadas</span>
+                          </span>
+                          <span className="font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent whitespace-nowrap flex-shrink-0">
+                            {goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%
+                          </span>
+                        </div>
+                        
+                        <div className="relative">
+                          <div className="h-3 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full overflow-hidden shadow-inner">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 shadow-lg ${
+                                goal.isCompleted 
+                                  ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                                  : 'bg-gradient-to-r from-purple-500 to-pink-600'
+                              }`}
+                              style={{ width: `${goal.progress || Math.floor((goal.currentCount / goal.targetCount) * 100)}%` }}
+                            />
+                          </div>
+                          
+                          {/* Efecto de brillo en la barra de progreso */}
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Botón para ver todas las metas - mejorado responsive */}
+                <div className="pt-4 flex justify-center">
+                  <button
+                    onClick={() => router.push('/dashboard/metas')}
+                    className="group relative px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <span className="relative flex items-center text-sm">
+                      <CursorArrowRaysIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">📈 Ver todas mis metas</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+      
+      {/* AdminBanner si es admin */}
+      {user?.role === 'admin' && <AdminBanner />}
       </div>
 
       {/* Diálogo de Actividades */}

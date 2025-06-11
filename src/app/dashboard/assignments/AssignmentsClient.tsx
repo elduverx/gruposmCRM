@@ -293,14 +293,26 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                     <div>
                       <span className="text-slate-600">🏪 Vendedor:</span>
                       <p className="font-semibold text-slate-800">
-                        {assignment.sellerFeeValue}{assignment.sellerFeeType === 'PERCENTAGE' ? '%' : '€'}
+                        {assignment.sellerFeeValue 
+                          ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(assignment.sellerFeeValue)
+                          : 'No definido'
+                        }
                       </p>
+                      {assignment.sellerFeeValue && assignment.sellerFeeType === 'PERCENTAGE' && assignment.price > 0 && (
+                        <p className="text-xs text-slate-500">({((assignment.sellerFeeValue / assignment.price) * 100).toFixed(1)}%)</p>
+                      )}
                     </div>
                     <div>
                       <span className="text-slate-600">👤 Comprador:</span>
                       <p className="font-semibold text-slate-800">
-                        {assignment.buyerFeeValue}{assignment.buyerFeeType === 'PERCENTAGE' ? '%' : '€'}
+                        {assignment.buyerFeeValue 
+                          ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(assignment.buyerFeeValue)
+                          : 'No definido'
+                        }
                       </p>
+                      {assignment.buyerFeeValue && assignment.buyerFeeType === 'PERCENTAGE' && assignment.price > 0 && (
+                        <p className="text-xs text-slate-500">({((assignment.buyerFeeValue / assignment.price) * 100).toFixed(1)}%)</p>
+                      )}
                     </div>
                   </div>
                 </div>
