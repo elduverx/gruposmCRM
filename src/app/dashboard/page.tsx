@@ -1185,7 +1185,7 @@ export default function InicioPage() {
                       <CalendarIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-800 font-audiowide">Calendario Inteligente</h3>
+                      <h3 className="text-xl font-bold text-slate-800 font-audiowide">Calendario</h3>
                       <p className="text-slate-600 text-sm">Gestiona tu agenda inmobiliaria</p>
                     </div>
                   </div>
@@ -1223,12 +1223,7 @@ export default function InicioPage() {
                       <CalendarIcon className="h-4 w-4 mr-2" />
                       Hoy
                     </button>
-                    <button 
-                      className="text-sm text-blue-600 hover:text-purple-600 font-medium transition-colors duration-200"
-                      onClick={() => router.push('/dashboard/progreso/actividades')}
-                    >
-                      Ver todo →
-                    </button>
+                  
                   </div>
                 </div>
               </div>
