@@ -721,7 +721,7 @@ export default function InicioPage() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-audiowide">
-                    ¡Bienvenido, {user?.name}! ✨
+                    ¡Bienvenido a GrupoSM, {user?.name}! ✨
                   </h1>
                   <p className="mt-2 text-slate-600 text-lg">
                     Tu centro de comando inmobiliario inteligente
