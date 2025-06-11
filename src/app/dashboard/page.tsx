@@ -742,137 +742,313 @@ export default function InicioPage() {
           </div>
         </div>
 
-      {/* Formulario unificado de actividad/meta */}
+      {/* Formulario unificado de actividad/meta - UI Moderna y Bien Distribuida */}
       <Dialog
         open={isActivityFormOpen}
         onClose={() => setIsActivityFormOpen(false)}
-        title="Nueva Actividad"
+        title=""
+        maxWidth="5xl"
       >
-        <form onSubmit={handleActivitySubmit} className="space-y-4">
-          <div>
-            <Select
-              label="Meta asociada (opcional)"
-              value={activityFormData.goalId}
-              onChange={(e) => setActivityFormData({ ...activityFormData, goalId: e.target.value })}
-              options={[
-                { value: '', label: 'Sin meta asociada' },
-                ...goalOptions
-              ]}
-            />
+        <div className="relative w-full max-w-4xl mx-auto bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 rounded-3xl border border-white/20 shadow-2xl backdrop-blur-sm overflow-hidden">
+          {/* Header con gradiente */}
+          <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/20 rounded-2xl p-2.5 backdrop-blur-sm">
+                  <PlusIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Nueva Actividad</h3>
+                  <p className="text-blue-100 text-sm">Organiza tu agenda de manera inteligente</p>
+                </div>
+              </div>
+            </div>
+            {/* Efecto de ondas */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-300/20 rounded-full blur-2xl"></div>
           </div>
 
-          <div>
-            <Select
-              label="Tipo de actividad"
-              value={activityFormData.type}
-              onChange={(e) => setActivityFormData({ ...activityFormData, type: e.target.value })}
-              options={[
-                { value: 'LLAMADA', label: 'Llamada' },
-                { value: 'VISITA', label: 'Visita' },
-                { value: 'EMAIL', label: 'Email' },
-                { value: 'DPV', label: 'DPV' },
-                { value: 'NOTICIA', label: 'Noticia' },
-                { value: 'ENCARGO', label: 'Encargo' },
-                { value: 'OTROS', label: 'Otros' }
-              ]}
-            />
-          </div>
+          <form onSubmit={handleActivitySubmit} className="p-6">
+            {/* Layout en Grid 2x3 para mejor distribución */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              
+              {/* Columna Izquierda */}
+              <div className="space-y-6">
+                {/* Meta asociada */}
+                <div className="group relative bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100/50 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="bg-blue-500 rounded-lg p-1.5">
+                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <label className="text-sm font-semibold text-gray-700">Meta asociada (opcional)</label>
+                  </div>
+                  <Select
+                    value={activityFormData.goalId}
+                    onChange={(e) => setActivityFormData({ ...activityFormData, goalId: e.target.value })}
+                    options={[
+                      { value: '', label: 'Sin meta asociada' },
+                      ...goalOptions
+                    ]}
+                    className="border-0 bg-white/70 rounded-xl shadow-sm focus:shadow-md transition-all duration-200"
+                  />
+                </div>
 
-          <div>
-            <Select
-              label="Prioridad"
-              value={activityFormData.metadata.priority}
-              onChange={(e) => setActivityFormData({
-                ...activityFormData,
-                metadata: { ...activityFormData.metadata, priority: e.target.value }
-              })}
-              options={[
-                { value: 'high', label: 'Alta' },
-                { value: 'medium', label: 'Media' },
-                { value: 'low', label: 'Baja' }
-              ]}
-            />
-          </div>
+                {/* Prioridad */}
+                <div className="group relative bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-4 border border-orange-100/50 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="bg-orange-500 rounded-lg p-1.5">
+                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <label className="text-sm font-semibold text-gray-700">Prioridad</label>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'high', label: 'Alta', color: 'from-red-500 to-red-600', emoji: '🔥' },
+                      { value: 'medium', label: 'Media', color: 'from-yellow-500 to-orange-500', emoji: '⚡' },
+                      { value: 'low', label: 'Baja', color: 'from-green-500 to-green-600', emoji: '🌱' }
+                    ].map((priority) => (
+                      <button
+                        key={priority.value}
+                        type="button"
+                        onClick={() => setActivityFormData({
+                          ...activityFormData,
+                          metadata: { ...activityFormData.metadata, priority: priority.value }
+                        })}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                          activityFormData.metadata.priority === priority.value
+                            ? `border-orange-500 bg-gradient-to-r ${priority.color} text-white shadow-lg transform scale-105`
+                            : 'border-gray-200 bg-white/70 hover:border-orange-300 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center space-y-1">
+                          <span className="text-lg">{priority.emoji}</span>
+                          <span className={`text-xs font-medium ${
+                            activityFormData.metadata.priority === priority.value ? 'text-white' : 'text-gray-700'
+                          }`}>
+                            {priority.label}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">Estado</label>
-            <div className="flex items-center">
+                {/* Estado y Fecha en una fila */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Estado */}
+                  <div className="group relative bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100/50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="bg-emerald-500 rounded-lg p-1.5">
+                        <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <label className="text-xs font-semibold text-gray-700">Estado</label>
+                    </div>
+                    <div className="flex flex-col items-center space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setActivityFormData({
+                          ...activityFormData,
+                          status: activityFormData.status === 'Pendiente' ? 'Realizada' : 'Pendiente',
+                          metadata: { 
+                            ...activityFormData.metadata, 
+                            completed: activityFormData.status === 'Pendiente'
+                          }
+                        })}
+                        className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-emerald-500/20 ${
+                          activityFormData.status === 'Realizada' 
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg' 
+                            : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition-all duration-300 ease-in-out ${
+                            activityFormData.status === 'Realizada' ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div className="text-center">
+                        <span className={`text-xs font-semibold ${
+                          activityFormData.status === 'Realizada' ? 'text-emerald-600' : 'text-gray-600'
+                        }`}>
+                          {activityFormData.status}
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          {activityFormData.status === 'Realizada' ? '✅ Completada' : '⏳ Por hacer'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fecha y hora */}
+                  <div className="group relative bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl p-4 border border-cyan-100/50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="bg-cyan-500 rounded-lg p-1.5">
+                        <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <label className="text-xs font-semibold text-gray-700">Fecha y hora</label>
+                    </div>
+                    <input
+                      type="datetime-local"
+                      id="activityDate"
+                      value={activityFormData.timestamp.slice(0, 16)}
+                      onChange={(e) => setActivityFormData({
+                        ...activityFormData,
+                        timestamp: new Date(e.target.value).toISOString()
+                      })}
+                      className="w-full px-3 py-2 bg-white/70 border border-gray-200 rounded-xl shadow-sm focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 focus:shadow-md transition-all duration-200 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna Derecha */}
+              <div className="space-y-6">
+                {/* Tipo de actividad - Grid compacto */}
+                <div className="group relative bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100/50 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="bg-purple-500 rounded-lg p-1.5">
+                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <label className="text-sm font-semibold text-gray-700">Tipo de actividad</label>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'LLAMADA', label: 'Llamada', icon: '📞', color: 'from-green-400 to-emerald-500' },
+                      { value: 'VISITA', label: 'Visita', icon: '🏠', color: 'from-blue-400 to-blue-500' },
+                      { value: 'EMAIL', label: 'Email', icon: '📧', color: 'from-red-400 to-red-500' },
+                      { value: 'DPV', label: 'DPV', icon: '📋', color: 'from-yellow-400 to-orange-500' },
+                      { value: 'NOTICIA', label: 'Noticia', icon: '📰', color: 'from-purple-400 to-purple-500' },
+                      { value: 'ENCARGO', label: 'Encargo', icon: '📝', color: 'from-indigo-400 to-indigo-500' },
+                      { value: 'OTROS', label: 'Otros', icon: '⚡', color: 'from-gray-400 to-gray-500' }
+                    ].slice(0, 6).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setActivityFormData({ ...activityFormData, type: option.value })}
+                        className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 ${
+                          activityFormData.type === option.value
+                            ? `border-purple-500 bg-gradient-to-r ${option.color} text-white shadow-lg scale-105`
+                            : 'border-gray-200 bg-white/70 hover:border-purple-300 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center space-y-1">
+                          <span className="text-lg">{option.icon}</span>
+                          <span className={`text-xs font-medium ${
+                            activityFormData.type === option.value ? 'text-white' : 'text-gray-700'
+                          }`}>
+                            {option.label}
+                          </span>
+                        </div>
+                        {activityFormData.type === option.value && (
+                          <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5">
+                            <svg className="h-3 w-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Fila adicional para el séptimo elemento */}
+                  <div className="mt-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setActivityFormData({ ...activityFormData, type: 'OTROS' })}
+                      className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 w-24 ${
+                        activityFormData.type === 'OTROS'
+                          ? 'border-purple-500 bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg scale-105'
+                          : 'border-gray-200 bg-white/70 hover:border-purple-300 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="text-lg">⚡</span>
+                        <span className={`text-xs font-medium ${
+                          activityFormData.type === 'OTROS' ? 'text-white' : 'text-gray-700'
+                        }`}>
+                          Otros
+                        </span>
+                      </div>
+                      {activityFormData.type === 'OTROS' && (
+                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5">
+                          <svg className="h-3 w-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Descripción */}
+                <div className="group relative bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-100/50 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="bg-indigo-500 rounded-lg p-1.5">
+                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <label className="text-sm font-semibold text-gray-700">Descripción</label>
+                  </div>
+                  <Textarea
+                    id="description"
+                    value={activityFormData.description}
+                    onChange={(e) => setActivityFormData({ ...activityFormData, description: e.target.value })}
+                    required
+                    placeholder="Describe los detalles de tu actividad..."
+                    className="w-full h-32 px-4 py-3 bg-white/70 border border-gray-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:shadow-md transition-all duration-200 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción - Centrados */}
+            <div className="flex justify-center space-x-4 pt-6 border-t border-gray-200/50">
               <button
                 type="button"
-                onClick={() => setActivityFormData({
-                  ...activityFormData,
-                  status: activityFormData.status === 'Pendiente' ? 'Realizada' : 'Pendiente',
-                  metadata: { 
-                    ...activityFormData.metadata, 
-                    completed: activityFormData.status === 'Pendiente'
-                  }
-                })}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  activityFormData.status === 'Realizada' ? 'bg-primary-600' : 'bg-gray-200'
-                }`}
+                onClick={() => setIsActivityFormOpen(false)}
+                className="group relative px-8 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-2xl font-medium transition-all duration-200 hover:border-gray-300 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-gray-500/20 min-w-[120px]"
               >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    activityFormData.status === 'Realizada' ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
+                <span className="relative z-10">Cancelar</span>
+                <div className="absolute inset-0 bg-gray-50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
               </button>
-              <span className="ml-2 text-sm text-gray-500">
-                {activityFormData.status}
-              </span>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="group relative px-8 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white rounded-2xl font-medium shadow-lg transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-purple-500/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none min-w-[160px]"
+              >
+                <span className="relative z-10 flex items-center justify-center space-x-2">
+                  {isLoading ? (
+                    <>
+                      <Spinner size="sm" color="white" />
+                      <span>Creando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Crear Actividad</span>
+                    </>
+                  )}
+                </span>
+                <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              </button>
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="activityDate" className="block text-sm font-medium text-gray-700">
-              Fecha y hora
-            </label>
-            <input
-              type="datetime-local"
-              id="activityDate"
-              value={activityFormData.timestamp.slice(0, 16)}
-              onChange={(e) => setActivityFormData({
-                ...activityFormData,
-                timestamp: new Date(e.target.value).toISOString()
-              })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Descripción
-            </label>
-            <Textarea
-              id="description"
-              value={activityFormData.description}
-              onChange={(e) => setActivityFormData({ ...activityFormData, description: e.target.value })}
-              required
-              placeholder="Describe la actividad..."
-            />
-          </div>
-
-          <div className="mt-5 sm:mt-6 flex justify-end space-x-2">
-            <button
-              type="button"
-              onClick={() => setIsActivityFormOpen(false)}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              {isLoading ? (
-                <Spinner size="sm" color="white" />
-              ) : (
-                'Crear Actividad'
-              )}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </Dialog>
 
       {/* Tarjetas de estadísticas modernas */}

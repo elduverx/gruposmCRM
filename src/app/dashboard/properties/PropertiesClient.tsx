@@ -344,18 +344,7 @@ export default function PropertiesClient() {
                 <p className="text-gray-600 mt-1">Administra propiedades y actividades</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => router.push('/dashboard/properties/new')}
-                className="group relative px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-700 rounded-xl blur opacity-60 group-hover:opacity-80 transition-opacity"></span>
-                <span className="relative flex items-center">
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Nueva Propiedad
-                </span>
-              </button>
-            </div>
+          
           </div>
         </div>
       </div>
