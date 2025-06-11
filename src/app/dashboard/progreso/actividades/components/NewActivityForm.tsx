@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Dialog } from '@/components/ui/dialog';
 
 const ACTIVITY_TYPES = [
-  { value: 'MANUAL', label: 'Manual' },
+  { value: 'OTROS', label: 'Otros' },
   { value: 'AUTOMATIC', label: 'Automática' }
 ];
 
@@ -22,7 +22,7 @@ export default function NewActivityForm({ onSuccess }: NewActivityFormProps) {
   const [goals, setGoals] = useState<UserGoal[]>([]);
   const [formData, setFormData] = useState({
     description: '',
-    type: 'MANUAL',
+    type: 'OTROS',
     goalId: ''
   });
 
@@ -54,7 +54,7 @@ export default function NewActivityForm({ onSuccess }: NewActivityFormProps) {
 
       setFormData({
         description: '',
-        type: 'MANUAL',
+        type: 'OTROS',
         goalId: ''
       });
       setIsOpen(false);

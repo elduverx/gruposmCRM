@@ -73,102 +73,193 @@ export default function NewsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Noticias</h1>
-        <button
-          className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors flex items-center"
-        >
-          <NewspaperIcon className="h-5 w-5 mr-2" />
-          Nueva Noticia
-        </button>
-      </div>
-
-      <div className="mb-6">
-        <SearchBar 
-          placeholder="Buscar noticias por tipo, acción, prioridad, dirección o población..." 
-          onSearch={setSearchTerm}
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
-            <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Cargando...</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+      {/* Modern Header */}
+      <div className="mb-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                <NewspaperIcon className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                  📰 Gestión de Noticias
+                </h1>
+                <p className="text-slate-600 mt-1">Administra noticias de propiedades y actividades</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-green-100 to-blue-100 px-4 py-2 rounded-xl border border-green-200">
+                <span className="text-green-700 font-medium text-sm">📊 {filteredNews.length} noticias</span>
+              </div>
+              <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center space-x-2 font-medium">
+                <NewspaperIcon className="h-5 w-5" />
+                <span>🆕 Nueva Noticia</span>
+              </button>
+            </div>
           </div>
-          <p className="mt-2 text-gray-600">Cargando noticias...</p>
         </div>
-      ) : filteredNews.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded-lg shadow">
-          <p className="text-gray-500">No se encontraron noticias.</p>
+      </div>
+
+      {/* Enhanced Search Section */}
+      <div className="mb-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+          <div className="flex items-center space-x-4">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-3 rounded-xl shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <SearchBar 
+                placeholder="🔍 Buscar noticias por tipo, acción, prioridad, dirección o población..." 
+                onSearch={setSearchTerm}
+              />
+            </div>
+            {searchTerm && (
+              <div className="bg-blue-100 px-4 py-2 rounded-xl border border-blue-200">
+                <span className="text-blue-700 font-medium text-sm">
+                  📋 {filteredNews.length} resultados encontrados
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Propiedad
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acción
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Prioridad
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredNews.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.property.address}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.type}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.action}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      item.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {item.priority === 'HIGH' ? 'Alta' : 'Baja'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      className="text-primary-600 hover:text-primary-900 mr-3"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
+      </div>
+
+      {/* Enhanced Content Area */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-16 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="text-center">
+              <div className="relative mb-6">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+              </div>
+              <p className="text-slate-700 text-lg font-medium">📰 Cargando noticias...</p>
+              <p className="text-slate-500 text-sm mt-2">Obteniendo la información más reciente</p>
+            </div>
+          </div>
+        ) : filteredNews.length === 0 ? (
+          <div className="text-center py-16 bg-gradient-to-r from-slate-50 to-blue-50">
+            <div className="text-6xl mb-6">📰</div>
+            <h3 className="text-xl font-bold text-slate-700 mb-3">
+              {searchTerm ? 'No se encontraron noticias' : 'No hay noticias disponibles'}
+            </h3>
+            <p className="text-slate-500 mb-6">
+              {searchTerm 
+                ? 'Prueba con otros términos de búsqueda' 
+                : 'Comienza creando tu primera noticia'}
+            </p>
+            <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium">
+              🆕 Crear primera noticia
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-hidden">
+            {/* Modern Table Header */}
+            <div className="bg-gradient-to-r from-slate-100 to-blue-100 px-6 py-4 border-b border-slate-200">
+              <div className="grid grid-cols-6 gap-4 font-bold text-slate-700 text-sm uppercase tracking-wider">
+                <div className="flex items-center space-x-2">
+                  <span>🏠</span>
+                  <span>Propiedad</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>📋</span>
+                  <span>Tipo</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>⚡</span>
+                  <span>Acción</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>🚨</span>
+                  <span>Prioridad</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>📅</span>
+                  <span>Fecha</span>
+                </div>
+                <div className="text-right">
+                  <span>🔧 Acciones</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced News List */}
+            <div className="divide-y divide-slate-100">
+              {filteredNews.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className={`group p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                  }`}
+                >
+                  <div className="grid grid-cols-6 gap-4 items-center">
+                    {/* Property Address */}
+                    <div>
+                      <div className="font-bold text-slate-800 font-audiowide group-hover:text-blue-800 transition-colors">
+                        {item.property.address}
+                      </div>
+                      <div className="text-sm text-slate-500 mt-1">
+                        {item.property.population}
+                      </div>
+                    </div>
+                    
+                    {/* Type */}
+                    <div>
+                      <span className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {item.type}
+                      </span>
+                    </div>
+                    
+                    {/* Action */}
+                    <div>
+                      <span className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {item.action}
+                      </span>
+                    </div>
+                    
+                    {/* Priority */}
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium shadow-lg ${
+                        item.priority === 'HIGH' 
+                          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' 
+                          : 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
+                      }`}>
+                        {item.priority === 'HIGH' ? '🔴 Alta' : '🟡 Baja'}
+                      </span>
+                    </div>
+                    
+                    {/* Date */}
+                    <div className="text-sm text-slate-600">
+                      📅 {new Date(item.createdAt).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 hover:text-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 hover:text-red-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

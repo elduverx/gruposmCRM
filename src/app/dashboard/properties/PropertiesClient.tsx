@@ -328,148 +328,204 @@ export default function PropertiesClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Inmuebles</h1>
-        
+      {/* Header modernizado */}
+      <div className="relative mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-600/10 to-blue-600/10 rounded-3xl"></div>
+        <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center space-x-4 mb-4 lg:mb-0">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-2xl">🏠</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Gestión de Inmuebles
+                </h1>
+                <p className="text-gray-600 mt-1">Administra propiedades y actividades</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => router.push('/dashboard/properties/new')}
+                className="group relative px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-700 rounded-xl blur opacity-60 group-hover:opacity-80 transition-opacity"></span>
+                <span className="relative flex items-center">
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Nueva Propiedad
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* Add a visual indicator if the user has zone restrictions */}
       {hasZoneRestriction && (
-        <div className="px-4 py-3 mb-4 bg-yellow-100 border-l-4 border-yellow-500 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Solo puedes ver inmuebles de las zonas que tienes asignadas.
-              </p>
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-2xl blur-sm"></div>
+          <div className="relative bg-yellow-50/90 backdrop-blur-sm border border-yellow-200/50 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <span className="text-yellow-500 text-xl mr-3">⚠️</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 font-medium">
+                  Solo puedes ver inmuebles de las zonas que tienes asignadas.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
       
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        {/* Search Bar */}
-        <div className="flex items-center">
-          <input
-            type="text"
-            placeholder="Buscar por dirección, propietario o población..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Search and Filters modernizados */}
+      <div className="mb-8 space-y-6">
+        {/* Search Bar modernizada */}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-2xl blur-sm group-focus-within:blur-md transition-all duration-300"></div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="🔍 Buscar por dirección, propietario o población..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-6 py-4 pl-12 text-sm bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent shadow-lg transition-all duration-300"
+            />
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
         </div>
         
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {/* Type Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Inmueble
-            </label>
-            <select
-              value={filters.type}
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              {Object.values(PropertyType).map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              {Object.values(OperationType).map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Action Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Acción
-            </label>
-            <select
-              value={filters.action}
-              onChange={(e) => handleFilterChange('action', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todas</option>
-              {Object.values(PropertyAction).map((action) => (
-                <option key={action} value={action}>
-                  {action}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Occupied Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ocupación
-            </label>
-            <select
-              value={filters.isOccupied === null ? '' : filters.isOccupied.toString()}
-              onChange={(e) => {
-                const value = e.target.value === '' ? null : e.target.value === 'true';
-                handleFilterChange('isOccupied', value);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              <option value="true">Ocupado</option>
-              <option value="false">Desocupado</option>
-            </select>
-          </div>
-          
-          {/* Zone Filter - update to respect zone restrictions */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Zona
-            </label>
-            <select
-              value={filters.zoneId}
-              onChange={(e) => handleFilterChange('zoneId', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={hasZoneRestriction && userZones.length <= 1}
-            >
-              {!hasZoneRestriction && <option value="">Todas</option>}
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-            </select>
-            {hasZoneRestriction && (
-              <p className="mt-1 text-xs text-gray-500">Solo puedes ver zonas asignadas</p>
-            )}
+        {/* Filters modernizados */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-100/50 to-blue-100/50 rounded-2xl blur-sm"></div>
+          <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {/* Type Filter */}
+              <div className="group">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-2">🏘️</span>
+                  Tipo de Inmueble
+                </label>
+                <select
+                  value={filters.type}
+                  onChange={(e) => handleFilterChange('type', e.target.value)}
+                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-200 group-hover:shadow-md"
+                >
+                  <option value="">Todos</option>
+                  {Object.values(PropertyType).map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Status Filter */}
+              <div className="group">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-2">📊</span>
+                  Estado
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-200 group-hover:shadow-md"
+                >
+                  <option value="">Todos</option>
+                  {Object.values(OperationType).map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Action Filter */}
+              <div className="group">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-2">⚡</span>
+                  Acción
+                </label>
+                <select
+                  value={filters.action}
+                  onChange={(e) => handleFilterChange('action', e.target.value)}
+                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-200 group-hover:shadow-md"
+                >
+                  <option value="">Todas</option>
+                  {Object.values(PropertyAction).map((action) => (
+                    <option key={action} value={action}>
+                      {action}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Occupied Filter */}
+              <div className="group">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-2">🔐</span>
+                  Ocupación
+                </label>
+                <select
+                  value={filters.isOccupied === null ? '' : filters.isOccupied.toString()}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? null : e.target.value === 'true';
+                    handleFilterChange('isOccupied', value);
+                  }}
+                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-200 group-hover:shadow-md"
+                >
+                  <option value="">Todos</option>
+                  <option value="true">Ocupado</option>
+                  <option value="false">Desocupado</option>
+                </select>
+              </div>
+              
+              {/* Zone Filter - update to respect zone restrictions */}
+              <div className="group">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-2">📍</span>
+                  Zona
+                </label>
+                <select
+                  value={filters.zoneId}
+                  onChange={(e) => handleFilterChange('zoneId', e.target.value)}
+                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-200 group-hover:shadow-md"
+                  disabled={hasZoneRestriction && userZones.length <= 1}
+                >
+                  {!hasZoneRestriction && <option value="">Todas</option>}
+                  {zones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </option>
+                  ))}
+                </select>
+                {hasZoneRestriction && (
+                  <p className="mt-1 text-xs text-gray-500 flex items-center">
+                    <span className="mr-1">🔒</span>
+                    Solo puedes ver zonas asignadas
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Results count */}
-      <div className="mb-4 text-sm text-gray-600">
-        Mostrando {paginatedProperties.length} de {totalItems} propiedades
+      {/* Results count modernizado */}
+      <div className="mb-6 px-4">
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm bg-gradient-to-r from-blue-100 to-green-100 text-blue-800 border border-blue-200/30">
+            📊 Mostrando {paginatedProperties.length} de {totalItems} propiedades
+          </span>
+          <div className="text-sm text-gray-500">
+            Página {currentPage} de {totalPages}
+          </div>
+        </div>
       </div>
       
       {/* Property Table */}
@@ -488,90 +544,110 @@ export default function PropertiesClient() {
         isLoading={isLoading}
       />
       
-      {/* Pagination Carousel */}
+      {/* Pagination Carousel modernizada */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-center">
-          <nav className="flex items-center space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded ${
-                currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              aria-label="Página anterior"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            </button>
-            
-            {/* Primera página siempre visible */}
-            {currentPage > 2 && (
-              <>
+        <div className="mt-8 flex justify-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-green-500/20 rounded-2xl blur-sm"></div>
+            <nav className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-4">
+              <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => handlePageChange(1)}
-                  className="px-3 py-1 rounded bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                >
-                  1
-                </button>
-                {currentPage > 3 && (
-                  <span className="px-2 text-gray-500">...</span>
-                )}
-              </>
-            )}
-            
-            {/* Páginas alrededor de la página actual */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                // Mostrar la página actual y una página antes y después
-                return Math.abs(page - currentPage) <= 1;
-              })
-              .map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === page
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`group relative px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-green-500 text-white hover:shadow-lg transform hover:scale-105'
                   }`}
+                  aria-label="Página anterior"
                 >
-                  {page}
+                  {currentPage !== 1 && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-green-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  )}
+                  <span className="relative flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Anterior
+                  </span>
                 </button>
-              ))}
-            
-            {/* Última página siempre visible */}
-            {currentPage < totalPages - 1 && (
-              <>
-                {currentPage < totalPages - 2 && (
-                  <span className="px-2 text-gray-500">...</span>
+                
+                {/* Primera página siempre visible */}
+                {currentPage > 2 && (
+                  <>
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      className="px-4 py-2 rounded-xl bg-white/70 text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-green-100 border border-gray-200 transition-all duration-300 hover:shadow-md"
+                    >
+                      1
+                    </button>
+                    {currentPage > 3 && (
+                      <span className="px-2 text-gray-500 font-medium">...</span>
+                    )}
+                  </>
                 )}
+                
+                {/* Páginas alrededor de la página actual */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    // Mostrar la página actual y una página antes y después
+                    return Math.abs(page - currentPage) <= 1;
+                  })
+                  .map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`group relative px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                        currentPage === page
+                          ? 'bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg'
+                          : 'bg-white/70 text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-green-100 border border-gray-200 hover:shadow-md'
+                      }`}
+                    >
+                      {currentPage === page && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-green-600 rounded-xl blur-sm opacity-60"></div>
+                      )}
+                      <span className="relative">{page}</span>
+                    </button>
+                  ))}
+                
+                {/* Última página siempre visible */}
+                {currentPage < totalPages - 1 && (
+                  <>
+                    {currentPage < totalPages - 2 && (
+                      <span className="px-2 text-gray-500 font-medium">...</span>
+                    )}
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      className="px-4 py-2 rounded-xl bg-white/70 text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-green-100 border border-gray-200 transition-all duration-300 hover:shadow-md"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+                
                 <button
-                  onClick={() => handlePageChange(totalPages)}
-                  className="px-3 py-1 rounded bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`group relative px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-green-500 text-white hover:shadow-lg transform hover:scale-105'
+                  }`}
+                  aria-label="Página siguiente"
                 >
-                  {totalPages}
+                  {currentPage !== totalPages && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-green-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  )}
+                  <span className="relative flex items-center">
+                    Siguiente
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </span>
                 </button>
-              </>
-            )}
-            
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded ${
-                currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              aria-label="Página siguiente"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </nav>
+              </div>
+            </nav>
+          </div>
         </div>
       )}
     </div>

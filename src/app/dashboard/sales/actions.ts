@@ -108,7 +108,7 @@ export async function markPropertyAsSold(propertyId: string, clientId: string): 
 
     // Registrar la actividad
     await logActivity({
-      type: 'MANUAL' as ActivityType,
+      type: 'OTROS' as ActivityType,
       description: `Propiedad marcada como vendida`,
       relatedId: propertyId,
       relatedType: 'property'
@@ -164,7 +164,7 @@ export async function revertPropertySale(propertyId: string): Promise<boolean> {
 
     // Registrar la actividad
     await logActivity({
-      type: 'MANUAL' as ActivityType,
+      type: 'OTROS' as ActivityType,
       description: `Venta de propiedad revertida`,
       relatedId: propertyId,
       relatedType: 'property'

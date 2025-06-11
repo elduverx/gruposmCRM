@@ -70,6 +70,7 @@ interface CreateGoalInput {
   targetCount: number;
   category: GoalCategory;
   endDate?: string;
+  userId?: string;
 }
 
 function classNames(...classes: string[]) {
@@ -236,24 +237,9 @@ export default function UserDetailPage() {
     try {
       setIsLoading(true);
       
-      // Create goal for the specific user via API call
-      const response = await fetch('/api/goals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          ...newGoalData,
-          userId: user.id
-        })
+      const goal = await createUserGoal({
+        ...newGoalData
       });
-
-      if (!response.ok) {
-        throw new Error('Error al crear la meta');
-      }
-
-      const goal = await response.json();
       
       setGoals(prev => [...prev, goal]);
       setNewGoalData({

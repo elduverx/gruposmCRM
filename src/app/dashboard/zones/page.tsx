@@ -59,57 +59,67 @@ const ZoneForm = ({ onSubmit, onCancel, initialData }: ZoneFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-          Nombre
+        <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2">
+          📝 Nombre de la zona
         </label>
         <input
           type="text"
           id="name"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg text-slate-700 placeholder-slate-400"
+          placeholder="Ingresa el nombre de la zona..."
           required
         />
       </div>
+      
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-          Descripción
+        <label htmlFor="description" className="block text-sm font-bold text-slate-700 mb-2">
+          📄 Descripción
         </label>
         <textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg text-slate-700 placeholder-slate-400"
+          placeholder="Describe la zona (opcional)..."
           rows={3}
         />
       </div>
+      
       <div>
-        <label htmlFor="color" className="block text-sm font-medium text-gray-700">
-          Color
+        <label htmlFor="color" className="block text-sm font-bold text-slate-700 mb-2">
+          🎨 Color de identificación
         </label>
-        <input
-          type="color"
-          id="color"
-          value={formData.color}
-          onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-          className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-        />
+        <div className="flex items-center space-x-3">
+          <input
+            type="color"
+            id="color"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+            className="w-16 h-12 rounded-xl border border-white/20 shadow-lg cursor-pointer"
+          />
+          <div className="flex-1 px-4 py-3 bg-slate-100 rounded-xl text-slate-600 font-medium">
+            Color seleccionado: {formData.color}
+          </div>
+        </div>
       </div>
-      <div className="flex justify-end space-x-3">
+      
+      <div className="flex justify-end space-x-4 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all duration-300 shadow-lg hover:shadow-xl font-medium"
         >
-          Cancelar
+          ❌ Cancelar
         </button>
         <button
           type="submit"
-          className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
         >
-          {initialData ? 'Actualizar' : 'Crear'}
+          {initialData ? '✏️ Actualizar' : '🆕 Crear'}
         </button>
       </div>
     </form>
@@ -1030,10 +1040,14 @@ export default function ZonesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Cargando zonas e inmuebles...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="text-center p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20">
+          <div className="relative mb-6">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+          </div>
+          <p className="text-slate-700 text-lg font-medium">🗺️ Cargando zonas e inmuebles...</p>
+          <p className="text-slate-500 text-sm mt-2">Preparando la vista de mapas</p>
         </div>
       </div>
     );
@@ -1041,16 +1055,16 @@ export default function ZonesPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2 font-audiowide">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-100">
+        <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border border-white/20">
+          <div className="text-6xl mb-4 animate-bounce">⚠️</div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-2 font-audiowide">Error</h2>
+          <p className="text-slate-600 mb-6">{error}</p>
           <button 
             onClick={() => router.refresh()}
-            className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
+            className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
           >
-            Reintentar
+            🔄 Reintentar
           </button>
         </div>
       </div>
@@ -1058,186 +1072,266 @@ export default function ZonesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <div className="sm:flex sm:items-center">
-          <div className="sm:flex-auto">
-            <h1 className="text-xl font-semibold text-gray-900 font-audiowide">Zonas</h1>
-          </div>
-        </div>
-        <div className="h-[60vh] w-full rounded-2xl overflow-hidden shadow-xl mx-4 mt-2 relative z-0">
-          {loadingZones && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">Cargando zonas...</p>
-              </div>
-            </div>
-          )}
-          <ZonesMap
-            zones={zones}
-            onZoneCreated={handleZoneCreated}
-            onZoneClick={handleZoneClick}
-            onEditZone={handleEditZone}
-            onDeleteZone={handleDeleteZone}
-            properties={properties}
-            onPropertyClick={onPropertyClick}
-            selectedPropertyId={selectedPropertyId}
-            setSelectedPropertyId={setSelectedPropertyId}
-            handleZoneClick={handleZoneClick}
-            selectedLocation={selectedLocation}
-            initialCenter={mapCenter}
-            initialZoom={mapZoom}
-            newZoneColor={newZoneColor}
-            zoneCoordinates={zoneCoordinates}
-            onMarkerRefsUpdate={setMarkerRefs}
-            zoneUsers={zoneUsers}
-          />
-        </div>
-
-        {/* Barra de búsqueda movida debajo del mapa */}
-        <div className="mx-4 mt-4">
-          <form onSubmit={handleSearchSubmit} className="relative rounded-md shadow-sm max-w-md" ref={searchRef}>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              className="block w-full rounded-md border-gray-300 pl-4 pr-12 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Buscar zonas, propiedades o direcciones..."
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              {isSearchingAddress ? (
-                <div className="animate-spin h-5 w-5 text-gray-400">
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-              ) : (
-                <button type="submit" className="text-gray-400 hover:text-gray-500">
-                  <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-            {showSuggestions && searchSuggestions.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-                {searchSuggestions.map((suggestion) => (
-                  <div
-                    key={`${suggestion.type}-${suggestion.id}`}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-medium">{suggestion.name}</div>
-                      {suggestion.description && (
-                        <div className="text-sm text-gray-500">{suggestion.description}</div>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {suggestion.type === 'zone' ? 'Zona' : 
-                       suggestion.type === 'property' ? 'Propiedad' : 'Dirección'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </form>
-          
-          {/* Botón para crear inmueble desde la ubicación seleccionada */}
-          {selectedLocation && (
-            <div className="mt-3 flex items-center justify-between bg-blue-50 p-3 rounded-md border border-blue-200">
-              <div className="flex items-center">
-                <div className="bg-blue-100 p-2 rounded-full mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+        {/* Modern Header */}
+        <div className="mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-blue-800">Ubicación seleccionada</p>
-                  <p className="text-xs text-blue-600 truncate max-w-xs">{selectedLocation.name}</p>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                    🗺️ Gestión de Zonas
+                  </h1>
+                  <p className="text-slate-600 mt-1">Administra zonas geográficas y propiedades asociadas</p>
                 </div>
               </div>
-              <button
-                onClick={navigateToNewProperty}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-                Crear inmueble
-              </button>
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-green-100 to-blue-100 px-4 py-2 rounded-xl border border-green-200">
+                  <span className="text-green-700 font-medium text-sm">🏠 {totalProperties} Propiedades</span>
+                </div>
+                <div className="bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 rounded-xl border border-blue-200">
+                  <span className="text-blue-700 font-medium text-sm">📍 {zones.length} Zonas</span>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+        </div>
+        {/* Enhanced Map Container */}
+        <div className="relative mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+            <div className="h-[65vh] w-full relative">
+              {loadingZones && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-10 rounded-2xl">
+                  <div className="text-center p-6">
+                    <div className="relative mb-4">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+                    </div>
+                    <p className="text-slate-700 font-medium">🗺️ Cargando zonas...</p>
+                  </div>
+                </div>
+              )}
+              <ZonesMap
+                zones={zones}
+                onZoneCreated={handleZoneCreated}
+                onZoneClick={handleZoneClick}
+                onEditZone={handleEditZone}
+                onDeleteZone={handleDeleteZone}
+                properties={properties}
+                onPropertyClick={onPropertyClick}
+                selectedPropertyId={selectedPropertyId}
+                setSelectedPropertyId={setSelectedPropertyId}
+                handleZoneClick={handleZoneClick}
+                selectedLocation={selectedLocation}
+                initialCenter={mapCenter}
+                initialZoom={mapZoom}
+                newZoneColor={newZoneColor}
+                zoneCoordinates={zoneCoordinates}
+                onMarkerRefsUpdate={setMarkerRefs}
+                zoneUsers={zoneUsers}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Sección de zonas en formato horizontal */}
-        <div className="mx-4 mt-4 mb-4 bg-white rounded-2xl shadow-xl p-6 overflow-hidden relative z-0">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Zonas</h1>
-            <div className="text-sm text-gray-500">
-              Dibuja un polígono en el mapa para crear una nueva zona
+        {/* Enhanced Search Bar */}
+        <div className="mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-3 rounded-xl shadow-lg">
+                <MagnifyingGlassIcon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <form onSubmit={handleSearchSubmit} className="relative" ref={searchRef}>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    className="w-full px-6 py-4 bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg text-slate-700 placeholder-slate-400"
+                    placeholder="🔍 Buscar zonas, propiedades o direcciones..."
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    {isSearchingAddress ? (
+                      <div className="animate-spin h-6 w-6 text-blue-500">
+                        <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    ) : (
+                      <button type="submit" className="text-blue-500 hover:text-blue-700 transition-colors">
+                        <MagnifyingGlassIcon className="h-6 w-6" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                  {showSuggestions && searchSuggestions.length > 0 && (
+                    <div className="absolute z-10 mt-2 w-full bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl border border-white/20 max-h-60 overflow-auto">
+                      {searchSuggestions.map((suggestion) => (
+                        <div
+                          key={`${suggestion.type}-${suggestion.id}`}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="px-6 py-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer flex items-center justify-between transition-all duration-200 border-b border-slate-100 last:border-b-0"
+                        >
+                          <div>
+                            <div className="font-medium text-slate-800">{suggestion.name}</div>
+                            {suggestion.description && (
+                              <div className="text-sm text-slate-500">{suggestion.description}</div>
+                            )}
+                          </div>
+                          <div className="text-xs text-blue-600 bg-blue-100 px-3 py-1 rounded-full font-medium">
+                            {suggestion.type === 'zone' ? '📍 Zona' : 
+                             suggestion.type === 'property' ? '🏠 Propiedad' : '📍 Dirección'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </form>
+              </div>
+            </div>
+            
+            {/* Selected Location Display */}
+            {selectedLocation && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-xl shadow-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-blue-800">📍 Ubicación seleccionada</p>
+                      <p className="text-sm text-blue-600 truncate max-w-xs">{selectedLocation.name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={navigateToNewProperty}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center space-x-2 font-medium"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>Crear inmueble</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Container */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 p-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                  Administración de Zonas
+                </h2>
+                <p className="text-slate-600">Gestiona zonas geográficas y sus propiedades</p>
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-4 py-2 rounded-xl border border-amber-200">
+              <span className="text-amber-700 font-medium text-sm">💡 Dibuja un polígono en el mapa para crear una nueva zona</span>
             </div>
           </div>
 
-          {/* Zonas en formato horizontal */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 flex items-center font-audiowide">
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">
-                {filteredZones.length}
-              </span>
-              Lista de Zonas
-            </h2>
+          {/* Enhanced Zones Section */}
+          <div className="mb-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <h3 className="text-xl font-bold text-slate-800 font-audiowide">📍 Lista de Zonas</h3>
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-xl shadow-lg font-medium">
+                  {filteredZones.length} zonas
+                </div>
+              </div>
+            </div>
+            
             {filteredZones.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No se encontraron zonas que coincidan con la búsqueda.' : 'No hay zonas creadas. Dibuja un polígono en el mapa para crear una.'}
+              <div className="text-center py-12 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
+                <div className="text-6xl mb-4">🗺️</div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                  {searchTerm ? 'No se encontraron zonas' : 'No hay zonas creadas'}
+                </h3>
+                <p className="text-slate-500">
+                  {searchTerm 
+                    ? 'Prueba con otros términos de búsqueda' 
+                    : 'Dibuja un polígono en el mapa para crear tu primera zona'}
+                </p>
               </div>
             ) : (
-              <div className="flex overflow-x-auto pb-4 space-x-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredZones.map((zone) => (
                   <div 
                     key={zone.id} 
-                    className={`flex-shrink-0 w-64 p-5 rounded-xl transition-colors duration-200 border shadow-sm cursor-pointer ${
+                    className={`group p-6 rounded-2xl transition-all duration-300 border cursor-pointer transform hover:scale-105 ${
                       selectedZoneId === zone.id 
-                        ? 'bg-blue-50 border-blue-300' 
-                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-300 shadow-2xl' 
+                        : 'bg-white/80 backdrop-blur-sm border-white/20 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 shadow-xl hover:shadow-2xl'
                     }`}
                     onClick={() => handleZoneClick(zone)}
                   >
-                    <div className="flex items-center space-x-4 mb-3">
-                      <div 
-                        className="w-6 h-6 rounded-full shadow-sm" 
-                        style={{ backgroundColor: zone.color }}
-                      />
-                      <div>
-                        <h3 className="font-medium text-lg font-audiowide">{zone.name}</h3>
-                        {zoneUsers[zone.id]?.length > 0 ? (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-                            Asignada a: {zoneUsers[zone.id].map(user => user.name || user.email.split('@')[0]).join(', ')}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-8 h-8 rounded-xl shadow-lg ring-2 ring-white" 
+                          style={{ backgroundColor: zone.color }}
+                        />
+                        <div>
+                          <h4 className="font-bold text-lg text-slate-800 font-audiowide group-hover:text-blue-800 transition-colors">
+                            {zone.name}
+                          </h4>
+                          <p className="text-sm text-slate-500 line-clamp-2">
+                            {zoneUsers[zone.id]?.length > 0 
+                              ? `👥 ${zoneUsers[zone.id].map(user => user.name || user.email.split('@')[0]).join(', ')}`
+                              : zone.description || '📋 Sin descripción'}
                           </p>
-                        ) : zone.description ? (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">{zone.description}</p>
-                        ) : (
-                          <p className="text-sm text-gray-400 mt-1 italic">Sin usuarios asignados</p>
-                        )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteZone(zone);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gradient-to-r from-blue-100 to-blue-200 p-3 rounded-xl">
+                        <div className="text-blue-800 font-bold text-lg">
+                          {getPropertiesInSelectedZone().length || 0}
+                        </div>
+                        <div className="text-blue-600 text-xs font-medium">🏠 Propiedades</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-purple-100 to-purple-200 p-3 rounded-xl">
+                        <div className="text-purple-800 font-bold text-lg">
+                          {zoneNews.filter(news => news.property.zoneId === zone.id).length}
+                        </div>
+                        <div className="text-purple-600 text-xs font-medium">📰 Noticias</div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {zoneNews.filter(news => news.property.zoneId === zone.id).length} noticias
-                      </span>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteZone(zone);
-                          }}
-                          className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
+                    
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div className="text-xs text-slate-400 text-center">
+                        👆 Click para ver detalles
                       </div>
                     </div>
                   </div>
@@ -1246,89 +1340,117 @@ export default function ZonesPage() {
             )}
           </div>
 
-          {/* Propiedades en formato de tarjetas con paginación */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center font-audiowide">
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">
-                  {selectedZoneId ? filteredPropertiesInZone.length : properties.length}
-                </span>
-                {selectedZoneId 
-                  ? `Propiedades en ${zones.find(z => z.id === selectedZoneId)?.name || 'Zona Seleccionada'}`
-                  : 'Propiedades'}
+          {/* Enhanced Properties Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <h3 className="text-xl font-bold text-slate-800 font-audiowide">🏠 Propiedades</h3>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg font-medium">
+                  {selectedZoneId ? filteredPropertiesInZone.length : properties.length} propiedades
+                </div>
                 {selectedZoneId && (
                   <button
                     onClick={() => {
                       setSelectedZoneId(null);
                       loadProperties(1);
                     }}
-                    className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm font-medium"
                   >
-                    Ver todas
+                    🔄 Ver todas las propiedades
                   </button>
                 )}
-              </h2>
-              <div className="text-sm text-gray-500">
-                Mostrando {properties.length} de {totalProperties} propiedades
+              </div>
+              <div className="bg-gradient-to-r from-slate-100 to-blue-100 px-4 py-2 rounded-xl border border-slate-200">
+                <span className="text-slate-700 font-medium text-sm">
+                  📊 Total: {totalProperties} propiedades
+                </span>
               </div>
             </div>
             
             {isLoadingProperties ? (
-              <div className="flex justify-center items-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <span className="ml-2 text-gray-600">Cargando propiedades...</span>
+              <div className="flex justify-center items-center h-32 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                <div className="text-center">
+                  <div className="relative mb-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+                  </div>
+                  <span className="text-slate-700 font-medium">🏠 Cargando propiedades...</span>
+                </div>
               </div>
             ) : selectedZoneId && filteredPropertiesInZone.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No hay propiedades dentro de esta zona.
+              <div className="text-center py-12 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">No hay propiedades en esta zona</h3>
+                <p className="text-slate-500">Esta zona aún no tiene propiedades asignadas</p>
               </div>
             ) : properties.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No se encontraron propiedades que coincidan con la búsqueda.' : 'No hay propiedades asignadas a zonas.'}
+              <div className="text-center py-12 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
+                <div className="text-6xl mb-4">🏠</div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                  {searchTerm ? 'No se encontraron propiedades' : 'No hay propiedades asignadas a zonas'}
+                </h3>
+                <p className="text-slate-500">
+                  {searchTerm 
+                    ? 'Prueba con otros términos de búsqueda' 
+                    : 'Comienza agregando propiedades a las zonas'}
+                </p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {(selectedZoneId ? filteredPropertiesInZone : properties).map((property) => (
                     <div 
                       key={property.id} 
-                      className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200 border border-gray-200 shadow-sm overflow-hidden"
+                      className="group bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105"
                     >
-                      <div className="p-4">
-                        <h3 className="font-medium text-lg line-clamp-1 font-audiowide">{property.address}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{property.population}</p>
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg text-slate-800 line-clamp-1 font-audiowide group-hover:text-blue-800 transition-colors">
+                              {property.address}
+                            </h4>
+                            <p className="text-slate-600 text-sm mt-1">{property.population}</p>
+                          </div>
+                        </div>
                         
-                        <div className="mt-3 flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2 mb-4">
                           {property.status && (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
-                              property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
-                              'bg-gray-100 text-gray-800'
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                              property.status === 'SALE' ? 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800' : 
+                              property.status === 'RENT' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' : 
+                              'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-800'
                             }`}>
-                              {property.status === 'SALE' ? 'Venta' : 
-                               property.status === 'RENT' ? 'Alquiler' : 
-                               'No especificado'}
+                              {property.status === 'SALE' ? '💰 Venta' : 
+                               property.status === 'RENT' ? '🏠 Alquiler' : 
+                               '❓ No especificado'}
                             </span>
                           )}
                           {(property.isLocated === true || property.isLocated === "true") && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                              Localizado
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-emerald-100 to-teal-200 text-emerald-800">
+                              ✅ Localizado
                             </span>
                           )}
                         </div>
                         
-                        <div className="mt-3 flex justify-between items-center">
+                        <div className="flex justify-between items-center">
                           <button
                             onClick={() => onPropertyClick(property)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
+                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
                           >
-                            Ver en mapa
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            <span>Ver en mapa</span>
                           </button>
                           <button
                             onClick={() => navigateToProperty(property.id)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors duration-200 text-sm font-medium"
+                            className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl text-sm font-medium"
                           >
-                            Ver detalles
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>Detalles</span>
                           </button>
                         </div>
                       </div>
@@ -1337,22 +1459,27 @@ export default function ZonesPage() {
                 </div>
                 
                 {hasMore && (
-                  <div className="mt-6 text-center">
+                  <div className="text-center pt-8">
                     <button
                       onClick={loadMoreProperties}
                       disabled={isLoadingMore}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                     >
                       {isLoadingMore ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <div className="flex items-center space-x-3">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Cargando...
-                        </>
+                          <span>Cargando...</span>
+                        </div>
                       ) : (
-                        'Cargar más propiedades'
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                          <span>Cargar más propiedades</span>
+                        </div>
                       )}
                     </button>
                   </div>
@@ -1363,296 +1490,410 @@ export default function ZonesPage() {
         </div>
       </div>
 
+      {/* Enhanced Zone Form Modal */}
       {showZoneForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4 font-audiowide">
-              {editingZone ? 'Editar Zona' : 'Nueva Zona'}
-            </h2>
-            <ZoneForm
-              onSubmit={handleZoneFormSubmit}
-              onCancel={() => {
-                setShowZoneForm(false);
-                setEditingZone(null);
-                setZoneCoordinates([]);
-              }}
-              initialData={editingZone || undefined}
-            />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl w-full max-w-md shadow-2xl border border-white/20 transform transition-all duration-300">
+            <div className="p-8">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                    {editingZone ? '✏️ Editar Zona' : '🆕 Nueva Zona'}
+                  </h2>
+                  <p className="text-slate-600 text-sm">
+                    {editingZone ? 'Modifica los datos de la zona' : 'Crea una nueva zona geográfica'}
+                  </p>
+                </div>
+              </div>
+              <ZoneForm
+                onSubmit={handleZoneFormSubmit}
+                onCancel={() => {
+                  setShowZoneForm(false);
+                  setEditingZone(null);
+                  setZoneCoordinates([]);
+                }}
+                initialData={editingZone || undefined}
+              />
+            </div>
           </div>
         </div>
       )}
 
+      {/* Enhanced Zone Details Modal */}
       {selectedZoneId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold font-audiowide">
-                {zones.find(z => z.id === selectedZoneId)?.name}
-              </h2>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => {
-                    const zoneToEdit = zones.find(z => z.id === selectedZoneId);
-                    if (zoneToEdit) {
-                      setSelectedZoneId(null);
-                      setShowUserAssignmentModal(true);
-                      setSelectedZone(zoneToEdit);
-                    }
-                  }}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <UserPlusIcon className="h-5 w-5 mr-1" />
-                  Asignar Usuarios
-                </button>
-                <button
-                  onClick={() => setSelectedZoneId(null)}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  <span className="sr-only">Cerrar</span>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            {/* Barra de búsqueda para filtrar contenido dentro de la zona */}
-            <div className="mb-6">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={zoneSearchTerm}
-                  onChange={(e) => setZoneSearchTerm(e.target.value)}
-                  placeholder="Buscar propiedades, noticias o encargos en esta zona..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
-                {zoneSearchTerm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-8">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
+                      📍 {zones.find(z => z.id === selectedZoneId)?.name}
+                    </h2>
+                    <p className="text-slate-600">Información detallada de la zona</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
                   <button
-                    onClick={() => setZoneSearchTerm('')}
-                    className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+                    onClick={() => {
+                      const zoneToEdit = zones.find(z => z.id === selectedZoneId);
+                      if (zoneToEdit) {
+                        setSelectedZoneId(null);
+                        setShowUserAssignmentModal(true);
+                        setSelectedZone(zoneToEdit);
+                      }
+                    }}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center space-x-2 font-medium"
                   >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <UserPlusIcon className="h-5 w-5" />
+                    <span>Asignar Usuarios</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedZoneId(null)}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                )}
+                </div>
               </div>
-            </div>
             
-            {isLoadingNews ? (
-              <div className="flex justify-center items-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <span className="ml-2 text-gray-600">Cargando información de la zona...</span>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-blue-800 font-audiowide">Propiedades</h3>
-                    <p className="text-3xl font-bold text-blue-600">{filteredPropertiesInZone.length}</p>
-                    <p className="text-sm text-blue-600">Total en esta zona</p>
-                  </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-purple-800 font-audiowide">Propiedades con noticias</h3>
-                    <p className="text-3xl font-bold text-purple-600">{filteredZoneNews.length}</p>
-                    <p className="text-sm text-purple-600">Inmuebles con noticias activas</p>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-orange-800 font-audiowide">Encargos</h3>
-                    <p className="text-3xl font-bold text-orange-600">{filteredZoneAssignments.length}</p>
-                    <p className="text-sm text-orange-600">Total encargos en esta zona</p>
+              {/* Enhanced Search Bar for Zone Content */}
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-2 rounded-lg shadow-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={zoneSearchTerm}
+                        onChange={(e) => setZoneSearchTerm(e.target.value)}
+                        placeholder="🔍 Buscar propiedades, noticias o encargos en esta zona..."
+                        className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg text-slate-700 placeholder-slate-400"
+                      />
+                      {zoneSearchTerm && (
+                        <button
+                          onClick={() => setZoneSearchTerm('')}
+                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+              </div>
+            
+              {isLoadingNews ? (
+                <div className="flex justify-center items-center h-32 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                  <div className="text-center">
+                    <div className="relative mb-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+                    </div>
+                    <span className="text-slate-700 font-medium">📊 Cargando información de la zona...</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Enhanced Statistics Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-2 rounded-xl shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-blue-800 font-audiowide">🏠 Propiedades</h3>
+                      </div>
+                      <p className="text-4xl font-bold text-blue-700 mb-2">{filteredPropertiesInZone.length}</p>
+                      <p className="text-sm text-blue-600">Total en esta zona</p>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-2 rounded-xl shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-purple-800 font-audiowide">📰 Noticias</h3>
+                      </div>
+                      <p className="text-4xl font-bold text-purple-700 mb-2">{filteredZoneNews.length}</p>
+                      <p className="text-sm text-purple-600">Inmuebles con noticias activas</p>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-lg">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-2 rounded-xl shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-orange-800 font-audiowide">📋 Encargos</h3>
+                      </div>
+                      <p className="text-4xl font-bold text-orange-700 mb-2">{filteredZoneAssignments.length}</p>
+                      <p className="text-sm text-orange-600">Total encargos en esta zona</p>
+                    </div>
+                  </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Columna izquierda: Propiedades con noticias */}
-                  <div className="bg-white border rounded-lg shadow-sm p-4">
-                    <h3 className="text-lg font-medium mb-4 text-purple-800 font-audiowide">Propiedades con noticias</h3>
-                    {filteredZoneNews.length === 0 ? (
-                      <p className="text-gray-500">No hay propiedades con noticias en esta zona</p>
-                    ) : (
-                      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                        {filteredZoneNews.map(news => {
-                          const property = news.property;
-                          return (
-                            <div 
-                              key={news.id} 
-                              className="p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors"
-                              onClick={() => navigateToProperty(property.id)}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h4 className="font-medium font-audiowide">{property.address}</h4>
-                                  <p className="text-sm text-gray-600">{property.population}</p>
-                                </div>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                                  {news.type} - {news.action}
-                                </span>
-                              </div>
-                              <div className="mt-2">
-                                <div className="text-sm">
-                                  <span className="font-medium">Prioridad: </span>
-                                  <span className={`${
-                                    news.priority === 'HIGH' ? 'text-red-600' : 'text-green-600'
-                                  }`}>
-                                    {news.priority === 'HIGH' ? 'Alta' : 'Baja'}
+                  {/* Enhanced Content Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Modern News Section */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-2 rounded-xl shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-purple-800 font-audiowide">📰 Propiedades con noticias</h3>
+                      </div>
+                      
+                      {filteredZoneNews.length === 0 ? (
+                        <div className="text-center py-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
+                          <div className="text-4xl mb-3">📰</div>
+                          <p className="text-slate-600 font-medium">No hay propiedades con noticias en esta zona</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                          {filteredZoneNews.map(news => {
+                            const property = news.property;
+                            return (
+                              <div 
+                                key={news.id} 
+                                className="group p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl shadow-lg hover:shadow-xl cursor-pointer transition-all duration-300 transform hover:scale-105"
+                                onClick={() => navigateToProperty(property.id)}
+                              >
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h4 className="font-bold text-slate-800 font-audiowide group-hover:text-purple-800 transition-colors">{property.address}</h4>
+                                    <p className="text-sm text-slate-600">{property.population}</p>
+                                  </div>
+                                  <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+                                    {news.type} - {news.action}
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {new Date(news.createdAt).toLocaleDateString()}
-                                </p>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                  <div className="text-sm">
+                                    <span className="font-medium text-slate-700">🚨 Prioridad: </span>
+                                    <span className={`font-bold ${
+                                      news.priority === 'HIGH' ? 'text-red-600' : 'text-green-600'
+                                    }`}>
+                                      {news.priority === 'HIGH' ? 'Alta' : 'Baja'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    📅 {new Date(news.createdAt).toLocaleDateString()}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                    Ver detalles →
+                                  </span>
+                                </div>
                               </div>
-                              <div className="mt-3 text-right">
-                                <span className="text-sm text-blue-600 hover:text-blue-800">
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Modern Assignments Section */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="bg-gradient-to-r from-orange-500 to-red-600 p-2 rounded-xl shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-orange-800 font-audiowide">📋 Encargos en esta zona</h3>
+                      </div>
+                      
+                      {filteredZoneAssignments.length === 0 ? (
+                        <div className="text-center py-8 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
+                          <div className="text-4xl mb-3">📋</div>
+                          <p className="text-slate-600 font-medium">No hay encargos en esta zona</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                          {filteredZoneAssignments.map(assignment => (
+                            <div 
+                              key={assignment.id} 
+                              className="group p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl cursor-pointer transition-all duration-300 transform hover:scale-105"
+                              onClick={() => navigateToProperty(assignment.propertyId)}
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h4 className="font-bold text-slate-800 font-audiowide group-hover:text-orange-800 transition-colors">{assignment.property.address}</h4>
+                                  <p className="text-sm text-slate-600">{assignment.property.population}</p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium shadow-lg ${
+                                  assignment.status === 'ACTIVE' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 
+                                  assignment.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white' : 
+                                  'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+                                }`}>
+                                  {assignment.status === 'ACTIVE' ? '✅ Activo' : 
+                                   assignment.status === 'PENDING' ? '⏳ Pendiente' : 
+                                   '✓ Completado'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2 mb-3 text-sm">
+                                <div>
+                                  <span className="font-medium text-slate-700">👤 Cliente: </span>
+                                  <span className="text-slate-600">{assignment.client.name}</span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">🏷️ Tipo: </span>
+                                  <span className="text-slate-600">{assignment.type === 'SALE' ? '💰 Venta' : '🏠 Alquiler'}</span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">💶 Precio: </span>
+                                  <span className="text-slate-600">{assignment.price ? `${assignment.price}€` : 'No especificado'}</span>
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  📅 Creado: {new Date(assignment.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                                   Ver detalles →
                                 </span>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Columna central: Encargos */}
-                  <div className="bg-white border rounded-lg shadow-sm p-4">
-                    <h3 className="text-lg font-medium mb-4 text-orange-800 font-audiowide">Encargos en esta zona</h3>
-                    {filteredZoneAssignments.length === 0 ? (
-                      <p className="text-gray-500">No hay encargos en esta zona</p>
-                    ) : (
-                      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                        {filteredZoneAssignments.map(assignment => (
-                          <div 
-                            key={assignment.id} 
-                            className="p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors"
-                            onClick={() => navigateToProperty(assignment.propertyId)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium font-audiowide">{assignment.property.address}</h4>
-                                <p className="text-sm text-gray-600">{assignment.property.population}</p>
-                              </div>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                assignment.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-                                assignment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {assignment.status === 'ACTIVE' ? 'Activo' : 
-                                 assignment.status === 'PENDING' ? 'Pendiente' : 
-                                 'Completado'}
-                              </span>
-                            </div>
-                            <div className="mt-2">
-                              <div className="text-sm">
-                                <span className="font-medium">Cliente: </span>
-                                <span>{assignment.client.name}</span>
-                              </div>
-                              <div className="text-sm">
-                                <span className="font-medium">Tipo: </span>
-                                <span>{assignment.type === 'SALE' ? 'Venta' : 'Alquiler'}</span>
-                              </div>
-                              <div className="text-sm">
-                                <span className="font-medium">Precio: </span>
-                                <span>{assignment.price ? `${assignment.price}€` : 'No especificado'}</span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Creado: {new Date(assignment.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="mt-3 text-right">
-                              <span className="text-sm text-blue-600 hover:text-blue-800">
-                                Ver detalles →
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Nueva sección: Lista de inmuebles en la zona */}
-                <div className="mt-6">
-                  <div className="bg-white border rounded-lg shadow-sm p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-blue-800 font-audiowide">Inmuebles en esta zona</h3>
-                     
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {filteredPropertiesInZone.length === 0 ? (
-                      <p className="text-gray-500">
-                        {zoneSearchTerm 
-                          ? "No hay inmuebles que coincidan con la búsqueda en esta zona" 
-                          : "No hay inmuebles en esta zona"}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-                        {filteredPropertiesInZone.map(property => (
-                          <div 
-                            key={property.id} 
-                            className={`p-4 bg-gray-50 border rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer transition-colors ${
-                              property.isLocated === true || property.isLocated === "true" ? 'border-green-300' : ''
-                            }`}
-                            onClick={() => navigateToProperty(property.id)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium font-audiowide">{property.address}</h4>
-                                <p className="text-sm text-gray-600">{property.population}</p>
+                  </div>
+                
+                  {/* Enhanced Properties List */}
+                  <div className="mt-8">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-gradient-to-r from-blue-500 to-cyan-600 p-2 rounded-xl shadow-lg">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-blue-800 font-audiowide">🏠 Inmuebles en esta zona</h3>
+                        </div>
+                      </div>
+                      
+                      {filteredPropertiesInZone.length === 0 ? (
+                        <div className="text-center py-12 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl">
+                          <div className="text-6xl mb-4">🏠</div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-2">
+                            {zoneSearchTerm 
+                              ? "No hay inmuebles que coincidan con la búsqueda" 
+                              : "No hay inmuebles en esta zona"}
+                          </h4>
+                          <p className="text-slate-500">
+                            {zoneSearchTerm 
+                              ? "Prueba con otros términos de búsqueda" 
+                              : "Esta zona aún no tiene propiedades asignadas"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2">
+                          {filteredPropertiesInZone.map(property => (
+                            <div 
+                              key={property.id} 
+                              className={`group p-5 rounded-2xl border cursor-pointer transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl ${
+                                property.isLocated === true || property.isLocated === "true" 
+                                  ? 'bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-300' 
+                                  : 'bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200'
+                              }`}
+                              onClick={() => navigateToProperty(property.id)}
+                            >
+                              <div className="flex justify-between items-start mb-4">
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-lg text-slate-800 font-audiowide group-hover:text-blue-800 transition-colors line-clamp-1">
+                                    {property.address}
+                                  </h4>
+                                  <p className="text-sm text-slate-600 mt-1">{property.population}</p>
+                                </div>
                               </div>
-                              <div className="flex flex-col items-end space-y-1">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  property.status === 'SALE' ? 'bg-blue-100 text-blue-800' : 
-                                  property.status === 'RENT' ? 'bg-green-100 text-green-800' : 
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {property.status === 'SALE' ? 'Venta' : 
-                                   property.status === 'RENT' ? 'Alquiler' : 
-                                   'No especificado'}
-                                </span>
+                              
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {property.status && (
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium shadow-lg ${
+                                    property.status === 'SALE' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 
+                                    property.status === 'RENT' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 
+                                    'bg-gradient-to-r from-slate-400 to-slate-500 text-white'
+                                  }`}>
+                                    {property.status === 'SALE' ? '💰 Venta' : 
+                                     property.status === 'RENT' ? '🏠 Alquiler' : 
+                                     '❓ No especificado'}
+                                  </span>
+                                )}
                                 {(property.isLocated === true || property.isLocated === "true") && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                                    Localizado
+                                  <span className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+                                    ✅ Localizado
                                   </span>
                                 )}
                               </div>
-                            </div>
-                            <div className="mt-2">
-                              <div className="text-sm">
-                                <span className="font-medium">Tipo: </span>
-                                <span>{property.type}</span>
+                              
+                              <div className="space-y-2 mb-4 text-sm">
+                                <div>
+                                  <span className="font-medium text-slate-700">🏷️ Tipo: </span>
+                                  <span className="text-slate-600">{property.type}</span>
+                                </div>
+                                {property.ownerName && (
+                                  <div>
+                                    <span className="font-medium text-slate-700">👤 Propietario: </span>
+                                    <span className="text-slate-600">{property.ownerName}</span>
+                                  </div>
+                                )}
+                                {property.habitaciones && (
+                                  <div>
+                                    <span className="font-medium text-slate-700">🛏️ Habitaciones: </span>
+                                    <span className="text-slate-600">{property.habitaciones}</span>
+                                  </div>
+                                )}
+                                {property.metrosCuadrados && (
+                                  <div>
+                                    <span className="font-medium text-slate-700">📐 Metros: </span>
+                                    <span className="text-slate-600">{property.metrosCuadrados}m²</span>
+                                  </div>
+                                )}
                               </div>
-                              {property.ownerName && (
-                                <div className="text-sm">
-                                  <span className="font-medium">Propietario: </span>
-                                  <span>{property.ownerName}</span>
-                                </div>
-                              )}
-                              {property.habitaciones && (
-                                <div className="text-sm">
-                                  <span className="font-medium">Habitaciones: </span>
-                                  <span>{property.habitaciones}</span>
-                                </div>
-                              )}
-                              {property.metrosCuadrados && (
-                                <div className="text-sm">
-                                  <span className="font-medium">Metros: </span>
-                                  <span>{property.metrosCuadrados}m²</span>
-                                </div>
-                              )}
+                              
+                              <div className="text-right">
+                                <span className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                  Ver detalles →
+                                </span>
+                              </div>
                             </div>
-                            <div className="mt-3 text-right">
-                              <span className="text-sm text-blue-600 hover:text-blue-800">
-                                Ver detalles →
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
