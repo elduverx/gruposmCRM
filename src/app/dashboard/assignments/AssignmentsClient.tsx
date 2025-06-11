@@ -97,7 +97,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
           </div>
           <div>
             <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
-              📋 Gestión de Encargos
+               Gestión de Encargos
             </h2>
             <p className="text-slate-600">
               {filteredAssignments.length} encargo{filteredAssignments.length !== 1 ? 's' : ''} 
@@ -110,7 +110,6 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
           disabled={isLoading}
           className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
         >
-          <ClipboardDocumentListIcon className="h-5 w-5" />
           <span>{isLoading ? 'Cargando...' : '🆕 Nuevo Encargo'}</span>
         </button>
       </div>
@@ -125,7 +124,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
           </div>
           <div className="flex-1">
             <SearchBar 
-              placeholder="🔍 Buscar encargos por propiedad, cliente, tipo o origen..." 
+              placeholder=" Buscar encargos por propiedad, cliente, tipo o origen..." 
               onSearch={handleSearch}
             />
           </div>

@@ -17,7 +17,7 @@ export default async function AssignmentsPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent font-audiowide">
-                📋 Gestión de Encargos
+                 Gestión de Encargos
               </h1>
               <p className="text-slate-600 mt-1">
                 Administra y supervisa todos los encargos de propiedades
