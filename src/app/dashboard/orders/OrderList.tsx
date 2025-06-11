@@ -22,6 +22,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
   const [isDeleting, setIsDeleting] = useState(false);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>(orders);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentClients, setCurrentClients] = useState<Client[]>(clients);
 
   useEffect(() => {
     // Filtrar pedidos cuando cambia el término de búsqueda
@@ -38,6 +39,16 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
       setFilteredOrders(filtered);
     }
   }, [searchTerm, orders]);
+
+  // Actualizar clientes locales cuando cambien los clientes externos
+  useEffect(() => {
+    setCurrentClients(clients);
+  }, [clients]);
+
+  // Función para manejar cuando se crea un nuevo cliente
+  const handleClientCreated = (newClient: Client) => {
+    setCurrentClients(prev => [...prev, newClient]);
+  };
 
   const handleEditOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -239,12 +250,13 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
             
             <OrderForm 
               order={selectedOrder} 
-              clients={clients}
+              clients={currentClients}
               onSubmit={handleFormSubmit} 
               onCancel={() => {
                 setIsFormOpen(false);
                 setSelectedOrder(null);
               }}
+              onClientCreated={handleClientCreated}
             />
           </Dialog.Panel>
         </div>

@@ -537,14 +537,6 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       throw new Error(`Tipo de actividad inválido: ${data.type}. Valores permitidos: ${validTypes.join(', ')}`);
     }
 
-    // Set proper metadata for activity status
-    const metadata = {
-      status: data.status === 'Realizada' ? 'completed' : 'pending',
-      date: activityDate.toISOString(),
-      type: data.type,
-      notes: data.notes
-    };
-
     const activity = await prisma.activity.create({
       data: {
         type: data.type, // ActivityType is now properly typed
@@ -552,7 +544,6 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
         client: data.client || null,
         notes: data.notes || null,
         date: activityDate,
-        metadata: metadata as Prisma.JsonValue,
         user: {
           connect: {
             id: currentUserId
