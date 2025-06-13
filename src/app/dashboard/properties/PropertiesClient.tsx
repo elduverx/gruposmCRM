@@ -11,6 +11,13 @@ import { PropertyType, OperationType, PropertyAction } from '@/types/property';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { logActivity } from '@/lib/client/activityLogger';
+import { Dialog } from '@headlessui/react';
+import BuildingForm from '@/components/BuildingForm';
+import ComplexForm from '@/components/ComplexForm';
+import { Building, BuildingCreateInput } from '@/types/building';
+import { Complex, ComplexCreateInput } from '@/types/complex';
+import { createBuilding } from '@/app/dashboard/buildings/actions';
+import { createComplex, getComplexes } from '@/app/dashboard/complexes/actions';
 
 export default function PropertiesClient() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -36,6 +43,11 @@ export default function PropertiesClient() {
   const [userZones, setUserZones] = useState<Zone[]>([]);
   const [hasZoneRestriction, setHasZoneRestriction] = useState(false);
   const initialLoadRef = React.useRef(false);
+  
+  // Estados para los modales
+  const [isBuildingFormOpen, setIsBuildingFormOpen] = useState(false);
+  const [isComplexFormOpen, setIsComplexFormOpen] = useState(false);
+  const [complexes, setComplexes] = useState<Complex[]>([]);
 
   // Fetch properties, activities, and zones
   useEffect(() => {
@@ -143,6 +155,14 @@ export default function PropertiesClient() {
         if (clientsResponse.ok) {
           const clientsData = await clientsResponse.json();
           setClients(clientsData);
+        }
+        
+        // Fetch complexes for building form
+        try {
+          const complexesData = await getComplexes();
+          setComplexes(complexesData);
+        } catch (error) {
+          console.error('Error loading complexes:', error);
         }
       } catch (error) {
         toast.error('Error al cargar los datos');
@@ -334,6 +354,31 @@ export default function PropertiesClient() {
     setCurrentPage(page);
   }, []);
 
+  // Handle building creation
+  const handleCreateBuilding = async (data: BuildingCreateInput) => {
+    try {
+      await createBuilding(data);
+      toast.success('Edificio creado exitosamente');
+      setIsBuildingFormOpen(false);
+    } catch (error) {
+      console.error('Error creating building:', error);
+      toast.error('Error al crear el edificio');
+    }
+  };
+
+  // Handle complex creation
+  const handleCreateComplex = async (data: ComplexCreateInput) => {
+    try {
+      const newComplex = await createComplex(data);
+      setComplexes(prev => [...prev, newComplex]);
+      toast.success('Complejo creado exitosamente');
+      setIsComplexFormOpen(false);
+    } catch (error) {
+      console.error('Error creating complex:', error);
+      toast.error('Error al crear el complejo');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header modernizado */}
@@ -352,7 +397,27 @@ export default function PropertiesClient() {
                 <p className="text-gray-600 mt-1">Administra propiedades y actividades</p>
               </div>
             </div>
-          
+            
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row gap-3">
+           
+              
+              <button
+                onClick={() => setIsBuildingFormOpen(true)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Nuevo Edificio
+              </button>
+              
+              <button
+                onClick={() => setIsComplexFormOpen(true)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Nuevo Complejo
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -648,6 +713,77 @@ export default function PropertiesClient() {
           </div>
         </div>
       )}
+      
+      {/* Modal para crear edificio */}
+      <Dialog
+        open={isBuildingFormOpen}
+        onClose={() => setIsBuildingFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-3xl blur-sm"></div>
+            <Dialog.Panel className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  🏢 Nuevo Edificio
+                </Dialog.Title>
+                <button
+                  onClick={() => setIsBuildingFormOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <BuildingForm
+                onSubmit={handleCreateBuilding}
+                onCancel={() => setIsBuildingFormOpen(false)}
+                complexes={complexes}
+              />
+            </Dialog.Panel>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Modal para crear complejo */}
+      <Dialog
+        open={isComplexFormOpen}
+        onClose={() => setIsComplexFormOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-sm"></div>
+            <Dialog.Panel className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  🏘️ Nuevo Complejo
+                </Dialog.Title>
+                <button
+                  onClick={() => setIsComplexFormOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <ComplexForm
+                onSubmit={handleCreateComplex}
+                onCancel={() => setIsComplexFormOpen(false)}
+              />
+            </Dialog.Panel>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

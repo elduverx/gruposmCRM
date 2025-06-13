@@ -76,7 +76,8 @@ export async function getActivities(): Promise<Activity[]> {
           tenantName: '',
           tenantPhone: '',
           tenantEmail: '',
-          notes: ''
+          notes: '',
+          buildingId: null
         } as Property : null
       };
     });

@@ -138,6 +138,7 @@ export interface Property {
   ascensor: boolean;
   piscina: boolean;
   basePropertyId: string | null;
+  buildingId: string | null;
   isSold: boolean;
   price: string;
   description: string;
@@ -176,6 +177,7 @@ export interface PropertyCreateInput {
   parking?: boolean;
   ascensor?: boolean;
   piscina?: boolean;
+  buildingId?: string | null;
   zone?: {
     id: string;
     name: string;

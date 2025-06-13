@@ -56,11 +56,13 @@ model Property {
   parking         Boolean        @default(false)
   piscina         Boolean        @default(false)
   basePropertyId  String?        @unique
+  buildingId      String?
   isSold          Boolean        @default(false)
   activities      Activity[]
   assignments     Assignment[]
   dpv             DPV?
   BaseProperty    BaseProperty?  @relation(fields: [basePropertyId], references: [id])
+  building        Building?      @relation("BuildingProperties", fields: [buildingId], references: [id])
   responsibleUser User?          @relation("ResponsibleFor", fields: [responsibleId], references: [id])
   zone            Zone?          @relation(fields: [zoneId], references: [id])
   propertyNews    PropertyNews[]
@@ -70,6 +72,7 @@ model Property {
   @@index([zoneId], map: "Property_zoneId_fkey")
   @@index([responsibleId], map: "Property_responsibleId_fkey")
   @@index([basePropertyId], map: "Property_basePropertyId_fkey")
+  @@index([buildingId], map: "Property_buildingId_fkey")
 }
 
 model Client {
@@ -285,6 +288,43 @@ model BaseProperty {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime
   Property        Property?
+}
+
+model Building {
+  id           String       @id @default(cuid())
+  name         String
+  address      String
+  population   String
+  latitude     Float?
+  longitude    Float?
+  description  String?
+  totalFloors  Int?
+  totalUnits   Int?
+  complexId    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  // Relaciones
+  complex      Complex?     @relation(fields: [complexId], references: [id])
+  properties   Property[]   @relation("BuildingProperties")
+  
+  @@index([complexId], map: "Building_complexId_fkey")
+}
+
+model Complex {
+  id           String       @id @default(cuid())
+  name         String
+  address      String
+  population   String
+  latitude     Float?
+  longitude    Float?
+  description  String?
+  totalBuildings Int?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  // Relaciones
+  buildings    Building[]
 }
 
 enum Role {
