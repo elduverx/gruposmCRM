@@ -53,12 +53,26 @@ export default function ClientsPage() {
     }
   };
 
-  const handleSubmit = async (formData: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'properties'> & { relatedProperties: string[] }) => {
+  const handleSubmit = async (formData: {
+    name: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    relatedProperties: string[];
+    hasRequest: boolean;
+    isTenant?: boolean;
+  }) => {
     try {
+      // Ensure isTenant is always a boolean
+      const clientData = {
+        ...formData,
+        isTenant: formData.isTenant || false
+      };
+      
       if (selectedClient) {
-        await updateClient(selectedClient.id, formData);
+        await updateClient(selectedClient.id, clientData);
       } else {
-        await createClient(formData);
+        await createClient(clientData);
       }
       await fetchClients();
       setIsFormOpen(false);

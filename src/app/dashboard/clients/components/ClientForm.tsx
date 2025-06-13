@@ -25,6 +25,7 @@ interface ClientFormProps {
     address: string | null;
     properties: string[];
     hasRequest: boolean;
+    isTenant?: boolean;
   };
   onSubmit: (data: {
     name: string;
@@ -33,6 +34,7 @@ interface ClientFormProps {
     address: string | null;
     relatedProperties: string[];
     hasRequest: boolean;
+    isTenant?: boolean;
   }) => void;
   onCancel: () => void;
 }
@@ -43,6 +45,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [address, setAddress] = useState(initialData?.address || '');
   const [relatedProperties, setRelatedProperties] = useState<string[]>(initialData?.properties || []);
+  const [isTenant, setIsTenant] = useState(initialData?.isTenant || false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -98,7 +101,8 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
       phone: phone || null,
       address: address || null,
       relatedProperties,
-      hasRequest: false
+      hasRequest: false,
+      isTenant
     });
   };
 
@@ -207,6 +211,21 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
                       placeholder="Calle Principal, 123, Ciudad"
                     />
                   </div>
+                </div>
+
+                <div className="group">
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50/50 border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200">
+                    <input
+                      type="checkbox"
+                      checked={isTenant}
+                      onChange={(e) => setIsTenant(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div className="flex items-center gap-2">
+                      <BuildingOfficeIcon className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-gray-700">Es inquilino</span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>

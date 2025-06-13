@@ -8,6 +8,7 @@ export interface Client {
   phone: string | null;
   address: string | null;
   hasRequest: boolean;
+  isTenant: boolean;
   createdAt: Date;
   updatedAt: Date;
   properties: Property[];
@@ -21,4 +22,5 @@ export interface ClientFormData {
   address: string | null;
   relatedProperties: string[];
   hasRequest: boolean;
+  isTenant?: boolean;
 } 

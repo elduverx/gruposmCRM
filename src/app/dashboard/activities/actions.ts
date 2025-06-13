@@ -60,6 +60,7 @@ export async function getActivities(): Promise<Activity[]> {
           ownerPhone: activity.property.ownerPhone,
           basePropertyId: activity.property.basePropertyId,
           isSold: activity.property.isSold,
+          occupiedByName: activity.property.occupiedBy || '',
           activities: [],
           zone: null,
           assignments: [],

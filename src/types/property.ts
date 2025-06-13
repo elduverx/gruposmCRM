@@ -115,6 +115,7 @@ export interface Property {
   latitude: number | null;
   longitude: number | null;
   occupiedBy: string | null;
+  occupiedByName: string | null;
   isLocated: boolean;
   responsible: string | null;
   activities: Activity[];
@@ -166,6 +167,7 @@ export interface PropertyCreateInput {
   latitude?: number | null;
   longitude?: number | null;
   occupiedBy?: string | null;
+  occupiedByName?: string | null;
   isLocated?: boolean;
   responsible?: string | null;
   habitaciones?: number | null;

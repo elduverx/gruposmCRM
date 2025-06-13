@@ -45,6 +45,7 @@ model Property {
   latitude        Float?
   longitude       Float?
   occupiedBy      String?
+  occupiedByName  String?
   type            PropertyType   @default(CASA)
   isLocated       Boolean        @default(false)
   responsible     String?
@@ -80,6 +81,7 @@ model Client {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   hasRequest    Boolean        @default(false)
+  isTenant      Boolean        @default(false)
   assignments   Assignment[]
   ClientRequest ClientRequest?
   properties    Property[]     @relation("ClientProperties")

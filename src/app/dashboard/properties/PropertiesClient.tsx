@@ -16,6 +16,7 @@ export default function PropertiesClient() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
   const [zones, setZones] = useState<Zone[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -136,6 +137,13 @@ export default function PropertiesClient() {
         });
         
         setActivitiesMap(activitiesMapping);
+        
+        // Fetch clients para mostrar nombres en lugar de IDs
+        const clientsResponse = await fetch('/api/clients');
+        if (clientsResponse.ok) {
+          const clientsData = await clientsResponse.json();
+          setClients(clientsData);
+        }
       } catch (error) {
         toast.error('Error al cargar los datos');
       } finally {
@@ -522,6 +530,7 @@ export default function PropertiesClient() {
         properties={paginatedProperties}
         activitiesMap={activitiesMap}
         zones={zones}
+        clients={clients}
         onPropertyClick={handlePropertyClick}
         onDeleteProperty={handleDeleteProperty}
         onToggleLocated={handleToggleLocated}

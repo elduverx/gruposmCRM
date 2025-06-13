@@ -9,6 +9,7 @@ interface PropertyTableProps {
   properties: Property[];
   activitiesMap: Record<string, Activity[]>;
   zones: Zone[];
+  clients?: any[]; // Agregar prop para clientes
   onPropertyClick: (property: Property) => void;
   onDeleteProperty: (id: string) => void;
   onToggleLocated: (property: Property) => void;
@@ -24,6 +25,7 @@ export default function PropertyTable({
   properties,
   activitiesMap,
   zones,
+  clients = [], // Agregar prop clients con valor por defecto
   onPropertyClick,
   onDeleteProperty,
   onToggleLocated,
@@ -38,6 +40,25 @@ export default function PropertyTable({
   const renderSortIndicator = (field: string) => {
     if (sortBy !== field) return null;
     return sortOrder === 'asc' ? '↑' : '↓';
+  };
+
+  // Función para renderizar "Ocupado por"
+  const renderOccupiedBy = (property: Property) => {
+    if (!property.isOccupied) {
+      return '-';
+    }
+    
+    if (property.occupiedByName) {
+      return property.occupiedByName;
+    }
+    
+    if (property.occupiedBy) {
+      // Fallback: buscar el nombre si no está guardado
+      const tenant = clients.find(client => client.id === property.occupiedBy);
+      return tenant ? tenant.name : 'Inquilino no encontrado';
+    }
+    
+    return 'Propietario';
   };
 
   // Función para renderizar el indicador de localización
@@ -143,7 +164,7 @@ export default function PropertyTable({
                     {property.address}
                   </button>
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.occupiedBy || '-'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{renderOccupiedBy(property)}</td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
                   {renderLastActivity(property.id)}
                 </td>

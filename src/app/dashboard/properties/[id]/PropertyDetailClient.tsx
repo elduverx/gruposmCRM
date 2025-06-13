@@ -269,7 +269,13 @@ export default function PropertyDetailClient({
           
           <div>
             <label className="text-sm text-gray-700">Ocupado por</label>
-            <p className="font-medium">{property.occupiedBy || 'N/A'}</p>
+            <p className="font-medium">
+              {property.isOccupied 
+                ? property.occupiedByName || 
+                  (property.occupiedBy ? 'Inquilino' : 'Propietario')
+                : '-'
+              }
+            </p>
           </div>
           
           <div>

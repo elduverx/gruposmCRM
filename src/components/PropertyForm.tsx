@@ -15,7 +15,9 @@ import {
   HomeModernIcon, 
   CheckCircleIcon,
   XCircleIcon,
-  UsersIcon
+  UsersIcon,
+  UserGroupIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 
 interface PropertyFormProps {
@@ -44,6 +46,7 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
     latitude: initialData?.latitude || null,
     longitude: initialData?.longitude || null,
     occupiedBy: initialData?.occupiedBy || null,
+    occupiedByName: initialData?.occupiedByName || null,
     isLocated: initialData?.isLocated || false,
     responsible: initialData?.responsible || '',
     habitaciones: initialData?.habitaciones || null,
@@ -57,6 +60,14 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isCreateTenantOpen, setIsCreateTenantOpen] = useState(false);
+  const [occupiedByType, setOccupiedByType] = useState<'OWNER' | 'TENANT' | 'NONE'>(
+    initialData?.isOccupied 
+      ? initialData?.occupiedBy 
+        ? 'TENANT' 
+        : 'OWNER'
+      : 'NONE'
+  );
   const { users } = useUsers();
 
   useEffect(() => {
@@ -106,12 +117,60 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+  const handleCreateTenant = async (tenantData: any) => {
+    try {
+      const newTenant = await createClient({
+        ...tenantData,
+        isTenant: true // Marcar como inquilino
+      });
+      setClients(prev => [...prev, newTenant]);
+      setFormData(prev => ({
+        ...prev,
+        occupiedBy: newTenant.id,
+        occupiedByName: newTenant.name,
+        isOccupied: true
+      }));
+      setOccupiedByType('TENANT');
+      setIsCreateTenantOpen(false);
+      toast.success('Inquilino creado con éxito');
+    } catch (error) {
+      console.error('Error creating tenant:', error);
+      toast.error('Error al crear el inquilino');
+    }
+  };
+
+  const handleOccupiedByChange = (type: 'OWNER' | 'TENANT' | 'NONE') => {
+    setOccupiedByType(type);
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? (value ? Number(value) : null) : value
+      isOccupied: type !== 'NONE',
+      occupiedBy: type === 'OWNER' ? null : prev.occupiedBy,
+      occupiedByName: type === 'OWNER' || type === 'NONE' ? null : prev.occupiedByName
     }));
+  };
+
+  // Función para obtener el nombre del inquilino seleccionado
+  const getSelectedTenantName = () => {
+    return formData.occupiedByName || '';
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (name === 'occupiedBy' && value) {
+      // Si se está seleccionando un inquilino, también guardar su nombre
+      const selectedTenant = clients.find(client => client.id === value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: value || null,
+        occupiedByName: selectedTenant ? selectedTenant.name : null
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'number' ? (value ? Number(value) : null) : value
+      }));
+    }
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,30 +338,7 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
               </div>
             </div>
 
-            <div>
-              <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
-                Responsable
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UsersIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  id="responsible"
-                  name="responsible"
-                  value={formData.responsible || ''}
-                  onChange={handleInputChange}
-                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                >
-                  <option value="">Seleccionar responsable</option>
-                  {availableUsers.map((user) => (
-                    <option key={user.id} value={user.name}>
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -370,6 +406,131 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Ocupado por */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+            <UserGroupIcon className="h-5 w-5 mr-2 text-blue-600" />
+            Ocupado por
+          </h3>
+          
+          {/* Selector de tipo de ocupación */}
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="occupiedBy"
+                  value="NONE"
+                  checked={occupiedByType === 'NONE'}
+                  onChange={() => handleOccupiedByChange('NONE')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">No ocupado</span>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="occupiedBy"
+                  value="OWNER"
+                  checked={occupiedByType === 'OWNER'}
+                  onChange={() => handleOccupiedByChange('OWNER')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">Propietario</span>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="occupiedBy"
+                  value="TENANT"
+                  checked={occupiedByType === 'TENANT'}
+                  onChange={() => handleOccupiedByChange('TENANT')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">Inquilino</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Selector de inquilino si está ocupado por inquilino */}
+          {occupiedByType === 'TENANT' && (
+            <div className="space-y-4">
+              {/* Mostrar inquilino seleccionado si existe */}
+              {formData.occupiedBy && getSelectedTenantName() && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <UserIcon className="h-5 w-5 text-green-600 mr-2" />
+                      <span className="text-sm font-medium text-green-800">
+                        Inquilino actual: {getSelectedTenantName()}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, occupiedBy: null }))}
+                      className="text-green-600 hover:text-green-800 text-sm underline"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="tenantId" className="block text-sm font-medium text-gray-700 mb-2">
+                    {formData.occupiedBy && getSelectedTenantName() ? 'Cambiar Inquilino' : 'Seleccionar Inquilino'}
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="tenantId"
+                      name="occupiedBy"
+                      value={formData.occupiedBy || ''}
+                      onChange={handleInputChange}
+                      className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar inquilino</option>
+                      {clients.filter(client => client.isTenant).map(tenant => (
+                        <option key={tenant.id} value={tenant.id}>
+                          {tenant.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateTenantOpen(true)}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Agregar Inquilino
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Información si está ocupado por el propietario */}
+          {occupiedByType === 'OWNER' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <UserIcon className="h-5 w-5 text-blue-600 mr-2" />
+                <span className="text-sm text-blue-800">
+                  La propiedad está ocupada por el propietario
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Características de la Propiedad */}
@@ -550,6 +711,41 @@ export default function PropertyForm({ onSubmit, initialData, onCancel, zones }:
               <ClientForm
                 onSubmit={handleCreateClient}
                 onCancel={() => setIsCreateClientOpen(false)}
+              />
+            </Dialog.Panel>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Crear Inquilino Modal */}
+      <Dialog
+        open={isCreateTenantOpen}
+        onClose={() => setIsCreateTenantOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-3xl blur-sm"></div>
+            <Dialog.Panel className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  🏠 Nuevo Inquilino
+                </Dialog.Title>
+                <button
+                  onClick={() => setIsCreateTenantOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <ClientForm
+                onSubmit={handleCreateTenant}
+                onCancel={() => setIsCreateTenantOpen(false)}
               />
             </Dialog.Panel>
           </div>

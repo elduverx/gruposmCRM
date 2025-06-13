@@ -26,16 +26,20 @@ export async function getClients(): Promise<Client[]> {
 
 export async function createClient(data: ClientFormData): Promise<Client> {
   try {
+    const clientData = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      hasRequest: data.hasRequest || false,
+      isTenant: data.isTenant || false,
+      properties: {
+        connect: data.relatedProperties.map(id => ({ id }))
+      }
+    };
+
     const client = await prisma.client.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        properties: {
-          connect: data.relatedProperties.map(id => ({ id }))
-        }
-      },
+      data: clientData,
       include: {
         properties: true
       }
@@ -51,17 +55,21 @@ export async function createClient(data: ClientFormData): Promise<Client> {
 
 export async function updateClient(id: string, data: ClientFormData): Promise<Client> {
   try {
+    const updateData = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      hasRequest: data.hasRequest || false,
+      isTenant: data.isTenant || false,
+      properties: {
+        set: data.relatedProperties.map(id => ({ id }))
+      }
+    };
+
     const client = await prisma.client.update({
       where: { id },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        properties: {
-          set: data.relatedProperties.map(id => ({ id }))
-        }
-      },
+      data: updateData,
       include: {
         properties: true
       }
@@ -128,4 +136,4 @@ export async function getClientById(id: string): Promise<Client & { properties: 
     console.error('Error fetching client:', error);
     throw error;
   }
-} 
+}
