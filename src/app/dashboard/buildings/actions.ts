@@ -216,7 +216,7 @@ export async function createBuilding(data: BuildingCreateInput): Promise<Buildin
   try {
     // Detectar diferentes patrones de dirección
     let matchingProperties: any[] = [];
-    let logInfo = {
+    const logInfo = {
       streetName: '',
       buildingNumber: '',
       expectedCount: 0,
