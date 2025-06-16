@@ -396,6 +396,88 @@ export async function getProperty(id: string): Promise<Property | null> {
   }
 }
 
+// Función para buscar propiedades por dirección base (sin buildingId)
+export async function searchPropertiesByAddress(streetName: string): Promise<Property[]> {
+  console.log(`Iniciando búsqueda de propiedades para: "${streetName}"`);
+  
+  try {
+    const normalizedStreetName = streetName.trim().toUpperCase();
+    
+    const properties = await prisma.property.findMany({
+      where: {
+        AND: [
+          { address: { contains: streetName.trim() } },
+          { buildingId: null } // Solo propiedades sin edificio asignado
+        ]
+      },
+      include: {
+        zone: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        responsibleUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        activities: true,
+        assignments: true,
+        clients: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        dpv: true
+      }
+    });
+
+    // Filtrar propiedades para asegurar coincidencia exacta del nombre de la calle
+    const filteredProperties = properties.filter(property => {
+      const propertyAddress = property.address.toUpperCase();
+      
+      // Verificar que contenga el nombre de la calle
+      if (!propertyAddress.includes(normalizedStreetName)) {
+        return false;
+      }
+      
+      // Verificar formato "CALLE, NUMERO"
+      const addressParts = property.address.split(',');
+      if (addressParts.length < 2) {
+        return false;
+      }
+      
+      const streetPart = addressParts[0].trim().toUpperCase();
+      const numberPart = addressParts[1].trim();
+      
+      // La parte de la calle debe coincidir exactamente
+      if (streetPart !== normalizedStreetName) {
+        return false;
+      }
+      
+      // La parte numérica debe ser un número válido
+      const propertyNumber = parseInt(numberPart);
+      if (isNaN(propertyNumber) || propertyNumber < 1) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    console.log(`Propiedades encontradas: ${properties.length}, filtradas: ${filteredProperties.length}`);
+    
+    return filteredProperties.map(mapProperty);
+  } catch (error) {
+    console.error('Error searching properties by address:', error);
+    throw new Error('Error al buscar propiedades por dirección');
+  }
+}
+
 export async function createProperty(data: PropertyCreateInput): Promise<Property | null> {
   try {
     const property = await prisma.property.create({

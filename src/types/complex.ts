@@ -20,8 +20,6 @@ export interface ComplexCreateInput {
   name: string;
   address: string;
   population: string;
-  latitude?: number | null;
-  longitude?: number | null;
   description?: string | null;
   totalBuildings?: number | null;
 }
@@ -30,8 +28,6 @@ export interface ComplexUpdateInput {
   name?: string;
   address?: string;
   population?: string;
-  latitude?: number | null;
-  longitude?: number | null;
   description?: string | null;
   totalBuildings?: number | null;
 }

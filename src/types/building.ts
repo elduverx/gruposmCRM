@@ -24,8 +24,6 @@ export interface BuildingCreateInput {
   name: string;
   address: string;
   population: string;
-  latitude?: number | null;
-  longitude?: number | null;
   description?: string | null;
   totalFloors?: number | null;
   totalUnits?: number | null;
@@ -36,8 +34,6 @@ export interface BuildingUpdateInput {
   name?: string;
   address?: string;
   population?: string;
-  latitude?: number | null;
-  longitude?: number | null;
   description?: string | null;
   totalFloors?: number | null;
   totalUnits?: number | null;

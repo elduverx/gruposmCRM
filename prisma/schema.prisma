@@ -295,8 +295,6 @@ model Building {
   name         String
   address      String
   population   String
-  latitude     Float?
-  longitude    Float?
   description  String?
   totalFloors  Int?
   totalUnits   Int?
@@ -316,8 +314,6 @@ model Complex {
   name         String
   address      String
   population   String
-  latitude     Float?
-  longitude    Float?
   description  String?
   totalBuildings Int?
   createdAt    DateTime     @default(now())
