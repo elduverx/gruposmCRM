@@ -1,5 +1,5 @@
 {
-  "buildCommand": "SKIP_DB_CHECK=true next build",
+  "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs"
 } 
