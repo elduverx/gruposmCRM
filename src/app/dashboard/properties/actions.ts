@@ -867,6 +867,29 @@ export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'i
       throw new Error('Invalid value provided. Must be a valid number.');
     }
 
+    // Convert precioSM to number if provided
+    const numericPrecioSM = data.precioSM !== undefined && data.precioSM !== null
+      ? typeof data.precioSM === 'string'
+        ? parseFloat(data.precioSM)
+        : Number(data.precioSM)
+      : null;
+
+    // Convert precioCliente to number if provided
+    const numericPrecioCliente = data.precioCliente !== undefined && data.precioCliente !== null
+      ? typeof data.precioCliente === 'string'
+        ? parseFloat(data.precioCliente)
+        : Number(data.precioCliente)
+      : null;
+
+    // Validate numeric conversions
+    if (numericPrecioSM !== null && isNaN(numericPrecioSM)) {
+      throw new Error('Invalid precioSM provided. Must be a valid number.');
+    }
+
+    if (numericPrecioCliente !== null && isNaN(numericPrecioCliente)) {
+      throw new Error('Invalid precioCliente provided. Must be a valid number.');
+    }
+
     const news = await prisma.propertyNews.create({
       data: {
         type: data.type,          // Default DPV added in schema
@@ -876,8 +899,8 @@ export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'i
         responsible: data.responsible, // Default Sin asignar added in schema
         value: numericValue,
         propertyId: data.propertyId,
-        precioSM: data.precioSM || null,
-        precioCliente: data.precioCliente || null,
+        precioSM: numericPrecioSM,
+        precioCliente: numericPrecioCliente,
         commissionType: data.commissionType,   // Default percentage added in schema
         commissionValue: data.commissionValue, // Default 3 added in schema
         isDone: false
