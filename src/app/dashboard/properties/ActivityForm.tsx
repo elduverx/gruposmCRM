@@ -128,8 +128,12 @@ export function ActivityForm({ propertyId, onSubmit, onCancel }: ActivityFormPro
           value={formData.notes}
           onChange={handleChange}
           rows={3}
+          maxLength={500}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
+        <div className="mt-1 text-sm text-gray-500 text-right">
+          {formData.notes.length}/500 caracteres
+        </div>
       </div>
 
       <div className="flex justify-end space-x-3 pt-4">

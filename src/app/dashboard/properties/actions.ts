@@ -613,6 +613,11 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       throw new Error('No hay un usuario autenticado');
     }
 
+    // Validate notes length (500 characters max)
+    if (data.notes && data.notes.length > 500) {
+      throw new Error('Las notas no pueden exceder los 500 caracteres');
+    }
+
     // Validate that type is a valid ActivityType
     const validTypes = ['DPV', 'NOTICIA', 'ENCARGO', 'VISITA', 'LLAMADA', 'EMAIL', 'OTROS'];
     if (!validTypes.includes(data.type)) {
