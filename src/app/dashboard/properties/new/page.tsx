@@ -690,11 +690,11 @@ export default function PropertyFormPage({ params }: { params: { id?: string } }
                   rows={4}
                   value={formData.notes || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value as string }))}
-                  maxLength={500}
+                  maxLength={191}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
                 <div className="mt-1 text-sm text-gray-500 text-right">
-                  {(formData.notes || '').length}/500 caracteres
+                  {(formData.notes || '').length}/191 caracteres
                 </div>
               </div>
 

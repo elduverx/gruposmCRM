@@ -613,9 +613,9 @@ export async function createActivity(data: Omit<Activity, 'id' | 'createdAt' | '
       throw new Error('No hay un usuario autenticado');
     }
 
-    // Validate notes length (500 characters max)
-    if (data.notes && data.notes.length > 500) {
-      throw new Error('Las notas no pueden exceder los 500 caracteres');
+    // Validate notes length (191 characters max - MySQL VARCHAR(191) limit)
+    if (data.notes && data.notes.length > 191) {
+      throw new Error('Las notas no pueden exceder los 191 caracteres');
     }
 
     // Validate that type is a valid ActivityType

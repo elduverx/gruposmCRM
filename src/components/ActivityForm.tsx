@@ -112,11 +112,11 @@ export default function ActivityForm({ propertyId, onSubmit, onCancel }: Activit
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          maxLength={500}
+          maxLength={191}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
         <div className="mt-1 text-sm text-gray-500 text-right">
-          {notes.length}/500 caracteres
+          {notes.length}/191 caracteres
         </div>
       </div>
 

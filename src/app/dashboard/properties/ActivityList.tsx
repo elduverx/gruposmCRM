@@ -149,11 +149,11 @@ export function ActivityList({ activities, onCreateActivity, isLoading }: Activi
               value={formData.notes}
               onChange={handleChange}
               rows={3}
-              maxLength={500}
+              maxLength={191}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             <div className="mt-1 text-sm text-gray-500 text-right">
-              {formData.notes.length}/500 caracteres
+              {formData.notes.length}/191 caracteres
             </div>
           </div>
 
