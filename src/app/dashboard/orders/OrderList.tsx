@@ -38,7 +38,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
         getPropertyTypeText(order.propertyType).toLowerCase().includes(searchTerm.toLowerCase()) ||
         formatNumber(order.minPrice).includes(searchTerm) ||
         formatNumber(order.maxPrice).includes(searchTerm) ||
-        order.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase()))
+        (Array.isArray(order.features) ? order.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase())) : false)
       );
       setFilteredOrders(filtered);
     }
@@ -397,8 +397,8 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-red-500/5 rounded-3xl blur-sm"></div>
           <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden">
-            <div className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredOrders.map((order) => (
                   <div 
                     key={order.id}
@@ -411,7 +411,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                     {/* Card principal */}
                     <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/40 group-hover:border-blue-200/50 transform group-hover:-translate-y-2">
                       {/* Header del card con gradiente */}
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-6 text-white relative overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-4 text-white relative overflow-hidden">
                         {/* Patrón de fondo decorativo */}
                         <div className="absolute inset-0 opacity-10">
                           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/20 transform translate-x-16 -translate-y-16"></div>
@@ -420,22 +420,22 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                         
                         <div className="relative flex justify-between items-start">
                           <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shadow-lg">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center shadow-lg">
                                 {getOperationIcon(order.operationType)}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-xl font-bold truncate">
+                                <h3 className="text-lg font-bold truncate">
                                   {order.client.name}
                                 </h3>
-                                <p className="text-blue-100 text-sm truncate flex items-center mt-1">
+                                <p className="text-blue-100 text-xs truncate flex items-center mt-1">
                                   <span className="mr-1">📧</span>
                                   {order.client.email}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-white/20 text-white backdrop-blur-sm">
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-white/20 text-white backdrop-blur-sm">
                                 <span className="mr-1">
                                   {order.operationType === 'SALE' ? '💰' : '🏠'}
                                 </span>
@@ -444,7 +444,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                             </div>
                           </div>
                           <span
-                            className={`px-3 py-1 text-xs font-semibold rounded-full backdrop-blur-sm ${getStatusBadgeColor(order.status)}`}
+                            className={`px-2 py-1 text-xs font-semibold rounded-full backdrop-blur-sm ${getStatusBadgeColor(order.status)}`}
                           >
                             {getStatusText(order.status)}
                           </span>
@@ -452,36 +452,38 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                       </div>
 
                       {/* Contenido del card */}
-                      <div className="p-6 space-y-5">
+                      <div className="p-4 space-y-3">
                         {/* Información de la propiedad */}
-                        <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-blue-100">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-                              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-3 border border-blue-100">
+                          <div className="flex items-start space-x-2">
+                            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                              <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
                               </svg>
                             </div>
-                            <div className="flex-1">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                                <span className="mr-2">🏠</span>
-                                Requisitos de la Propiedad
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center">
+                                <span className="mr-1">🏠</span>
+                                Requisitos
                               </h4>
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="bg-white rounded-lg p-2 border border-blue-200">
-                                  <span className="text-gray-500 block">Tipo:</span>
-                                  <p className="font-medium text-gray-800 truncate">{getPropertyTypeText(order.propertyType)}</p>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-white rounded-md p-2 border border-blue-200">
+                                  <span className="text-gray-500 block text-xs">Tipo:</span>
+                                  <p className="font-medium text-gray-800 text-xs truncate" title={getPropertyTypeText(order.propertyType)}>
+                                    {getPropertyTypeText(order.propertyType)}
+                                  </p>
                                 </div>
-                                <div className="bg-white rounded-lg p-2 border border-blue-200">
-                                  <span className="text-gray-500 block">Habitaciones:</span>
-                                  <p className="font-medium text-gray-800">{order.bedrooms}</p>
+                                <div className="bg-white rounded-md p-2 border border-blue-200">
+                                  <span className="text-gray-500 block text-xs">Hab:</span>
+                                  <p className="font-medium text-gray-800 text-xs">{order.bedrooms}</p>
                                 </div>
-                                <div className="bg-white rounded-lg p-2 border border-blue-200">
-                                  <span className="text-gray-500 block">Baños:</span>
-                                  <p className="font-medium text-gray-800">{order.bathrooms}</p>
+                                <div className="bg-white rounded-md p-2 border border-blue-200">
+                                  <span className="text-gray-500 block text-xs">Baños:</span>
+                                  <p className="font-medium text-gray-800 text-xs">{order.bathrooms}</p>
                                 </div>
-                                <div className="bg-white rounded-lg p-2 border border-blue-200">
-                                  <span className="text-gray-500 block">Características:</span>
-                                  <p className="font-medium text-gray-800">{order.features.length}</p>
+                                <div className="bg-white rounded-md p-2 border border-blue-200">
+                                  <span className="text-gray-500 block text-xs">Caract:</span>
+                                  <p className="font-medium text-gray-800 text-xs">{Array.isArray(order.features) ? order.features.length : 0}</p>
                                 </div>
                               </div>
                             </div>
@@ -489,66 +491,63 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                         </div>
 
                         {/* Rango de precio */}
-                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
-                              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-3 border border-emerald-200">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                              <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd"/>
                               </svg>
                             </div>
-                            <h4 className="text-sm font-semibold text-gray-900 flex items-center">
-                              <span className="mr-2">💰</span>
-                              Presupuesto del Cliente
+                            <h4 className="text-xs font-semibold text-gray-900 flex items-center">
+                              <span className="mr-1">💰</span>
+                              Presupuesto
                             </h4>
                           </div>
-                          <div className="bg-white rounded-lg p-3 border border-emerald-300 text-center">
-                            <p className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                          <div className="bg-white rounded-lg p-2 border border-emerald-300 text-center">
+                            <p className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                               {formatNumber(order.minPrice)}€ - {formatNumber(order.maxPrice)}€
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Rango de inversión
                             </p>
                           </div>
                         </div>
 
                         {/* Footer con fecha y acciones */}
-                        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                           <div className="text-xs text-gray-500 flex items-center">
                             <span className="mr-1">📅</span>
                             <span className="font-medium">{formatDate(order.createdAt)}</span>
                           </div>
-                          <div className="flex space-x-2">
+                          <div className="flex space-x-1">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleViewOrder(order);
                               }}
-                              className="group/btn p-2 rounded-lg text-blue-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600 hover:shadow-md"
+                              className="group/btn p-1.5 rounded-lg text-blue-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600 hover:shadow-md"
                               title="Ver detalles del pedido"
                             >
-                              <EyeIcon className="h-4 w-4" />
+                              <EyeIcon className="h-3 w-3" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditOrder(order);
                               }}
-                              className="group/btn p-2 rounded-lg text-indigo-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-indigo-600 hover:shadow-md"
+                              className="group/btn p-1.5 rounded-lg text-indigo-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-indigo-600 hover:shadow-md"
                               title="Editar pedido"
                             >
-                              <PencilIcon className="h-4 w-4" />
+                              <PencilIcon className="h-3 w-3" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteOrder(order.id);
                               }}
-                              className="group/btn p-2 rounded-lg text-red-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 hover:shadow-md"
+                              className="group/btn p-1.5 rounded-lg text-red-600 hover:text-white transition-all duration-200 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 hover:shadow-md"
                               disabled={isDeleting}
                               title="Eliminar pedido"
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <TrashIcon className="h-3 w-3" />
                             </button>
                           </div>
                         </div>

@@ -53,6 +53,25 @@ type ClientRequestUpdateInput = {
 };
 
 function mapOrderResponse(order: ClientRequestWithClient): Order {
+  // Safe JSON parsing function
+  const safeParseFeatures = (featuresString: string | null | undefined): PropertyFeatures => {
+    if (!featuresString) {
+      return [];
+    }
+    
+    try {
+      const parsed = JSON.parse(featuresString);
+      // Ensure the parsed value is an array of strings
+      if (Array.isArray(parsed)) {
+        return parsed.filter(item => typeof item === 'string');
+      }
+      return [];
+    } catch (error) {
+      console.warn('Failed to parse order features JSON:', error);
+      return [];
+    }
+  };
+
   return {
     id: order.id,
     status: 'PENDING',
@@ -63,7 +82,7 @@ function mapOrderResponse(order: ClientRequestWithClient): Order {
     minPrice: order.minPrice,
     maxPrice: order.maxPrice,
     propertyType: order.propertyType,
-    features: JSON.parse(order.features) as PropertyFeatures,
+    features: safeParseFeatures(order.features),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     client: {
