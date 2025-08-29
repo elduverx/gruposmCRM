@@ -7,5 +7,14 @@
     "role": "ADMIN",
     "createdAt": "2025-06-09T15:23:45.508Z",
     "updatedAt": "2025-06-09T15:23:45.508Z"
+  },
+  {
+    "id": "1756476892582",
+    "name": "Administrador",
+    "email": "admin@gruposm.com",
+    "password": "$2a$10$XdDutZw.8nsbOeWWPhCQp.u/WZBCD9H68OdPBWWsE/3Yu/7Uq/vki",
+    "role": "ADMIN",
+    "createdAt": "2025-08-29T14:14:52.583Z",
+    "updatedAt": "2025-08-29T14:14:52.583Z"
   }
 ]
