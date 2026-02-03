@@ -534,7 +534,7 @@ export default function OrderForm({
       <Dialog
         open={isCreateClientOpen}
         onClose={() => setIsCreateClientOpen(false)}
-        className="relative z-50"
+        className="relative z-[250]"
       >
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
           

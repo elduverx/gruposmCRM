@@ -290,10 +290,10 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
 
         {/* Order Form Modal - Modal personalizado */}
         {isFormOpen && (
-          <div className="fixed inset-0 z-[150] overflow-y-auto">
+          <div className="fixed inset-0 z-[200] overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+              <div
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={() => {
                   setIsFormOpen(false);
                   setSelectedOrder(null);
@@ -564,10 +564,10 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
       
       {/* Order Details Modal - Modal personalizado */}
       {isDetailsOpen && (
-        <div className="fixed inset-0 z-[50] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div 
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => {
                 setIsDetailsOpen(false);
                 setOrderDetails(null);
