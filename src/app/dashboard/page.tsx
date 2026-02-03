@@ -708,13 +708,13 @@ export default function InicioPage() {
         <div className="relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
           <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center space-x-4 flex-1 min-w-0">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
                   <SparklesSolid className="h-8 w-8 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-audiowide">
+                <div className="min-w-0">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-audiowide leading-tight break-words max-w-2xl">
                     ¡Bienvenido a GrupoSM, {user?.name}! ✨
                   </h1>
                   <p className="mt-2 text-slate-600 text-lg">
@@ -722,16 +722,18 @@ export default function InicioPage() {
                   </p>
                 </div>
               </div>
-              <button 
-                className="group relative px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => setIsActivityFormOpen(true)}
-              >
-                <div className="flex items-center space-x-2">
-                  <PlusIcon className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
-                  <span className="font-medium">Nueva Actividad</span>
-                </div>
-                <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 w-full md:w-auto">
+                <button
+                  className="group relative flex-1 md:flex-none px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  onClick={() => setIsActivityFormOpen(true)}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <PlusIcon className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="font-medium">Nueva Actividad</span>
+                  </div>
+                  <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1045,7 +1047,7 @@ export default function InicioPage() {
       </Dialog>
 
       {/* Tarjetas de estadísticas modernas */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr">
         {/* Inmuebles Card */}
         <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
@@ -1163,9 +1165,9 @@ export default function InicioPage() {
       </div>
 
       {/* Contenedor principal con grid */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Calendario - Columna izquierda */}
-        <div className="space-y-6 order-last">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
+        {/* Calendario + Actividades */}
+        <div className="space-y-6">
           {/* Calendario con diseño moderno */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-500/10 to-blue-500/10 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
@@ -1295,7 +1297,7 @@ export default function InicioPage() {
                   </div>
                 </div>
 
-                <div className="calendar-container bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50">
+                <div className="calendar-container bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50 min-h-[420px]">
                   <FullCalendar
                     ref={calendarRef}
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -1415,7 +1417,7 @@ export default function InicioPage() {
               
               {/* Header modernizado */}
               <div className="bg-gradient-to-r from-green-50/80 to-emerald-50/80 rounded-2xl p-6 mb-6 border border-green-100">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg">
                       <ClipboardDocumentListIcon className="h-6 w-6 text-white" />
@@ -1427,23 +1429,23 @@ export default function InicioPage() {
                       <p className="text-sm text-slate-600">Tareas por completar</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <button 
                       onClick={() => router.push('/dashboard/progreso/actividades')}
-                      className="group/btn relative px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                      className="group/btn relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-300 rounded-xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                      <span className="relative flex items-center">
+                      <span className="relative flex items-center justify-center">
                         <EyeIcon className="h-4 w-4 mr-2" />
                         Ver todo
                       </span>
                     </button>
                     <button 
                       onClick={() => setIsActivityFormOpen(true)}
-                      className="group/btn relative px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                      className="group/btn relative w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg transform hover:scale-105"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                      <span className="relative flex items-center">
+                      <span className="relative flex items-center justify-center">
                         <PlusIcon className="h-4 w-4 mr-2" />
                         ✨ Nueva actividad
                       </span>
@@ -1586,7 +1588,7 @@ export default function InicioPage() {
         </div>
 
         {/* Objetivos - Columna derecha modernizada */}
-        <div className="group relative order-first">
+        <div className="group relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
           <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 hover:shadow-2xl transition-all duration-300">
             
