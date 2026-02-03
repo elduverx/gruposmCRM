@@ -8,7 +8,7 @@ interface ClientFormProps {
   initialData?: {
     id?: string;
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     properties: string[];
@@ -16,11 +16,14 @@ interface ClientFormProps {
   };
   onSubmit: (data: {
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     relatedProperties: string[];
     hasRequest: boolean;
+    orderRequest?: {
+      desiredLocation: string;
+    };
   }) => void;
   onCancel: () => void;
 }
@@ -32,6 +35,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   const [address, setAddress] = useState(initialData?.address || '');
   const [relatedProperties, setRelatedProperties] = useState<string[]>(initialData?.properties || []);
   const [hasRequest, setHasRequest] = useState(initialData?.hasRequest || false);
+  const [desiredLocation, setDesiredLocation] = useState('');
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,11 +62,14 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
     e.preventDefault();
     onSubmit({
       name,
-      email,
+      email: email || null,
       phone: phone || null,
       address: address || null,
       relatedProperties,
-      hasRequest
+      hasRequest,
+      orderRequest: hasRequest && desiredLocation.trim()
+        ? { desiredLocation: desiredLocation.trim() }
+        : undefined
     });
   };
 
@@ -94,7 +101,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
+          Email (opcional)
         </label>
         <input
           type="email"
@@ -102,7 +109,6 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
         />
       </div>
 
@@ -172,6 +178,21 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
           Tiene pedido
         </label>
       </div>
+
+      {hasRequest && (
+        <div>
+          <label htmlFor="desiredLocation" className="block text-sm font-medium text-gray-700">
+            Sitio donde desea el inmueble
+          </label>
+          <input
+            type="text"
+            id="desiredLocation"
+            value={desiredLocation}
+            onChange={(e) => setDesiredLocation(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          />
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3 pt-4">
         <button

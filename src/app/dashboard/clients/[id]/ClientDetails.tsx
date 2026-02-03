@@ -31,7 +31,7 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-          <p className="text-gray-600">{client.email}</p>
+          <p className="text-gray-600">{client.email || 'Sin correo'}</p>
           {client.phone && <p className="text-gray-600">{client.phone}</p>}
           {client.address && <p className="text-gray-600">{client.address}</p>}
         </div>
@@ -67,7 +67,7 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
                 <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Email</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{client.email}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">{client.email || 'Sin correo'}</dd>
                   </div>
                   {client.phone && (
                     <div>

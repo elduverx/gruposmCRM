@@ -66,6 +66,7 @@ interface RawAssignment {
   exclusiveUntil: Date;
   origin: string;
   clientId: string;
+  clientRequestId?: string | null;
   sellerFeeType: string;
   sellerFeeValue: number;
   buyerFeeType: string;
@@ -164,6 +165,7 @@ function mapAssignments(assignments: unknown[]): Assignment[] {
         exclusiveUntil: new Date().toISOString(),
         origin: '',
         clientId: '',
+        clientRequestId: null,
         sellerFeeType: '',
         sellerFeeValue: 0,
         buyerFeeType: '',
@@ -522,33 +524,7 @@ export async function updateProperty(id: string, data: Partial<Property>): Promi
 
 export async function deleteProperty(id: string): Promise<boolean> {
   try {
-    const property = await prisma.property.findUnique({
-      where: { id }
-    });
-
-    if (!property) {
-      return false;
-    }
-
-    await prisma.property.delete({
-      where: { id }
-    });
-
-    // Registrar la actividad
-    await logActivity({
-      type: 'OTROS' as ActivityType,
-      description: `Propiedad eliminada: ${property.address}`,
-      relatedId: property.id,
-      relatedType: 'PROPERTY',
-      metadata: {
-        address: property.address,
-        type: property.type,
-        status: property.status
-      }
-    });
-
-    revalidatePath('/dashboard/properties');
-    return true;
+    return false;
   } catch (error) {
     throw new Error('Error deleting property');
   }
@@ -993,8 +969,22 @@ export async function createPropertyNews(data: Omit<PropertyNewsWithProperty, 'i
 // Funciones para encargos
 export async function getAssignmentsByPropertyId(propertyId: string): Promise<Assignment[]> {
   try {
+    const currentUserId = await getCurrentUserId();
+    let whereCondition: Record<string, unknown> = { propertyId };
+
+    if (currentUserId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: currentUserId },
+        select: { role: true }
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        whereCondition = { propertyId, responsibleId: currentUserId };
+      }
+    }
+
     const assignments = await prisma.assignment.findMany({
-      where: { propertyId },
+      where: whereCondition,
       orderBy: { createdAt: 'desc' },
       include: {
         client: {
@@ -1021,6 +1011,7 @@ export async function getAssignmentsByPropertyId(propertyId: string): Promise<As
 
 export async function createAssignment(data: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Assignment> {
   try {
+    const currentUserId = await getCurrentUserId();
     const assignment = await prisma.assignment.create({
       data: {
         type: data.type,
@@ -1028,11 +1019,13 @@ export async function createAssignment(data: Omit<Assignment, 'id' | 'createdAt'
         exclusiveUntil: new Date(data.exclusiveUntil),
         origin: data.origin,
         clientId: data.clientId,
+        clientRequestId: data.clientRequestId || null,
         propertyId: data.propertyId,
         sellerFeeType: data.sellerFeeType,
         sellerFeeValue: data.sellerFeeValue,
         buyerFeeType: data.buyerFeeType,
-        buyerFeeValue: data.buyerFeeValue
+        buyerFeeValue: data.buyerFeeValue,
+        responsibleId: currentUserId || undefined
       },
       include: {
         client: {
@@ -1110,6 +1103,7 @@ export async function updateAssignment(id: string, data: Partial<Assignment>): P
       where: { id },
       data: {
         ...data,
+        clientRequestId: data.clientRequestId === undefined ? undefined : data.clientRequestId,
         exclusiveUntil: data.exclusiveUntil ? new Date(data.exclusiveUntil) : undefined
       },
       include: {
@@ -1185,7 +1179,22 @@ export async function deleteAssignment(id: string): Promise<boolean> {
 
 export async function getAssignments(): Promise<Assignment[]> {
   try {
+    const currentUserId = await getCurrentUserId();
+    let whereCondition: Record<string, unknown> = {};
+
+    if (currentUserId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: currentUserId },
+        select: { role: true }
+      });
+
+      if (currentUser?.role !== 'ADMIN') {
+        whereCondition = { responsibleId: currentUserId };
+      }
+    }
+
     const assignments = await prisma.assignment.findMany({
+      where: whereCondition,
       include: {
         property: {
           select: {

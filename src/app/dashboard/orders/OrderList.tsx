@@ -32,13 +32,14 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
     } else {
       const filtered = orders.filter(order => 
         order.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.client.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         getStatusText(order.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getOperationTypeText(order.operationType).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getPropertyTypeText(order.propertyType).toLowerCase().includes(searchTerm.toLowerCase()) ||
         formatNumber(order.minPrice).includes(searchTerm) ||
         formatNumber(order.maxPrice).includes(searchTerm) ||
-        (Array.isArray(order.features) ? order.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase())) : false)
+        (Array.isArray(order.features) ? order.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase())) : false) ||
+        (order.desiredLocation || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredOrders(filtered);
     }
@@ -202,7 +203,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
 
   if (filteredOrders.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+      <div className="w-full bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
         {/* Header moderno */}
         <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-white/20">
           <div className="mx-auto max-w-7xl px-6 py-8">
@@ -342,7 +343,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+    <div className="w-full bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       {/* Header moderno */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-white/20">
         <div className="mx-auto max-w-7xl px-6 py-8">
@@ -430,7 +431,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                                 </h3>
                                 <p className="text-blue-100 text-xs truncate flex items-center mt-1">
                                   <span className="mr-1">📧</span>
-                                  {order.client.email}
+                                  {order.client.email || 'Sin correo'}
                                 </p>
                               </div>
                             </div>
@@ -615,7 +616,13 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
                       </div>
                       <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm">
                         <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Correo Electrónico</label>
-                        <p className="text-lg font-semibold text-gray-900 mt-1">{orderDetails.client.email}</p>
+                        <p className="text-lg font-semibold text-gray-900 mt-1">{orderDetails.client.email || 'Sin correo'}</p>
+                      </div>
+                      <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm md:col-span-2">
+                        <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Sitio deseado</label>
+                        <p className="text-lg font-semibold text-gray-900 mt-1">
+                          {orderDetails.desiredLocation || 'No indicado'}
+                        </p>
                       </div>
                     </div>
                   </div>

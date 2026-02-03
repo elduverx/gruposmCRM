@@ -20,7 +20,7 @@ interface ClientFormProps {
   initialData?: {
     id?: string;
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     properties: string[];
@@ -29,12 +29,15 @@ interface ClientFormProps {
   };
   onSubmit: (data: {
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     relatedProperties: string[];
     hasRequest: boolean;
     isTenant?: boolean;
+    orderRequest?: {
+      desiredLocation: string;
+    };
   }) => void;
   onCancel: () => void;
 }
@@ -46,6 +49,8 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
   const [address, setAddress] = useState(initialData?.address || '');
   const [relatedProperties, setRelatedProperties] = useState<string[]>(initialData?.properties || []);
   const [isTenant, setIsTenant] = useState(initialData?.isTenant || false);
+  const [hasRequest, setHasRequest] = useState(initialData?.hasRequest || false);
+  const [desiredLocation, setDesiredLocation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -97,12 +102,15 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
     e.preventDefault();
     onSubmit({
       name,
-      email,
+      email: email || null,
       phone: phone || null,
       address: address || null,
       relatedProperties,
-      hasRequest: false,
-      isTenant
+      hasRequest,
+      isTenant,
+      orderRequest: hasRequest && desiredLocation.trim()
+        ? { desiredLocation: desiredLocation.trim() }
+        : undefined
     });
   };
 
@@ -155,7 +163,7 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
                 <div className="group">
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                     <EnvelopeIcon className="w-4 h-4 text-blue-500" />
-                    Correo Electrónico
+                    Correo Electrónico (opcional)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -167,7 +175,6 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 pr-4 py-2 w-full bg-gray-50/50 border-2 border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all duration-200 text-gray-800 placeholder-gray-400 text-sm"
-                      required
                       placeholder="ejemplo@correo.com"
                     />
                   </div>
@@ -227,6 +234,43 @@ export default function ClientForm({ initialData, onSubmit, onCancel }: ClientFo
                     </div>
                   </label>
                 </div>
+
+                <div className="group">
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50/50 border-2 border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50/50 transition-all duration-200">
+                    <input
+                      type="checkbox"
+                      checked={hasRequest}
+                      onChange={(e) => setHasRequest(e.target.checked)}
+                      className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
+                    />
+                    <div className="flex items-center gap-2">
+                      <CheckCircleIcon className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-gray-700">Crear pedido</span>
+                    </div>
+                  </label>
+                </div>
+
+                {hasRequest && (
+                  <div className="group">
+                    <label htmlFor="desiredLocation" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                      <MapPinIcon className="w-4 h-4 text-emerald-500" />
+                      Sitio donde desea el inmueble
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPinIcon className="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
+                      </div>
+                      <input
+                        type="text"
+                        id="desiredLocation"
+                        value={desiredLocation}
+                        onChange={(e) => setDesiredLocation(e.target.value)}
+                        className="pl-10 pr-4 py-2 w-full bg-gray-50/50 border-2 border-gray-200 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all duration-200 text-gray-800 placeholder-gray-400 text-sm"
+                        placeholder="Ej: Centro, Barrio Norte, Calle..."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

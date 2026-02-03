@@ -10,6 +10,8 @@ import { deleteAssignment } from '../properties/actions';
 import { Property } from '@/types/property';
 import { getProperties } from '../properties/actions';
 import SearchBar from '@/components/common/SearchBar';
+import { markPropertyAsSold } from '../sales/actions';
+import { toast } from 'sonner';
 
 interface AssignmentsClientProps {
   initialAssignments: Assignment[];
@@ -24,6 +26,8 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
   const [isPropertySelectorOpen, setIsPropertySelectorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [confirmSaleOpen, setConfirmSaleOpen] = useState(false);
+  const [saleAssignment, setSaleAssignment] = useState<Assignment | null>(null);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este encargo?')) {
@@ -70,6 +74,32 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
     setIsAssignmentFormOpen(true);
   };
 
+  const handleFinalizeSale = (assignment: Assignment) => {
+    setSaleAssignment(assignment);
+    setConfirmSaleOpen(true);
+  };
+
+  const confirmFinalizeSale = async () => {
+    if (!saleAssignment?.propertyId || !saleAssignment?.clientId) {
+      toast.error('No se pudo finalizar la venta');
+      return;
+    }
+
+    try {
+      const success = await markPropertyAsSold(saleAssignment.propertyId, saleAssignment.clientId);
+      if (success) {
+        toast.success('Venta finalizada correctamente');
+        setConfirmSaleOpen(false);
+        setSaleAssignment(null);
+        window.location.reload();
+      } else {
+        toast.error('No se pudo finalizar la venta');
+      }
+    } catch (error) {
+      toast.error('Error al finalizar la venta');
+    }
+  };
+
   // Filtrar encargos cuando cambia el término de búsqueda
   const handleSearch = (term: string) => {
     if (term.trim() === '') {
@@ -80,7 +110,9 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
           (assignment.property?.address || '').toLowerCase().includes(term.toLowerCase()) ||
           (assignment.property?.population || '').toLowerCase().includes(term.toLowerCase()) ||
           assignment.type.toLowerCase().includes(term.toLowerCase()) ||
-          (assignment.origin || '').toLowerCase().includes(term.toLowerCase())
+          (assignment.origin || '').toLowerCase().includes(term.toLowerCase()) ||
+          (assignment.client?.name || '').toLowerCase().includes(term.toLowerCase()) ||
+          (assignment.client?.email || '').toLowerCase().includes(term.toLowerCase())
         );
       });
       setFilteredAssignments(filtered);
@@ -315,6 +347,14 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                     </div>
                   </div>
                 </div>
+
+                <button
+                  onClick={() => handleFinalizeSale(assignment)}
+                  disabled={assignment.property?.isSold}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {assignment.property?.isSold ? 'Venta finalizada' : '✅ Finalizar venta'}
+                </button>
               </div>
 
               {/* Card Footer */}
@@ -334,6 +374,45 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
           ))}
         </div>
       )}
+
+      {/* Confirmar Finalizar Venta */}
+      <Dialog
+        open={confirmSaleOpen}
+        onClose={() => {
+          setConfirmSaleOpen(false);
+          setSaleAssignment(null);
+        }}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-2xl shadow-2xl border border-white/20 p-6">
+            <Dialog.Title className="text-lg font-semibold text-slate-800 mb-3">
+              Finalizar venta
+            </Dialog.Title>
+            <p className="text-sm text-slate-600 mb-6">
+              ¿Deseas marcar este encargo como vendido? Esta acción completará el proceso.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setConfirmSaleOpen(false);
+                  setSaleAssignment(null);
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmFinalizeSale}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all"
+              >
+                Confirmar
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
 
       {/* Enhanced Assignment Modal */}
       <Dialog
@@ -444,6 +523,15 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                               {property.type}
                             </span>
                           )}
+                          <div className="mt-2">
+                            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                              property.isOccupied
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {property.isOccupied ? 'Ocupado' : 'Libre'}
+                            </span>
+                          </div>
                         </div>
                         <div className="text-slate-400 group-hover:text-blue-600 transition-colors">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

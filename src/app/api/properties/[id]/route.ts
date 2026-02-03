@@ -87,28 +87,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Validate property exists
-    const existingProperty = await prisma.property.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
-
-    if (!existingProperty) {
-      return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete the property
-    await prisma.property.delete({
-      where: {
-        id: params.id,
-      },
-    });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { error: 'No está permitido eliminar inmuebles' },
+      { status: 403 }
+    );
   } catch (error) {
     // Log error to server logs instead of console
     // eslint-disable-next-line no-console

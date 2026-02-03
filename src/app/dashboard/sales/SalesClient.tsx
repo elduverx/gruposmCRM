@@ -418,7 +418,7 @@ export default function SalesClient() {
                             {assignment.client?.email && (
                               <div className="flex items-center text-xs text-gray-600 mb-1">
                                 <Mail className="h-3 w-3 mr-2" />
-                                {assignment.client.email}
+                                {assignment.client.email || 'Sin correo'}
                               </div>
                             )}
                             {assignment.client?.phone && (

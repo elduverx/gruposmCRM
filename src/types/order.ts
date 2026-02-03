@@ -3,7 +3,7 @@ export interface Order {
   client: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
   };
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   operationType: 'SALE' | 'RENT';
@@ -16,6 +16,7 @@ export interface Order {
   maxPrice: number;
   propertyType: string;
   features: string[];
+  desiredLocation?: string | null;
 }
 
 export interface OrderCreateInput {
@@ -27,12 +28,13 @@ export interface OrderCreateInput {
   maxPrice: number;
   propertyType: string;
   features: string[];
+  desiredLocation?: string | null;
 }
 
 export interface OrderWithClient extends Order {
   client: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
   };
-} 
+}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Property } from '@/types/property';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import { TrashIcon } from '@heroicons/react/24/outline';
 import { Activity } from '@/types/property';
 import { Zone } from '@/types/zone';
 
@@ -175,16 +174,7 @@ export default function PropertyTable({
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.ownerPhone}</td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{property.responsible || '-'}</td>
                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => onDeleteProperty(property.id)}
-                      disabled={isDeleting === property.id}
-                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                      <span className="sr-only">Eliminar {property.address}</span>
-                    </button>
-                  </div>
+                  <span className="text-xs text-slate-400">Sin eliminación</span>
                 </td>
               </tr>
             ))}

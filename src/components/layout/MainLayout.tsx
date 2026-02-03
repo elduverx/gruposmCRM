@@ -154,8 +154,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           
           <div className="relative flex h-20 items-center justify-between px-6 border-b border-slate-700/50 backdrop-blur-sm">
             <Link href="/dashboard" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">SM</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl overflow-hidden shadow-lg">
+                <Image
+                  src="/favicon.ico"
+                  alt="GrupoSM logo"
+                  width={40}
+                  height={40}
+                  className="h-full w-full object-cover"
+                />
               </div>
               <div>
                 <h1 className="text-white font-bold text-lg font-audiowide">GrupoSM</h1>
@@ -204,8 +210,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
             </button>
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-sm">SM</span>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg overflow-hidden mr-3 shadow-lg">
+                <Image
+                  src="/favicon.ico"
+                  alt="GrupoSM logo"
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
               </div>
               <span className="text-sm font-medium text-gray-900">{user?.name}</span>
             </div>

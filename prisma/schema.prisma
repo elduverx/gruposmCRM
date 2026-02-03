@@ -78,7 +78,7 @@ model Property {
 model Client {
   id            String         @id @default(cuid())
   name          String
-  email         String
+  email         String?
   phone         String?
   address       String?
   createdAt     DateTime       @default(now())
@@ -105,6 +105,7 @@ model Assignment {
   updatedAt            DateTime  @updatedAt
   propertyId           String
   clientId             String
+  clientRequestId      String?
   responsibleId        String?
   buyerFeeType         String
   buyerFeeValue        Float
@@ -121,11 +122,13 @@ model Assignment {
   documentsStatus      Json?     // Estado de cada documento
   specialConditions    String?   @db.Text
   client              Client    @relation(fields: [clientId], references: [id])
+  clientRequest        ClientRequest? @relation(fields: [clientRequestId], references: [id])
   property            Property  @relation(fields: [propertyId], references: [id])
   responsibleUser     User?     @relation("AssignmentResponsible", fields: [responsibleId], references: [id])
 
   @@index([propertyId], map: "Assignment_propertyId_fkey")
   @@index([clientId], map: "Assignment_clientId_fkey")
+  @@index([clientRequestId])
   @@index([responsibleId], map: "Assignment_responsibleId_fkey")
 }
 
@@ -204,10 +207,12 @@ model ClientRequest {
   maxPrice     Float
   propertyType String
   features     String
+  desiredLocation String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime
   type         String   @default("SALE")
   Client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignments  Assignment[]
 }
 
 model UserGoal {

@@ -23,6 +23,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
     role: 'USER',
     password: ''
   });
+  const [generatedPassword, setGeneratedPassword] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -126,9 +127,24 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
 
       {/* Password Field */}
       <div className="group relative">
-        <label className="block text-sm font-semibold text-slate-700 mb-2">
-          🔒 {user ? 'Nueva contraseña (opcional)' : 'Contraseña'}
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            🔒 {user ? 'Nueva contraseña (opcional)' : 'Contraseña'}
+          </label>
+          {user && (
+            <button
+              type="button"
+              className="text-xs text-blue-600 hover:text-blue-800 focus:outline-none"
+              onClick={() => {
+                const newPass = Math.random().toString(36).slice(-12) + '!';
+                setFormData(prev => ({ ...prev, password: newPass }));
+                setGeneratedPassword(newPass);
+              }}
+            >
+              Generar temporal
+            </button>
+          )}
+        </div>
         <div className="relative">
           <input
             type="password"
@@ -148,6 +164,11 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
         {user && (
           <p className="text-xs text-slate-500 mt-1 ml-1">
             💡 Deja este campo vacío para mantener la contraseña actual
+          </p>
+        )}
+        {generatedPassword && (
+          <p className="text-xs text-green-600 mt-1 ml-1 break-all">
+            Contraseña temporal: <span className="font-semibold text-slate-800">{generatedPassword}</span>
           </p>
         )}
       </div>

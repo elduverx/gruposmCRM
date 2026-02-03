@@ -16,5 +16,14 @@
     "role": "ADMIN",
     "createdAt": "2025-08-29T14:14:52.583Z",
     "updatedAt": "2025-08-29T14:14:52.583Z"
+  },
+  {
+    "id": "1768437150487",
+    "name": "Sergio Martinez",
+    "email": "inmobiliaria@gruposergiomartinez.com",
+    "password": "$2a$10$iWvEzFjj49LA00GY0zlfAOD6plH52.jCT33SH6RDB6nYIlXXRbilu",
+    "role": "ADMIN",
+    "createdAt": "2026-01-15T00:32:30.494Z",
+    "updatedAt": "2026-01-15T00:32:30.494Z"
   }
 ]

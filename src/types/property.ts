@@ -52,6 +52,7 @@ export interface Assignment {
   exclusiveUntil: string;
   origin: string;
   clientId: string | null;
+  clientRequestId?: string | null;
   sellerFeeType: string; // PERCENTAGE o FIXED
   sellerFeeValue: number;
   buyerFeeType: string; // PERCENTAGE o FIXED
@@ -62,7 +63,7 @@ export interface Assignment {
   client?: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     hasRequest?: boolean;
   };

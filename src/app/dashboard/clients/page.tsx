@@ -29,7 +29,7 @@ export default function ClientsPage() {
     } else {
       const filtered = clients.filter(client => 
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.address?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -55,12 +55,15 @@ export default function ClientsPage() {
 
   const handleSubmit = async (formData: {
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     relatedProperties: string[];
     hasRequest: boolean;
     isTenant?: boolean;
+    orderRequest?: {
+      desiredLocation: string;
+    };
   }) => {
     try {
       // Ensure isTenant is always a boolean
@@ -240,7 +243,7 @@ export default function ClientsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <span className="mr-2">📧</span>
-                          {client.email}
+                          {client.email || 'Sin correo'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

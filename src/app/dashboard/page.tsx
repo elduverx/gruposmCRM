@@ -103,7 +103,7 @@ export default function InicioPage() {
     status: 'Pendiente', // Agregar estado por defecto
     metadata: {
       completed: false,
-      priority: 'medium'
+      priority: 'low'
     }
   });
 
@@ -116,7 +116,7 @@ export default function InicioPage() {
     goalId: '',
     metadata: {
       completed: false,
-      priority: 'medium',
+      priority: 'low',
       duration: 30, // Duración en minutos
       reminder: 15 // Recordatorio en minutos antes
     }
@@ -284,7 +284,7 @@ export default function InicioPage() {
         status: 'Pendiente',
         metadata: {
           completed: false,
-          priority: 'medium'
+          priority: 'low'
         }
       });
       
@@ -305,7 +305,7 @@ export default function InicioPage() {
   const getCalendarEvents = (): EventInput[] => {
     const userEvents = userActivities.map(activity => {
       const isCompleted = activity.metadata?.completed || false;
-      const priority = activity.metadata?.priority || 'medium';
+      const priority = activity.metadata?.priority === 'high' ? 'high' : 'low';
       
       // Colores dinámicos según el tipo y estado
       let backgroundColor = '#4F46E5';
@@ -493,15 +493,9 @@ export default function InicioPage() {
                 activity.type === 'visit' ? 'Visita' : 'Otra'
               }</div>
               <div class="text-xs mt-1 ${
-                activity.metadata?.priority === 'high' ? 'text-red-600' :
-                activity.metadata?.priority === 'medium' ? 'text-yellow-600' :
-                'text-green-600'
+                activity.metadata?.priority === 'high' ? 'text-red-600' : 'text-green-600'
               }">
-                Prioridad: ${
-                  activity.metadata?.priority === 'high' ? 'Alta' :
-                  activity.metadata?.priority === 'medium' ? 'Media' :
-                  'Baja'
-                }
+                Prioridad: ${activity.metadata?.priority === 'high' ? 'Alta' : 'Baja'}
               </div>
             </div>
           `;
@@ -806,10 +800,9 @@ export default function InicioPage() {
                     <label className="text-sm font-semibold text-gray-700">Prioridad</label>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { value: 'high', label: 'Alta', color: 'from-red-500 to-red-600', emoji: '🔥' },
-                      { value: 'medium', label: 'Media', color: 'from-yellow-500 to-orange-500', emoji: '⚡' },
                       { value: 'low', label: 'Baja', color: 'from-green-500 to-green-600', emoji: '🌱' }
                     ].map((priority) => (
                       <button
@@ -1170,9 +1163,9 @@ export default function InicioPage() {
       </div>
 
       {/* Contenedor principal con grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Calendario - Columna izquierda */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 order-last">
           {/* Calendario con diseño moderno */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-500/10 to-blue-500/10 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
@@ -1338,8 +1331,6 @@ export default function InicioPage() {
                       
                       if (arg.event.extendedProps.priority === 'high') {
                         classes.push('fc-priority-high', 'animate-pulse');
-                      } else if (arg.event.extendedProps.priority === 'medium') {
-                        classes.push('fc-priority-medium');
                       } else {
                         classes.push('fc-priority-low');
                       }
@@ -1466,9 +1457,9 @@ export default function InicioPage() {
                   .filter(activity => !activity.metadata?.completed)
                   .sort((a, b) => {
                     // Ordenar por prioridad y fecha
-                    const priorityOrder = { high: 0, medium: 1, low: 2 };
-                    const aPriority = a.metadata?.priority || 'medium';
-                    const bPriority = b.metadata?.priority || 'medium';
+                    const priorityOrder = { high: 0, low: 1 };
+                    const aPriority = a.metadata?.priority === 'high' ? 'high' : 'low';
+                    const bPriority = b.metadata?.priority === 'high' ? 'high' : 'low';
                     
                     if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
                       return priorityOrder[aPriority] - priorityOrder[bPriority];
@@ -1479,14 +1470,13 @@ export default function InicioPage() {
                   .slice(0, 5)
                   .map((activity) => {
                     const goalTitle = userGoals.find(g => g.id === activity.goalId)?.title;
+                    const normalizedPriority = activity.metadata?.priority === 'high' ? 'high' : 'low';
                     const priorityColors = {
                       high: 'from-red-500 to-pink-600',
-                      medium: 'from-amber-500 to-orange-600',
                       low: 'from-green-500 to-emerald-600'
                     };
                     const priorityIcons = {
                       high: '🔥',
-                      medium: '⚡',
                       low: '🌱'
                     };
                     
@@ -1528,14 +1518,14 @@ export default function InicioPage() {
                             </button>
                             
                             {/* Indicador de prioridad */}
-                            <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${priorityColors[activity.metadata?.priority || 'medium']} shadow-lg`} />
+                            <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${priorityColors[normalizedPriority]} shadow-lg`} />
                             
                             {/* Contenido de la actividad */}
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-2">
                                 <p className="text-sm font-bold text-slate-800">{activity.description}</p>
                                 <span className="text-xs">
-                                  {priorityIcons[activity.metadata?.priority || 'medium']}
+                                  {priorityIcons[normalizedPriority]}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-3 text-xs text-slate-600">
@@ -1596,7 +1586,7 @@ export default function InicioPage() {
         </div>
 
         {/* Objetivos - Columna derecha modernizada */}
-        <div className="lg:col-span-1 group relative">
+        <div className="group relative order-first">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-sm group-hover:blur-md transition-all duration-300"></div>
           <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-6 hover:shadow-2xl transition-all duration-300">
             
@@ -1889,7 +1879,6 @@ export default function InicioPage() {
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                           >
                             <option value="high">Alta</option>
-                            <option value="medium">Media</option>
                             <option value="low">Baja</option>
                           </select>
                         </div>
@@ -2201,11 +2190,6 @@ export default function InicioPage() {
         /* Prioridad alta - borde rojo en el lado izquierdo */
         .fc .fc-priority-high {
           border-left-color: #ef4444 !important;
-        }
-        
-        /* Prioridad media - borde amarillo en el lado izquierdo */
-        .fc .fc-priority-medium {
-          border-left-color: #f59e0b !important;
         }
         
         /* Prioridad baja - borde verde en el lado izquierdo */

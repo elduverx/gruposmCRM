@@ -403,7 +403,7 @@ export default function SalesClientImproved() {
                               {assignment.client?.email && (
                                 <div className="flex items-center text-xs text-gray-600">
                                   <Mail className="h-3 w-3 mr-2 text-green-500" />
-                                  <span className="font-medium">{assignment.client.email}</span>
+                                  <span className="font-medium">{assignment.client.email || 'Sin correo'}</span>
                                 </div>
                               )}
                               {assignment.client?.phone && (
@@ -664,7 +664,7 @@ export default function SalesClientImproved() {
                       {selectedAssignment?.client?.email && (
                         <p className="text-sm text-gray-600 mt-1 flex items-center">
                           <Mail className="h-3 w-3 mr-1" />
-                          {selectedAssignment.client.email}
+                          {selectedAssignment.client.email || 'Sin correo'}
                         </p>
                       )}
                     </div>

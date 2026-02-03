@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Order, OrderCreateInput } from '@/types/order';
 import { Client } from '@/types/client';
 import { PropertyType } from '@/types/property';
-import { UserIcon, HomeIcon, CurrencyEuroIcon, HomeModernIcon, HomeModernIcon as BathroomIcon, PlusIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { UserIcon, HomeIcon, CurrencyEuroIcon, HomeModernIcon, HomeModernIcon as BathroomIcon, PlusIcon, ExclamationCircleIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import { createClient } from '@/app/dashboard/clients/actions';
 import ClientForm from '@/app/dashboard/clients/components/ClientForm';
@@ -33,7 +33,8 @@ export default function OrderForm({
     minPrice: order?.minPrice || 0,
     maxPrice: order?.maxPrice || 0,
     propertyType: order?.propertyType || PropertyType.PISO,
-    features: order?.features || []
+    features: order?.features || [],
+    desiredLocation: order?.desiredLocation || ''
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,7 +51,8 @@ export default function OrderForm({
       minPrice: order?.minPrice || 0,
       maxPrice: order?.maxPrice || 0,
       propertyType: order?.propertyType || PropertyType.PISO,
-      features: order?.features || []
+      features: order?.features || [],
+      desiredLocation: order?.desiredLocation || ''
     });
     
     // Resetea los errores cuando cambia el order
@@ -263,6 +265,26 @@ export default function OrderForm({
                 </div>
                 
                 <div className="space-y-4">
+                  <div className="group">
+                    <label htmlFor="desiredLocation" className="block text-sm font-medium text-gray-700 mb-2">
+                      Sitio donde desea el inmueble
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPinIcon className="h-5 w-5 text-emerald-500 transition-colors duration-200" />
+                      </div>
+                      <input
+                        type="text"
+                        id="desiredLocation"
+                        name="desiredLocation"
+                        value={formData.desiredLocation || ''}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border-2 border-gray-200 rounded-xl shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:bg-white transition-all duration-200 text-gray-800 text-sm"
+                        placeholder="Ej: Centro, Barrio Norte, Calle..."
+                      />
+                    </div>
+                  </div>
+
                   <div className="group">
                     <label htmlFor="propertyType" className="block text-sm font-medium text-gray-700 mb-2">
                       Tipo de Inmueble

@@ -26,12 +26,13 @@ export async function getClients(): Promise<Client[]> {
 
 export async function createClient(data: ClientFormData): Promise<Client> {
   try {
+    const wantsOrder = !!data.orderRequest?.desiredLocation?.trim();
     const clientData = {
       name: data.name,
-      email: data.email,
+      email: data.email?.trim() || null,
       phone: data.phone,
       address: data.address,
-      hasRequest: data.hasRequest || false,
+      hasRequest: data.hasRequest || wantsOrder,
       isTenant: data.isTenant || false,
       properties: {
         connect: data.relatedProperties.map(id => ({ id }))
@@ -44,6 +45,24 @@ export async function createClient(data: ClientFormData): Promise<Client> {
         properties: true
       }
     });
+
+    if (wantsOrder) {
+      await prisma.clientRequest.create({
+        data: {
+          id: `order_${Date.now()}`,
+          clientId: client.id,
+          bedrooms: 1,
+          bathrooms: 1,
+          minPrice: 0,
+          maxPrice: 0,
+          propertyType: 'PISO',
+          features: JSON.stringify([]),
+          desiredLocation: data.orderRequest?.desiredLocation?.trim() || null,
+          updatedAt: new Date(),
+          type: 'SALE'
+        }
+      });
+    }
     
     return client as unknown as Client;
   } catch (error) {
@@ -55,12 +74,13 @@ export async function createClient(data: ClientFormData): Promise<Client> {
 
 export async function updateClient(id: string, data: ClientFormData): Promise<Client> {
   try {
+    const wantsOrder = !!data.orderRequest?.desiredLocation?.trim();
     const updateData = {
       name: data.name,
-      email: data.email,
+      email: data.email?.trim() || null,
       phone: data.phone,
       address: data.address,
-      hasRequest: data.hasRequest || false,
+      hasRequest: data.hasRequest || wantsOrder,
       isTenant: data.isTenant || false,
       properties: {
         set: data.relatedProperties.map(id => ({ id }))
@@ -74,6 +94,29 @@ export async function updateClient(id: string, data: ClientFormData): Promise<Cl
         properties: true
       }
     });
+
+    if (wantsOrder) {
+      await prisma.clientRequest.upsert({
+        where: { clientId: client.id },
+        update: {
+          desiredLocation: data.orderRequest?.desiredLocation?.trim() || null,
+          updatedAt: new Date()
+        },
+        create: {
+          id: `order_${Date.now()}`,
+          clientId: client.id,
+          bedrooms: 1,
+          bathrooms: 1,
+          minPrice: 0,
+          maxPrice: 0,
+          propertyType: 'PISO',
+          features: JSON.stringify([]),
+          desiredLocation: data.orderRequest?.desiredLocation?.trim() || null,
+          updatedAt: new Date(),
+          type: 'SALE'
+        }
+      });
+    }
     
     return client as unknown as Client;
   } catch (error) {

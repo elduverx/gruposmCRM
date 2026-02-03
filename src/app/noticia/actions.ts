@@ -3,9 +3,46 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { PropertyNews } from '@/types/property';
+import { getCurrentUserId } from '@/lib/auth';
+
+async function buildNewsVisibilityWhere() {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return {};
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { zones: true }
+    });
+
+    if (!user) return {};
+    if (user.role === 'ADMIN') return {};
+
+    const zoneIds = user.zones.map(zone => zone.id);
+    if (zoneIds.length > 0) {
+      return {
+        property: {
+          zoneId: { in: zoneIds }
+        }
+      };
+    }
+
+    const responsible = (user.name || user.email || '').trim();
+    if (!responsible) {
+      return { id: '__none__' };
+    }
+
+    return { responsible };
+  } catch (error) {
+    // En caso de error, devolver sin filtro para evitar bloquear la UI
+    return {};
+  }
+}
 
 export async function getAllNews(): Promise<PropertyNews[]> {
+  const where = await buildNewsVisibilityWhere();
   const news = await prisma.propertyNews.findMany({
+    where,
     include: {
       property: {
         select: {

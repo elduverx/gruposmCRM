@@ -16,12 +16,13 @@ type ClientRequestWithClient = {
   maxPrice: number;
   propertyType: string;
   features: string;
+  desiredLocation?: string | null;
   createdAt: Date;
   updatedAt: Date;
   Client: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
   };
 };
 
@@ -38,6 +39,7 @@ type ClientRequestCreateInput = {
   maxPrice: number;
   propertyType: string;
   features: string;
+  desiredLocation?: string | null;
   updatedAt: Date;
 };
 
@@ -50,6 +52,7 @@ type ClientRequestUpdateInput = {
   minPrice?: number;
   maxPrice?: number;
   propertyType?: string;
+  desiredLocation?: string | null;
 };
 
 function mapOrderResponse(order: ClientRequestWithClient): Order {
@@ -83,6 +86,7 @@ function mapOrderResponse(order: ClientRequestWithClient): Order {
     maxPrice: order.maxPrice,
     propertyType: order.propertyType,
     features: safeParseFeatures(order.features),
+    desiredLocation: order.desiredLocation ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     client: {
@@ -161,6 +165,7 @@ export async function createOrder(data: OrderCreateInput): Promise<{ order: Orde
       maxPrice: data.maxPrice,
       propertyType: data.propertyType,
       features: JSON.stringify(data.features),
+      desiredLocation: data.desiredLocation || null,
       updatedAt: new Date(),
       type: data.operationType
     };
@@ -224,6 +229,10 @@ export async function updateOrder(id: string, data: Partial<OrderCreateInput>): 
 
     if (data.propertyType) {
       updateData.propertyType = data.propertyType;
+    }
+
+    if (data.desiredLocation !== undefined) {
+      updateData.desiredLocation = data.desiredLocation || null;
     }
     
     const order = await prisma.clientRequest.update({

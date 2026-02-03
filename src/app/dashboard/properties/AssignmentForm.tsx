@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
-import { createAssignment, updateAssignment } from './actions';
+import { createAssignment, updateAssignment, createActivity } from './actions';
 import { Client } from '@/types/client';
 import { getClients } from '../clients/actions';
 import { Assignment } from '@/types/property';
+import { Order } from '@/types/order';
+import { getOrders } from '../orders/actions';
 import {
   HomeIcon,
   CalendarIcon,
@@ -29,6 +31,7 @@ interface AssignmentFormProps {
 export function AssignmentForm({ propertyId, initialData, onSuccess }: AssignmentFormProps) {
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [formData, setFormData] = useState({
     type: initialData?.type || 'SALE',
@@ -36,6 +39,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     exclusiveUntil: initialData?.exclusiveUntil ? new Date(initialData.exclusiveUntil).toISOString().split('T')[0] : '',
     origin: initialData?.origin || '',
     clientId: initialData?.clientId || '',
+    clientRequestId: initialData?.clientRequestId || '',
     sellerFeeType: initialData?.sellerFeeType || 'PERCENTAGE',
     sellerFeeValue: initialData?.sellerFeeValue || 0,
     sellerFeePercentage: 3, // Valor por defecto para el porcentaje
@@ -45,6 +49,8 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
     buyerFeePercentage: 3, // Valor por defecto para el porcentaje
     buyerFeeFixed: 3000, // Valor por defecto para el monto fijo
   });
+  const [scheduleVisit, setScheduleVisit] = useState(false);
+  const [visitDate, setVisitDate] = useState('');
 
   // Estados para los toggles
   const [sellerFeeIsPercentage, setSellerFeeIsPercentage] = useState(formData.sellerFeeType === 'PERCENTAGE');
@@ -96,6 +102,32 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
 
     fetchClients();
   }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const ordersData = await getOrders();
+        setOrders(ordersData);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching orders:', error);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  useEffect(() => {
+    if (!formData.clientId) {
+      setFormData(prev => ({ ...prev, clientRequestId: '' }));
+      return;
+    }
+
+    const hasOrder = orders.some(order => order.client.id === formData.clientId && order.id === formData.clientRequestId);
+    if (!hasOrder) {
+      setFormData(prev => ({ ...prev, clientRequestId: '' }));
+    }
+  }, [formData.clientId, formData.clientRequestId, orders]);
 
   // Efecto para actualizar los valores de comisión cuando cambia el precio o el tipo de comisión
   useEffect(() => {
@@ -176,6 +208,12 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         return;
       }
 
+      if (scheduleVisit && !visitDate) {
+        alert('Selecciona una fecha y hora para la visita');
+        setLoading(false);
+        return;
+      }
+
       console.log('Enviando datos del formulario:', {
         clientId: formData.clientId,
         propertyId,
@@ -190,6 +228,7 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
         exclusiveUntil: new Date(formData.exclusiveUntil).toISOString(), // Convert Date to ISO string
         origin: formData.origin,
         clientId: formData.clientId,
+        clientRequestId: formData.clientRequestId || null,
         sellerFeeType: formData.sellerFeeType,
         sellerFeeValue: parseFloat(formData.sellerFeeValue.toString()),
         buyerFeeType: formData.buyerFeeType,
@@ -202,6 +241,16 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
           console.log('Actualizando encargo existente:', initialData.id);
           const result = await updateAssignment(initialData.id, dataToSubmit);
           if (result) {
+            if (scheduleVisit && visitDate) {
+              await createActivity({
+                type: 'VISITA',
+                status: 'Programada',
+                client: null,
+                notes: 'Visita agendada desde encargo',
+                date: new Date(visitDate),
+                propertyId
+              });
+            }
             console.log('Encargo actualizado exitosamente');
             onSuccess?.();
           } else {
@@ -212,6 +261,16 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
           console.log('Creando nuevo encargo');
           const result = await createAssignment(dataToSubmit);
           if (result) {
+            if (scheduleVisit && visitDate) {
+              await createActivity({
+                type: 'VISITA',
+                status: 'Programada',
+                client: null,
+                notes: 'Visita agendada desde encargo',
+                date: new Date(visitDate),
+                propertyId
+              });
+            }
             console.log('Encargo creado exitosamente');
             onSuccess?.();
           } else {
@@ -243,6 +302,13 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
   const formatNumber = (num: number) => {
     return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  const clientOrders = formData.clientId
+    ? orders.filter(order => order.client.id === formData.clientId)
+    : [];
+
+  const totalCommission = (formData.sellerFeeValue || 0) + (formData.buyerFeeValue || 0);
+  const userCommission = totalCommission * 0.1;
 
   const handleClientCreated = (newClient: Client) => {
     setClients(prev => [...prev, newClient]);
@@ -383,6 +449,33 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pedido del cliente (opcional)
+                  </label>
+                  <div className="mt-1 relative">
+                    <select
+                      name="clientRequestId"
+                      value={formData.clientRequestId}
+                      onChange={handleChange}
+                      className="block w-full rounded-md border-gray-300 pl-3 pr-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!formData.clientId || clientOrders.length === 0}
+                    >
+                      <option value="">
+                        {formData.clientId ? 'Sin pedido' : 'Selecciona un cliente primero'}
+                      </option>
+                      {clientOrders.map(order => (
+                        <option key={order.id} value={order.id}>
+                          {order.desiredLocation || order.propertyType || 'Pedido'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {formData.clientId && clientOrders.length === 0 && (
+                    <p className="text-xs text-slate-500 mt-1">Este cliente no tiene pedidos</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha límite de exclusividad
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
@@ -398,6 +491,31 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                       required
                     />
                   </div>
+                </div>
+
+                <div className="col-span-1 lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Agenda visita (opcional)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={scheduleVisit}
+                      onChange={(e) => setScheduleVisit(e.target.checked)}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-600">Programar visita para este encargo</span>
+                  </div>
+                  {scheduleVisit && (
+                    <div className="mt-3">
+                      <input
+                        type="datetime-local"
+                        value={visitDate}
+                        onChange={(e) => setVisitDate(e.target.value)}
+                        className="block w-full rounded-md border-gray-300 pl-3 pr-3 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className='col-span-1 lg:col-span-2'>
@@ -560,6 +678,20 @@ export function AssignmentForm({ propertyId, initialData, onSuccess }: Assignmen
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="md:col-span-2 bg-white rounded-lg border border-indigo-100 p-4 md:p-6 shadow-sm">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Resumen de comisión</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 bg-indigo-50 rounded-md border border-indigo-100">
+                      <p className="text-xs text-indigo-700 font-medium">Total comisión</p>
+                      <p className="text-lg font-semibold text-indigo-900">{formatNumber(totalCommission)}€</p>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-md border border-emerald-100">
+                      <p className="text-xs text-emerald-700 font-medium">Comisión usuario (10%)</p>
+                      <p className="text-lg font-semibold text-emerald-900">{formatNumber(userCommission)}€</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

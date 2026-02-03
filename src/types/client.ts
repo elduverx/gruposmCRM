@@ -4,7 +4,7 @@ import { Assignment } from './property';
 export interface Client {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   address: string | null;
   hasRequest: boolean;
@@ -17,10 +17,13 @@ export interface Client {
 
 export interface ClientFormData {
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   address: string | null;
   relatedProperties: string[];
   hasRequest: boolean;
   isTenant?: boolean;
-} 
+  orderRequest?: {
+    desiredLocation: string;
+  };
+}

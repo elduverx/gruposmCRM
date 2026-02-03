@@ -35,7 +35,7 @@ export default async function OrdersPage() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-visible">
           <OrderList orders={orders} clients={clients} />
         </div>
       </div>

@@ -520,6 +520,42 @@ export async function assignUsersToZone(zoneId: string, userIds: string[]) {
         }
       }
     });
+
+    // Si la zona queda asignada a un solo usuario, asignar todos los inmuebles/noticias/encargos
+    if (userIds.length === 1) {
+      const assignedUserId = userIds[0];
+      const assignedUser = await prisma.user.findUnique({
+        where: { id: assignedUserId },
+        select: { name: true, email: true }
+      });
+
+      const responsibleName = (assignedUser?.name || assignedUser?.email || 'Sin asignar').trim();
+      const propertiesInZone = await prisma.property.findMany({
+        where: { zoneId },
+        select: { id: true }
+      });
+      const propertyIds = propertiesInZone.map(property => property.id);
+
+      if (propertyIds.length > 0) {
+        await prisma.property.updateMany({
+          where: { id: { in: propertyIds } },
+          data: {
+            responsibleId: assignedUserId,
+            responsible: responsibleName
+          }
+        });
+
+        await prisma.assignment.updateMany({
+          where: { propertyId: { in: propertyIds } },
+          data: { responsibleId: assignedUserId }
+        });
+
+        await prisma.propertyNews.updateMany({
+          where: { propertyId: { in: propertyIds } },
+          data: { responsible: responsibleName }
+        });
+      }
+    }
     
     // Log the activity
     await logActivity({

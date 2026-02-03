@@ -32,7 +32,7 @@ export default function OrderList({ orders = [], clients = [] }: OrderListProps)
     } else {
       const filtered = orders.filter(order => 
         order.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.client.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         getStatusText(order.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getOperationTypeText(order.operationType).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getPropertyTypeText(order.propertyType).toLowerCase().includes(searchTerm.toLowerCase()) ||
