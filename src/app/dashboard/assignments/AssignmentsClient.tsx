@@ -320,11 +320,11 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                 {/* Commission Information */}
                 <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200">
                   <p className="text-sm text-slate-600 font-medium mb-3">💼 Comisiones</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div>
                       <span className="text-slate-600">🏪 Vendedor:</span>
                       <p className="font-semibold text-slate-800">
-                        {assignment.sellerFeeValue 
+                        {assignment.sellerFeeValue
                           ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(assignment.sellerFeeValue)
                           : 'No definido'
                         }
@@ -336,7 +336,7 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                     <div>
                       <span className="text-slate-600">👤 Comprador:</span>
                       <p className="font-semibold text-slate-800">
-                        {assignment.buyerFeeValue 
+                        {assignment.buyerFeeValue
                           ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(assignment.buyerFeeValue)
                           : 'No definido'
                         }
@@ -346,6 +346,34 @@ export default function AssignmentsClient({ initialAssignments }: AssignmentsCli
                       )}
                     </div>
                   </div>
+
+                  {/* Total de comisiones y comisión del usuario */}
+                  {(assignment.sellerFeeValue || assignment.buyerFeeValue) && (
+                    <div className="pt-3 border-t border-slate-300 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-700 font-medium">💰 Total Comisión:</span>
+                        <p className="font-bold text-lg text-blue-700">
+                          {new Intl.NumberFormat('es-ES', {
+                            style: 'currency',
+                            currency: 'EUR',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format((assignment.sellerFeeValue || 0) + (assignment.buyerFeeValue || 0))}
+                        </p>
+                      </div>
+                      <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                        <span className="text-sm text-green-700 font-medium">✨ Comisión Usuario (10%):</span>
+                        <p className="font-bold text-lg text-green-700">
+                          {new Intl.NumberFormat('es-ES', {
+                            style: 'currency',
+                            currency: 'EUR',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(((assignment.sellerFeeValue || 0) + (assignment.buyerFeeValue || 0)) * 0.10)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button

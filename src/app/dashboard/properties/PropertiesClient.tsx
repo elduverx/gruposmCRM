@@ -12,6 +12,81 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { logActivity } from '@/lib/client/activityLogger';
 
+// Función para normalizar texto (eliminar acentos, espacios extras, minúsculas)
+const normalizeText = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+    .replace(/\s+/g, ' ') // Eliminar espacios extras
+    .trim();
+};
+
+// Función para normalizar números (eliminar separadores de miles)
+const normalizeNumber = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text.replace(/[.,\s]/g, '');
+};
+
+// Función de similitud de Levenshtein (distancia de edición)
+const levenshteinDistance = (str1: string, str2: string): number => {
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[str2.length][str1.length];
+};
+
+// Función para verificar si hay coincidencia fuzzy
+const fuzzyMatch = (searchTerm: string, targetText: string, threshold: number = 2): boolean => {
+  const normalizedSearch = normalizeText(searchTerm);
+  const normalizedTarget = normalizeText(targetText);
+
+  // Coincidencia exacta (después de normalizar)
+  if (normalizedTarget.includes(normalizedSearch)) {
+    return true;
+  }
+
+  // Búsqueda fuzzy por palabras
+  const searchWords = normalizedSearch.split(' ').filter(w => w.length > 2);
+  const targetWords = normalizedTarget.split(' ');
+
+  for (const searchWord of searchWords) {
+    for (const targetWord of targetWords) {
+      // Si la palabra tiene más de 4 caracteres, permitir más tolerancia
+      const maxDistance = searchWord.length > 4 ? threshold : 1;
+      const distance = levenshteinDistance(searchWord, targetWord);
+
+      if (distance <= maxDistance) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
 export default function PropertiesClient() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
@@ -274,17 +349,75 @@ export default function PropertiesClient() {
   const filteredAndSortedProperties = useMemo(() => {
     // Apply filters
     const filtered = properties.filter(property => {
-      const matchesSearch = searchQuery === '' || 
-        property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        property.population.toLowerCase().includes(searchQuery.toLowerCase());
-      
+      // Búsqueda avanzada mejorada con fuzzy matching y normalización
+      if (searchQuery === '') {
+        // Si no hay búsqueda, no aplicar filtro de búsqueda
+      } else {
+        const normalizedQuery = normalizeText(searchQuery);
+        const normalizedQueryNumber = normalizeNumber(searchQuery);
+
+        // Campos de texto para búsqueda fuzzy
+        const textFields = [
+          property.address,
+          property.population,
+          property.ownerName,
+          property.ownerPhone,
+          property.ownerEmail,
+          property.occupiedByName,
+          property.tenantName,
+          property.tenantPhone,
+          property.tenantEmail,
+          property.description,
+          property.notes,
+          property.zone?.name,
+          property.responsibleUser?.name,
+          property.responsibleUser?.email,
+        ];
+
+        // Búsqueda fuzzy en campos de texto
+        const matchesTextField = textFields.some(field => {
+          if (!field) return false;
+          return fuzzyMatch(searchQuery, field, 2);
+        });
+
+        // Búsqueda en precio (normalizado sin comas/puntos)
+        const normalizedPrice = normalizeNumber(property.price);
+        const matchesPrice = normalizedPrice.includes(normalizedQueryNumber);
+
+        // Búsqueda en números (habitaciones, baños, metros)
+        const matchesNumbers =
+          property.habitaciones?.toString().includes(searchQuery) ||
+          property.banos?.toString().includes(searchQuery) ||
+          property.metrosCuadrados?.toString().includes(normalizedQueryNumber);
+
+        // Búsqueda en clientes asociados
+        const matchesClients = property.clients?.some(client =>
+          fuzzyMatch(searchQuery, client.name || '', 2) ||
+          normalizeText(client.phone || '').includes(normalizedQuery) ||
+          normalizeText(client.email || '').includes(normalizedQuery)
+        );
+
+        // Búsqueda en asignaciones (assignments)
+        const matchesAssignments = property.assignments?.some(assignment => {
+          const clientName = assignment.client?.name || '';
+          const clientPhone = assignment.client?.phone || '';
+          return fuzzyMatch(searchQuery, clientName, 2) ||
+                 normalizeText(clientPhone).includes(normalizedQuery);
+        });
+
+        const matchesSearch = matchesTextField || matchesPrice || matchesNumbers ||
+                             matchesClients || matchesAssignments;
+
+        if (!matchesSearch) return false;
+      }
+
       const matchesType = filters.type === '' || property.type === filters.type;
       const matchesStatus = filters.status === '' || property.status === filters.status;
       const matchesAction = filters.action === '' || property.action === filters.action;
       const matchesIsOccupied = filters.isOccupied === null || property.isOccupied === filters.isOccupied;
       const matchesZone = filters.zoneId === '' || property.zoneId === filters.zoneId;
-      
-      return matchesSearch && matchesType && matchesStatus && matchesAction && matchesIsOccupied && matchesZone;
+
+      return matchesType && matchesStatus && matchesAction && matchesIsOccupied && matchesZone;
     });
     
     // Apply sorting
@@ -402,7 +535,7 @@ export default function PropertiesClient() {
           <div className="relative">
             <input
               type="text"
-              placeholder="🔍 Buscar por dirección, propietario o población..."
+              placeholder="🔍 Búsqueda inteligente: dirección, propietario, inquilino, responsable, precio, zona... (tolera errores de escritura)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-6 py-4 pl-12 text-sm bg-white/90 backdrop-blur-sm border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent shadow-lg transition-all duration-300"
